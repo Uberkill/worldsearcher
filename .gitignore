@@ -22,3 +22,13 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Diagnostic and patches
+*.cjs
+*.py
+diag_*.png
+diag_*.json
+*_log.txt
+subagent_logs.txt
+messages.txt
+puppeteer_test*.js

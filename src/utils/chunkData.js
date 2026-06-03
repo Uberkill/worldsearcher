@@ -182,7 +182,7 @@ export const getGlobalBlockLevel = (cx, cz, buffer, neighborBuffers, neighborObj
 };
 
 export const getGlobalBlockLight = (cx, cz, buffer, neighborBuffers, neighborObj, gx, gy, gz) => {
-  if (gy < CHUNK_Y_MIN || gy > CHUNK_Y_MAX) return 15; // Max sunlight above/below
+  if (gy < CHUNK_Y_MIN || gy > CHUNK_Y_MAX) return (15 << 26); // Max sunlight above/below (packed!)
   
   if (gx >= cx * 16 && gx < cx * 16 + 16 && gz >= cz * 16 && gz < cz * 16 + 16) {
     const lx = (gx % 16 + 16) % 16;
