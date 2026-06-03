@@ -1,0 +1,77 @@
+<USER_REQUEST>
+okay here is the code that isn supoosed to fix and replace the old ui . get back the 3d background 
+
+import React, { useState, useEffect, useRef } from 'react';
+import { Play, PlaySquare, Settings, Moon, Sun, Power, ChevronLeft, Volume2, Monitor, Backpack, X, Save, AlertTriangle, Download, Upload, Plus, Clock, File } from 'lucide-react';
+import * as THREE from 'three';
+
+// --- MOCK DATA ---
+const mockInventory = [
+  { id: 1, color: '#ffffff', qty: 64 }, { id: 2, color: '#7b68ee', qty: 64 }, { id: 3, color: '#20b2aa', qty: 64 }, 
+  { id: 4, color: '#d3d3d3', qty: 64 }, { id: 5, color: '#f5f5f5', qty: 64 }, { id: 6, color: '#ffd700', qty: 64 }, 
+  { id: 7, color: '#ff6347', qty: 64 }, { id: 8, color: '#2f4f4f', qty: 64 }, { id: 9, color: '#8b4513', qty: 64 },
+  { id: 10, color: '#4169e1', qty: 64 }, { id: 11, color: '#00ffff', qty: 64 }, null, null, null, null, null, null, null,
+  null, null, null, null, null, null, null, null, null
+];
+
+const mockHotbar = [
+  { id: 28, color: '#00ffff', qty: 1 }, { id: 29, color: '#ffa500', qty: 1 }, { id: 30, color: '#ff1493', qty: 1 },
+  { id: 31, color: '#ff8c00', qty: 1 }, { id: 32, color: '#ff4500', qty: 64 }, { id: 33, color: '#36454f', qty: 64 },
+  { id: 34, color: '#48d1cc', qty: 64 }, { id: 35, color: '#708090', qty: 64 }, { id: 36, color: '#2f4f4f', qty: 64 }
+];
+
+const mockSaves = [
+  { id: 1, name: "Alpha Sector", mode: "Survival", played: "12h 45m", date: "2026.05.29" },
+  { id: 2, name: "Creative Build", mode: "Creative", played: "45h 12m", date: "2026.05.20" },
+  { id: 3, isEmpty: true }
+];
+
+// --- REUSABLE COMPONENTS ---
+
+// Inventory Slot
+const InventorySlot = ({ item }) => (
+  <div className="w-12 h-12 rounded-lg bg-black/40 border border-white/10 relative hover:border-cyan-400 hover:bg-white/5 transition-colors cursor-none flex items-center justify-center group shadow-inner">
+    {item && (
+      <>
+        <div 
+          className="w-8 h-8 rounded-sm shadow-[inset_0_2px_4px_rgba(255,255,255,0.3)] border border-blac
+<truncated 35176 bytes>
+-white" size={24} />
+              </button>
+            </div>
+
+            {/* TITLE SETTINGS MENU */}
+            <div className={`absolute bottom-0 right-0 w-80 flex flex-col transition-all duration-[600ms] ease-[cubic-bezier(0.23,1,0.32,1)] ${activeMenu === 'settings' ? 'opacity-100 translate-x-0 pointer-events-auto delay-100' : 'opacity-0 translate-x-12 pointer-events-none'}`}>
+              <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl p-6 shadow-2xl space-y-8">
+                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                   <h3 className="text-xl font-light tracking-widest text-white">SETTINGS</h3>
+                   <Settings className="text-cyan-400" size={20} />
+                </div>
+                <div className="space-y-8">
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2 text-white/70">
+                      <Volume2 size={16} />
+                      <span className="text-sm tracking-widest font-bold">AUDIO</span>
+                    </div>
+                    <CustomSlider label="MASTER" defaultValue={80} />
+                    <CustomSlider label="MUSIC" defaultValue={100} />
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => setActiveMenu('main')} className="group flex items-center self-end mt-4 p-3 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 transition-all cursor-none">
+                <ChevronLeft className="text-white/50 group-hover:text-cyan-400 transition-colors mr-2" size={20} />
+                <span className="tracking-widest font-light text-white/50 group-hover:text-white transition-colors">BACK</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+  );
+}
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-30T05:01:02+08:00.
+</ADDITIONAL_METADATA>

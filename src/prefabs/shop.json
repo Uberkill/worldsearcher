@@ -1,0 +1,55 @@
+{
+  "name": "Outpost_Shop",
+  "palette": {
+    "W": "wood",
+    "L": "log",
+    "F": "leaves"
+  },
+  "layers": [
+    [
+      "       ",
+      " WWWWW ",
+      " WWWWW ",
+      " WWWWW ",
+      " WWWWW ",
+      " WWWWW ",
+      "       "
+    ],
+    [
+      "       ",
+      " L   L ",
+      "       ",
+      "  WWW  ",
+      "       ",
+      " L   L ",
+      "       "
+    ],
+    [
+      "       ",
+      " L   L ",
+      "       ",
+      "       ",
+      "       ",
+      " L   L ",
+      "       "
+    ],
+    [
+      "       ",
+      " L   L ",
+      "       ",
+      "       ",
+      "       ",
+      " L   L ",
+      "       "
+    ],
+    [
+      "FFFFFFF",
+      "FFFFFFF",
+      "FFFFFFF",
+      "FFFFFFF",
+      "FFFFFFF",
+      "FFFFFFF",
+      "FFFFFFF"
+    ]
+  ]
+}

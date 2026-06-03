@@ -1,0 +1,25 @@
+{
+  "zombie": {
+    "rolls": 1,
+    "drops": [
+      { "id": "rotten_flesh", "chance": 0.70, "min": 1, "max": 2 },
+      { "id": "iron_ingot", "chance": 0.05, "min": 1, "max": 1 },
+      { "id": "gold_coin", "chance": 0.25, "min": 1, "max": 5 }
+    ]
+  },
+  "beast": {
+    "rolls": 2,
+    "drops": [
+      { "id": "rotten_flesh", "chance": 0.40, "min": 2, "max": 4 },
+      { "id": "iron_ingot", "chance": 0.20, "min": 1, "max": 3 },
+      { "id": "gold_coin", "chance": 0.40, "min": 10, "max": 20 }
+    ]
+  },
+  "boss": {
+    "rolls": 5,
+    "drops": [
+      { "id": "diamond", "chance": 0.50, "min": 1, "max": 2 },
+      { "id": "gold_coin", "chance": 1.0, "min": 50, "max": 100 }
+    ]
+  }
+}

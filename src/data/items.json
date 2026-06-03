@@ -1,0 +1,62 @@
+{
+  "sword": {
+    "id": 22,
+    "name": "Vibro-Blade",
+    "color": "#00ffff",
+    "isTransparent": false,
+    "lightLevel": 0,
+    "type": "tool",
+    "combat": { "type": "hitscan", "damage": 25, "range": 4, "cooldownMs": 500, "raycastRadius": 0.5 }
+  },
+  "gun": {
+    "id": 23,
+    "name": "Pulse Rifle",
+    "color": "#ff0055",
+    "isTransparent": false,
+    "lightLevel": 0,
+    "type": "tool",
+    "combat": { "type": "projectile", "damage": 15, "speed": 40, "cooldownMs": 100 }
+  },
+  "pickaxe": {
+    "id": 24,
+    "name": "Laser Drill",
+    "color": "#ffaa00",
+    "isTransparent": false,
+    "lightLevel": 0,
+    "type": "tool",
+    "combat": { "type": "hitscan", "damage": 10, "range": 3, "cooldownMs": 600, "raycastRadius": 0.3 }
+  },
+  "lantern": {
+    "id": 25,
+    "name": "Lantern",
+    "color": "#ffaa00",
+    "isTransparent": true,
+    "lightLevel": 15,
+    "type": "tool"
+  },
+  "gauss_rifle": {
+    "id": 27,
+    "name": "Gauss Rifle",
+    "color": "#00ffff",
+    "isTransparent": false,
+    "lightLevel": 0,
+    "type": "tool",
+    "combat": { "type": "hitscan", "damage": 150, "range": 200, "cooldownMs": 1500, "areaOfEffect": 1.5 }
+  },
+  "grapple": {
+    "id": 28,
+    "name": "Aether Grapple",
+    "color": "#444444",
+    "isTransparent": false,
+    "lightLevel": 0,
+    "type": "tool"
+  },
+  "flare": {
+    "id": 26,
+    "name": "Flare",
+    "color": "#ff5500",
+    "isTransparent": true,
+    "lightLevel": 14,
+    "type": "tool"
+  }
+}

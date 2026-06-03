@@ -1,0 +1,24 @@
+{
+  "name": "Meteor",
+  "palette": {
+    "B": "bedrock",
+    "T": "tnt"
+  },
+  "layers": [
+    [
+      " B ",
+      "BBB",
+      " B "
+    ],
+    [
+      "BBB",
+      "BTB",
+      "BBB"
+    ],
+    [
+      " B ",
+      "BBB",
+      " B "
+    ]
+  ]
+}

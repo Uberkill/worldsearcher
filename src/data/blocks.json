@@ -1,0 +1,294 @@
+{
+  "dirt": {
+    "id": 1,
+    "name": "Regolith",
+    "color": "#2d3748",
+    "health": 100,
+    "isTransparent": false,
+    "lightLevel": 0,
+    "isFlora": false,
+    "isPassable": false,
+    "isLiquid": false,
+    "texture": "dirt.png"
+  },
+  "grass": {
+    "id": 2,
+    "name": "Xeno-Moss",
+    "color": "#38b2ac",
+    "health": 100,
+    "isTransparent": false,
+    "lightLevel": 0,
+    "isFlora": false,
+    "isPassable": false,
+    "isLiquid": false,
+    "textures": {
+      "top": "grass_top.png",
+      "side": "grass_side.png",
+      "bottom": "dirt.png"
+    }
+  },
+  "chest": {
+    "id": 22,
+    "name": "Storage Crate",
+    "color": "#d97706",
+    "health": 150,
+    "isTransparent": false,
+    "lightLevel": 0,
+    "isFlora": false,
+    "isPassable": false,
+    "isLiquid": false,
+    "textures": {
+      "top": "chest_top.png",
+      "bottom": "wood.png",
+      "side": "chest_side.png"
+    }
+  },
+  "glass": {
+    "id": 3,
+    "name": "Aero-Glass",
+    "color": "#e0f2fe",
+    "health": 50,
+    "isTransparent": true,
+    "opacity": 0.3,
+    "lightLevel": 0,
+    "isFlora": false,
+    "isPassable": false,
+    "isLiquid": false,
+    "texture": "glass.png"
+  },
+  "wood": {
+    "id": 4,
+    "name": "Composite",
+    "color": "#475569",
+    "health": 150,
+    "isTransparent": false,
+    "lightLevel": 0,
+    "isFlora": false,
+    "isPassable": false,
+    "isLiquid": false,
+    "texture": "wood.png"
+  },
+  "log": {
+    "id": 5,
+    "name": "Crystal Stalk",
+    "color": "#6366f1",
+    "health": 150,
+    "isTransparent": false,
+    "lightLevel": 0,
+    "isFlora": false,
+    "isPassable": false,
+    "isLiquid": false,
+    "textures": {
+      "top": "log_top.png",
+      "bottom": "log_top.png",
+      "side": "log_side.png"
+    }
+  },
+  "leaves": {
+    "id": 6,
+    "name": "Bio-Foliage",
+    "color": "#10b981",
+    "health": 50,
+    "isTransparent": false,
+    "lightLevel": 0,
+    "isFlora": false,
+    "isPassable": false,
+    "isLiquid": false,
+    "texture": "leaves.png"
+  },
+  "stone": {
+    "id": 7,
+    "name": "Basalt Crust",
+    "color": "#1e293b",
+    "health": 200,
+    "isTransparent": false,
+    "lightLevel": 0,
+    "isFlora": false,
+    "isPassable": false,
+    "isLiquid": false,
+    "texture": "stone.png"
+  },
+  "alien_sand": {
+    "id": 8,
+    "name": "Alien Sand",
+    "color": "#cbd5e1",
+    "health": 100,
+    "isTransparent": false,
+    "lightLevel": 0,
+    "isFlora": false,
+    "isPassable": false,
+    "isLiquid": false,
+    "textures": {
+      "top": "alien_sand_top.png",
+      "side": "alien_sand_side.png",
+      "bottom": "alien_sand_bottom.png"
+    }
+  },
+  "snow": {
+    "id": 9,
+    "name": "Cryo-Frost",
+    "color": "#f8fafc",
+    "health": 100,
+    "isTransparent": false,
+    "lightLevel": 0,
+    "isFlora": false,
+    "isPassable": false,
+    "isLiquid": false,
+    "texture": "snow.png"
+  },
+  "glow_panel": {
+    "id": 10,
+    "name": "Lumen Panel",
+    "color": "#ffea00",
+    "health": 50,
+    "isTransparent": false,
+    "lightLevel": 15,
+    "isFlora": false,
+    "isPassable": false,
+    "isLiquid": false,
+    "texture": "glow_panel.png"
+  },
+  "bedrock": {
+    "id": 11,
+    "name": "Mantle Core",
+    "color": "#0f172a",
+    "health": 9999,
+    "isTransparent": false,
+    "lightLevel": 0,
+    "isFlora": false,
+    "isPassable": false,
+    "isLiquid": false,
+    "texture": "bedrock.png"
+  },
+  "tnt": {
+    "id": 12,
+    "name": "Plasma Charge",
+    "color": "#ef4444",
+    "health": 10,
+    "isTransparent": false,
+    "lightLevel": 0,
+    "isFlora": false,
+    "isPassable": false,
+    "isLiquid": false,
+    "textures": {
+      "top": "tnt_top.png",
+      "bottom": "tnt_bottom.png",
+      "side": "tnt_side.png"
+    }
+  },
+  "crafting_table": {
+    "id": 13,
+    "name": "Fabricator",
+    "color": "#8b5a2b",
+    "health": 150,
+    "isTransparent": false,
+    "lightLevel": 0,
+    "isFlora": false,
+    "isPassable": false,
+    "isLiquid": false,
+    "textures": {
+      "top": "crafting_table_top.png",
+      "bottom": "wood.png",
+      "side": "crafting_table_side.png"
+    }
+  },
+  "crystal": {
+    "id": 14,
+    "name": "Aether Crystal",
+    "color": "#00ffff",
+    "health": 50,
+    "isTransparent": true,
+    "opacity": 0.6,
+    "lightLevel": 14,
+    "isFlora": false,
+    "isPassable": false,
+    "isLiquid": false,
+    "texture": "crystal.png"
+  },
+  "tall_grass": {
+    "id": 15,
+    "name": "Xeno-Fern",
+    "color": "#059669",
+    "health": 10,
+    "isTransparent": true,
+    "lightLevel": 0,
+    "isFlora": true,
+    "isPassable": true,
+    "isLiquid": false,
+    "texture": "tall_grass.png"
+  },
+  "red_flower": {
+    "id": 16,
+    "name": "Crimson Spore",
+    "color": "#ef4444",
+    "health": 10,
+    "isTransparent": true,
+    "lightLevel": 0,
+    "isFlora": true,
+    "isPassable": true,
+    "isLiquid": false,
+    "texture": "red_flower.png"
+  },
+  "yellow_flower": {
+    "id": 17,
+    "name": "Lumen Petal",
+    "color": "#facc15",
+    "health": 10,
+    "isTransparent": true,
+    "lightLevel": 0,
+    "isFlora": true,
+    "isPassable": true,
+    "isLiquid": false,
+    "texture": "yellow_flower.png"
+  },
+  "water": {
+    "id": 18,
+    "name": "H2O Fluid",
+    "color": "#3b82f6",
+    "health": 100,
+    "isTransparent": true,
+    "opacity": 0.85,
+    "lightLevel": 0,
+    "isFlora": false,
+    "isPassable": false,
+    "isLiquid": true,
+    "texture": "water.png"
+  },
+  "lava": {
+    "id": 19,
+    "name": "Plasma Fluid",
+    "color": "#00e5ff",
+    "health": 100,
+    "isTransparent": true,
+    "opacity": 0.95,
+    "lightLevel": 15,
+    "isFlora": false,
+    "isPassable": false,
+    "isLiquid": true,
+    "texture": "lava.png"
+  },
+  "obsidian": {
+    "id": 20,
+    "name": "Obsidian",
+    "color": "#111827",
+    "health": 500,
+    "isTransparent": false,
+    "lightLevel": 0,
+    "isFlora": false,
+    "isPassable": false,
+    "isLiquid": false,
+    "texture": "obsidian.png"
+  },
+  "cobblestone": {
+    "id": 21,
+    "name": "Cooling Magma",
+    "color": "#4b5563",
+    "health": 250,
+    "isTransparent": false,
+    "lightLevel": 0,
+    "isFlora": false,
+    "isPassable": false,
+    "isLiquid": false,
+    "texture": "cobblestone.png"
+  }
+}

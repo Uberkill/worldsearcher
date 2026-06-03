@@ -1,0 +1,31 @@
+{
+  "RECIPE_WOODEN_PLANKS": {
+    "inputs": [{ "id": "log", "qty": 1 }],
+    "outputs": [{ "id": "wood", "qty": 4 }]
+  },
+  "RECIPE_CRAFTING_TABLE": {
+    "inputs": [{ "id": "wood", "qty": 4 }],
+    "outputs": [{ "id": "crafting_table", "qty": 1 }]
+  },
+  "RECIPE_WOODEN_PICKAXE": {
+    "inputs": [{ "id": "wood", "qty": 3 }, { "id": "stick", "qty": 2 }],
+    "outputs": [{ "id": "wooden_pickaxe", "qty": 1, "unstackable": true, "durability": 60 }]
+  },
+  "RECIPE_STONE_PICKAXE": {
+    "inputs": [{ "id": "cobblestone", "qty": 3 }, { "id": "stick", "qty": 2 }],
+    "outputs": [{ "id": "stone_pickaxe", "qty": 1, "unstackable": true, "durability": 132 }]
+  },
+  "RECIPE_STICK": {
+    "inputs": [{ "id": "wood", "qty": 2 }],
+    "outputs": [{ "id": "stick", "qty": 4 }]
+  },
+  "RECIPE_TORCH": {
+    "inputs": [{ "id": "coal", "qty": 1 }, { "id": "stick", "qty": 1 }],
+    "outputs": [{ "id": "lantern", "qty": 4 }]
+  },
+  "RECIPE_GLASS": {
+    "inputs": [{ "id": "alien_sand", "qty": 1 }],
+    "outputs": [{ "id": "glass", "qty": 1 }],
+    "requiresFurnace": true
+  }
+}

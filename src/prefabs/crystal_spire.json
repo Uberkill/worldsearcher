@@ -1,0 +1,49 @@
+{
+  "name": "Crystal_Spire",
+  "palette": {
+    "G": "glass",
+    "L": "glow_panel"
+  },
+  "layers": [
+    [
+      " G ",
+      "GGG",
+      " G "
+    ],
+    [
+      " G ",
+      "GLG",
+      " G "
+    ],
+    [
+      " G ",
+      "GLG",
+      " G "
+    ],
+    [
+      " G ",
+      "GLG",
+      " G "
+    ],
+    [
+      " G ",
+      "GLG",
+      " G "
+    ],
+    [
+      " G ",
+      "GGG",
+      " G "
+    ],
+    [
+      " G ",
+      " G ",
+      " G "
+    ],
+    [
+      "   ",
+      " G ",
+      "   "
+    ]
+  ]
+}
