@@ -5,20 +5,8 @@
     "T": "tnt"
   },
   "layers": [
-    [
-      " B ",
-      "BBB",
-      " B "
-    ],
-    [
-      "BBB",
-      "BTB",
-      "BBB"
-    ],
-    [
-      " B ",
-      "BBB",
-      " B "
-    ]
+    [" B ", "BBB", " B "],
+    ["BBB", "BTB", "BBB"],
+    [" B ", "BBB", " B "]
   ]
 }

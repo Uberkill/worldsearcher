@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128">
+  <path d="M64 128 L 64 64" stroke="#059669" stroke-width="8"/>
+  <circle cx="64" cy="40" r="12" fill="#d97706"/>
+  <path d="M64 40 L 40 20 L 50 40 L 40 60 L 64 40 Z" fill="#facc15"/>
+  <path d="M64 40 L 88 20 L 78 40 L 88 60 L 64 40 Z" fill="#facc15"/>
+  <path d="M64 40 L 64 10 L 74 30 L 54 30 L 64 40 Z" fill="#facc15"/>
+  <path d="M64 40 L 64 70 L 74 50 L 54 50 L 64 40 Z" fill="#facc15"/>
+</svg>

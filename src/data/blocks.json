@@ -37,11 +37,7 @@
     "isFlora": false,
     "isPassable": false,
     "isLiquid": false,
-    "textures": {
-      "top": "chest_top.png",
-      "bottom": "wood.png",
-      "side": "chest_side.png"
-    }
+    "texture": "chest.png"
   },
   "glass": {
     "id": 3,
@@ -54,7 +50,7 @@
     "isFlora": false,
     "isPassable": false,
     "isLiquid": false,
-    "texture": "glass.png"
+    "texture": "glass.svg"
   },
   "wood": {
     "id": 4,
@@ -186,11 +182,7 @@
     "isFlora": false,
     "isPassable": false,
     "isLiquid": false,
-    "textures": {
-      "top": "crafting_table_top.png",
-      "bottom": "wood.png",
-      "side": "crafting_table_side.png"
-    }
+    "texture": "crafting_table.png"
   },
   "crystal": {
     "id": 14,
@@ -215,7 +207,7 @@
     "isFlora": true,
     "isPassable": true,
     "isLiquid": false,
-    "texture": "tall_grass.png"
+    "texture": "tall_grass.svg"
   },
   "red_flower": {
     "id": 16,
@@ -227,7 +219,7 @@
     "isFlora": true,
     "isPassable": true,
     "isLiquid": false,
-    "texture": "red_flower.png"
+    "texture": "red_flower.svg"
   },
   "yellow_flower": {
     "id": 17,
@@ -239,7 +231,7 @@
     "isFlora": true,
     "isPassable": true,
     "isLiquid": false,
-    "texture": "yellow_flower.png"
+    "texture": "yellow_flower.svg"
   },
   "water": {
     "id": 18,
@@ -265,6 +257,7 @@
     "isFlora": false,
     "isPassable": false,
     "isLiquid": true,
+    "damagePerTick": 10,
     "texture": "lava.png"
   },
   "obsidian": {
@@ -290,5 +283,31 @@
     "isPassable": false,
     "isLiquid": false,
     "texture": "cobblestone.png"
+  },
+  "flare": {
+    "id": 23,
+    "name": "Flare",
+    "color": "#ff8800",
+    "health": 1,
+    "isTransparent": true,
+    "isHidden": true,
+    "lightLevel": 15,
+    "isFlora": false,
+    "isPassable": true,
+    "isLiquid": false,
+    "texture": "fallback"
+  },
+  "xp_orb": {
+    "id": 24,
+    "name": "Scrap Data",
+    "color": "#4ade80",
+    "health": 1,
+    "isTransparent": true,
+    "isHidden": true,
+    "lightLevel": 10,
+    "isFlora": false,
+    "isPassable": true,
+    "isLiquid": false,
+    "texture": "fallback"
   }
 }

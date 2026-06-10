@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
-import html2canvas from 'html2canvas';
 
 export const Screenshot = () => {
   const { gl, scene, camera } = useThree();
@@ -8,11 +7,15 @@ export const Screenshot = () => {
   useEffect(() => {
     const handleKeyDown = async (e) => {
       if (e.key.toLowerCase() === 'p') {
-        if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
-        
+        if (
+          document.activeElement.tagName === 'INPUT' ||
+          document.activeElement.tagName === 'TEXTAREA'
+        )
+          return;
+
         // Force a render so the buffer isn't clear when we capture it
         gl.render(scene, camera);
-        
+
         try {
           const dataURL = gl.domElement.toDataURL('image/png');
           const link = document.createElement('a');
@@ -20,7 +23,7 @@ export const Screenshot = () => {
           link.href = dataURL;
           link.click();
         } catch (err) {
-          console.error("Failed to capture screenshot:", err);
+          console.error('Failed to capture screenshot:', err);
         }
       }
     };

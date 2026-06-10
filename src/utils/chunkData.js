@@ -18,10 +18,16 @@ import { BlockRegistry } from '../registry/BlockRegistry';
 
 export const CHUNK_SIZE_X = 16;
 export const CHUNK_SIZE_Z = 16;
-export const CHUNK_Y_MIN = -64;
+export const CHUNK_Y_MIN = -32;
 export const CHUNK_Y_MAX = 255;
-export const CHUNK_HEIGHT = CHUNK_Y_MAX - CHUNK_Y_MIN + 1; // 320
-export const CHUNK_VOLUME = CHUNK_SIZE_X * CHUNK_HEIGHT * CHUNK_SIZE_Z; // 81920
+export const CHUNK_HEIGHT = CHUNK_Y_MAX - CHUNK_Y_MIN + 1; // 288
+export const CHUNK_VOLUME = CHUNK_SIZE_X * CHUNK_HEIGHT * CHUNK_SIZE_Z; // 73728
+
+// Dynamic World Scaling Constants
+export const SEA_LEVEL = 30;
+export const CHUNK_PAD = 1;
+export const HALO_SIZE_X = CHUNK_SIZE_X + CHUNK_PAD * 2;
+export const HALO_SIZE_Z = CHUNK_SIZE_Z + CHUNK_PAD * 2;
 
 /**
  * Converts 3D chunk-local coordinates into a 1D Array index.
@@ -32,100 +38,97 @@ export const CHUNK_VOLUME = CHUNK_SIZE_X * CHUNK_HEIGHT * CHUNK_SIZE_Z; // 81920
 export const getIndex = (lx, y, lz) => {
   const yOffset = y - CHUNK_Y_MIN;
   // Index formula: (Y * 256) + (Z * 16) + X
-  return (yOffset * 256) + (lz * 16) + lx;
+  return yOffset * 256 + lz * 16 + lx;
 };
 
 /**
  * Returns true if the coordinates are strictly inside the chunk boundaries.
  */
 export const isInsideChunk = (lx, y, lz) => {
-  return lx >= 0 && lx < 16 && lz >= 0 && lz < 16 && y >= CHUNK_Y_MIN && y <= CHUNK_Y_MAX;
+  return (
+    lx >= 0 &&
+    lx < 16 &&
+    lz >= 0 &&
+    lz < 16 &&
+    y >= CHUNK_Y_MIN &&
+    y <= CHUNK_Y_MAX
+  );
 };
 
 /**
  * Bit-packs block metadata into the ECS buffer.
  */
-export const setBlock = (buffer, index, textureId, health, isHidden, level = 0, blockLight = 0, sunLight = 0) => {
-  const h = health === Infinity ? 511 : Math.min(Math.max(health, 0), 510);
-  buffer[index] = (textureId & 0xFF) | 
-                  ((h & 0x1FF) << 8) | 
-                  ((level & 0xF) << 17) | 
-                  ((isHidden ? 1 : 0) << 21) |
-                  ((blockLight & 0xF) << 22) |
-                  ((sunLight & 0xF) << 26);
+export const setBlock = (
+  buffer,
+  index,
+  textureId,
+  health,
+  isHidden,
+  level = 0,
+  blockLight = 0,
+  sunLight = 0
+) => {
+  const h = (health === Infinity || health >= 9999) ? 511 : Math.min(Math.max(health, 0), 510);
+  buffer[index] =
+    (textureId & 0xff) |
+    ((h & 0x1ff) << 8) |
+    ((level & 0xf) << 17) |
+    ((isHidden ? 1 : 0) << 21) |
+    ((blockLight & 0xf) << 22) |
+    ((sunLight & 0xf) << 26);
 };
 
 export const setLight = (buffer, index, blockLight, sunLight) => {
   const val = buffer[index];
-  buffer[index] = (val & ~(0xFF << 22)) | ((blockLight & 0xF) << 22) | ((sunLight & 0xF) << 26);
+  buffer[index] =
+    (val & ~(0xff << 22)) |
+    ((blockLight & 0xf) << 22) |
+    ((sunLight & 0xf) << 26);
 };
 
 export const setBlockLight = (buffer, index, blockLight) => {
   const val = buffer[index];
-  buffer[index] = (val & ~(0xF << 22)) | ((blockLight & 0xF) << 22);
+  buffer[index] = (val & ~(0xf << 22)) | ((blockLight & 0xf) << 22);
 };
 
 export const setSunlight = (buffer, index, sunLight) => {
   const val = buffer[index];
-  buffer[index] = (val & ~(0xF << 26)) | ((sunLight & 0xF) << 26);
+  buffer[index] = (val & ~(0xf << 26)) | ((sunLight & 0xf) << 26);
+};
+
+export const setFluidLevel = (buffer, index, level) => {
+  const val = buffer[index];
+  // Clear bits 17-20 and set new level
+  buffer[index] = (val & ~(0xf << 17)) | ((level & 0xf) << 17);
 };
 
 // --- Fast ECS Readers ---
-export const getTextureId = (val) => val & 0xFF;
+export const getTextureId = (val) => val & 0xff;
 
 export const getHealth = (val) => {
-  const h = (val >> 8) & 0x1FF;
+  const h = (val >> 8) & 0x1ff;
   return h === 511 ? Infinity : h;
 };
 
-export const getLevel = (val) => (val >> 17) & 0xF;
+export const getLevel = (val) => (val >> 17) & 0xf;
 
 export const getIsHidden = (val) => ((val >> 21) & 1) === 1;
 
-export const getBlockLight = (val) => (val >> 22) & 0xF;
+export const getBlockLight = (val) => (val >> 22) & 0xf;
 
-export const getSunlight = (val) => (val >> 26) & 0xF;
+export const getSunlight = (val) => (val >> 26) & 0xf;
 
 /**
  * Helper to safely query a global coordinate across the main chunk and its neighbors.
- * Useful for lighting and greedy meshing.
+ * Returns -2 if out of Y bounds, -1 if out of X/Z bounds (neighbor not found), otherwise returns the raw 32-bit block.
  */
-export const getGlobalBlockVal = (cx, cz, buffer, neighborBuffers, gx, gy, gz) => {
-  // If Y is entirely out of bounds, return Air
-  if (gy < CHUNK_Y_MIN || gy > CHUNK_Y_MAX) return 0;
+export const getGlobalRawBlock = (cx, cz, buffer, neighborBuffers, gx, gy, gz) => {
+  if (gy < CHUNK_Y_MIN || gy > CHUNK_Y_MAX) return -2;
 
-  // If inside the main chunk
   if (gx >= cx * 16 && gx < cx * 16 + 16 && gz >= cz * 16 && gz < cz * 16 + 16) {
-    const lx = (gx % 16 + 16) % 16;
-    const lz = (gz % 16 + 16) % 16;
+    const lx = ((gx % 16) + 16) % 16;
+    const lz = ((gz % 16) + 16) % 16;
     return buffer[getIndex(lx, gy, lz)];
-  }
-
-  // It's in a neighbor chunk. Find which one.
-  const ncx = Math.floor(gx / 16);
-  const ncz = Math.floor(gz / 16);
-
-  if (neighborBuffers) {
-    for (let i = 0; i < neighborBuffers.length; i++) {
-      const nb = neighborBuffers[i];
-      if (nb.cx === ncx && nb.cz === ncz) {
-        const lx = (gx % 16 + 16) % 16;
-        const lz = (gz % 16 + 16) % 16;
-        return nb.buffer[getIndex(lx, gy, lz)];
-      }
-    }
-  }
-
-  return 0; // Unloaded / Air
-};
-
-export const getGlobalBlockTex = (cx, cz, buffer, neighborBuffers, neighborObj, gx, gy, gz) => {
-  if (gy < CHUNK_Y_MIN || gy > CHUNK_Y_MAX) return 0;
-  
-  if (gx >= cx * 16 && gx < cx * 16 + 16 && gz >= cz * 16 && gz < cz * 16 + 16) {
-    const lx = (gx % 16 + 16) % 16;
-    const lz = (gz % 16 + 16) % 16;
-    return getTextureId(buffer[getIndex(lx, gy, lz)]);
   }
 
   if (neighborBuffers) {
@@ -133,74 +136,48 @@ export const getGlobalBlockTex = (cx, cz, buffer, neighborBuffers, neighborObj, 
     const ncz = Math.floor(gz / 16);
     for (let i = 0; i < neighborBuffers.length; i++) {
       if (neighborBuffers[i].cx === ncx && neighborBuffers[i].cz === ncz) {
-        const lx = (gx % 16 + 16) % 16;
-        const lz = (gz % 16 + 16) % 16;
-        return getTextureId(neighborBuffers[i].buffer[getIndex(lx, gy, lz)]);
+        const lx = ((gx % 16) + 16) % 16;
+        const lz = ((gz % 16) + 16) % 16;
+        return neighborBuffers[i].buffer[getIndex(lx, gy, lz)];
       }
     }
   }
 
-  if (neighborObj) {
-    const nb = neighborObj[`${gx},${gy},${gz}`];
-    const nbLegacy = neighborObj[`${gx},${gy+0.5},${gz}`];
-    const b = nb || nbLegacy;
-    return b ? (typeof b.texture === 'number' ? b.texture : (BlockRegistry[b.texture]?.id || 1)) : 0;
+  return -1;
+};
+
+export const getGlobalBlockVal = (cx, cz, buffer, neighborBuffers, gx, gy, gz) => {
+  const val = getGlobalRawBlock(cx, cz, buffer, neighborBuffers, gx, gy, gz);
+  return val < 0 ? 0 : val;
+};
+
+export const getGlobalBlockTex = (cx, cz, buffer, neighborBuffers, neighborObj, gx, gy, gz) => {
+  const val = getGlobalRawBlock(cx, cz, buffer, neighborBuffers, gx, gy, gz);
+  if (val >= 0) return getTextureId(val);
+
+  if (val === -1 && neighborObj) {
+    const nb = neighborObj[`${gx},${gy},${gz}`] || neighborObj[`${gx},${gy + 0.5},${gz}`];
+    return nb ? (typeof nb.texture === 'number' ? nb.texture : BlockRegistry[nb.texture]?.id || 1) : 0;
   }
 
   return 0;
 };
 
 export const getGlobalBlockLevel = (cx, cz, buffer, neighborBuffers, neighborObj, gx, gy, gz) => {
-  if (gy < CHUNK_Y_MIN || gy > CHUNK_Y_MAX) return 0;
-  
-  if (gx >= cx * 16 && gx < cx * 16 + 16 && gz >= cz * 16 && gz < cz * 16 + 16) {
-    const lx = (gx % 16 + 16) % 16;
-    const lz = (gz % 16 + 16) % 16;
-    return getLevel(buffer[getIndex(lx, gy, lz)]);
-  }
+  const val = getGlobalRawBlock(cx, cz, buffer, neighborBuffers, gx, gy, gz);
+  if (val >= 0) return getLevel(val);
 
-  if (neighborBuffers) {
-    const ncx = Math.floor(gx / 16);
-    const ncz = Math.floor(gz / 16);
-    for (let i = 0; i < neighborBuffers.length; i++) {
-      if (neighborBuffers[i].cx === ncx && neighborBuffers[i].cz === ncz) {
-        const lx = (gx % 16 + 16) % 16;
-        const lz = (gz % 16 + 16) % 16;
-        return getLevel(neighborBuffers[i].buffer[getIndex(lx, gy, lz)]);
-      }
-    }
-  }
-
-  if (neighborObj) {
-    const nb = neighborObj[`${gx},${gy},${gz}`];
-    const nbLegacy = neighborObj[`${gx},${gy+0.5},${gz}`];
-    const b = nb || nbLegacy;
-    return b ? (b.level || 0) : 0;
+  if (val === -1 && neighborObj) {
+    const nb = neighborObj[`${gx},${gy},${gz}`] || neighborObj[`${gx},${gy + 0.5},${gz}`];
+    return nb ? nb.level || 0 : 0;
   }
 
   return 0;
 };
 
 export const getGlobalBlockLight = (cx, cz, buffer, neighborBuffers, neighborObj, gx, gy, gz) => {
-  if (gy < CHUNK_Y_MIN || gy > CHUNK_Y_MAX) return (15 << 26); // Max sunlight above/below (packed!)
-  
-  if (gx >= cx * 16 && gx < cx * 16 + 16 && gz >= cz * 16 && gz < cz * 16 + 16) {
-    const lx = (gx % 16 + 16) % 16;
-    const lz = (gz % 16 + 16) % 16;
-    return buffer[getIndex(lx, gy, lz)]; // Return RAW block data so mesher can extract sun/blk!
-  }
-
-  if (neighborBuffers) {
-    const ncx = Math.floor(gx / 16);
-    const ncz = Math.floor(gz / 16);
-    for (let i = 0; i < neighborBuffers.length; i++) {
-      if (neighborBuffers[i].cx === ncx && neighborBuffers[i].cz === ncz) {
-        const lx = (gx % 16 + 16) % 16;
-        const lz = (gz % 16 + 16) % 16;
-        return neighborBuffers[i].buffer[getIndex(lx, gy, lz)]; // Return RAW block data!
-      }
-    }
-  }
-
-  return 15; // Fallback to max sunlight if neighbor is missing, prevents pitch black holes!
+  const val = getGlobalRawBlock(cx, cz, buffer, neighborBuffers, gx, gy, gz);
+  if (val === -2) return 15 << 26; // Out of Y bounds (Max sunlight packed)
+  if (val === -1) return 15;       // Out of bounds / fallback
+  return val;                      // Raw block data containing packed light
 };

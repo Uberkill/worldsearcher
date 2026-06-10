@@ -1,33 +1,36 @@
 import { RigidBody } from '@react-three/rapier';
 import { useStore } from '../stores/useStore';
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { playerPosition } from '../globals';
-import * as THREE from 'three';
 import { MaterialCache } from '../utils/MaterialCache';
 
 import { GlobalRegistry } from '../registry/Registry';
 
 export const DynamicCube = ({ block }) => {
-  const bakeCube = useStore(state => state.bakeCube);
+  const bakeCube = useStore((state) => state.bakeCube);
 
-  const addCube = useStore(state => state.addCube);
-  const setHoverTarget = useStore((state) => state.setHoverTarget);
-  const damageBlock = useStore(state => state.damageBlock);
-  const removeDebris = useStore(state => state.removeDebris);
+        const removeDebris = useStore((state) => state.removeDebris);
   const ref = useRef();
   const meshRef = useRef();
-  
+
   useEffect(() => {
     if (ref.current) {
       ref.current.wakeUp();
-      ref.current.applyImpulse({ x: (Math.random()-0.5)*0.5, y: -0.01, z: (Math.random()-0.5)*0.5 }, true);
+      ref.current.applyImpulse(
+        {
+          x: (Math.random() - 0.5) * 0.5,
+          y: -0.01,
+          z: (Math.random() - 0.5) * 0.5,
+        },
+        true
+      );
     }
   }, []);
-  
+
+  const hasRemoved = useRef(false);
   useFrame(() => {
-    if (!block.isDebris) return; // Completely bail out if not debris (optimization)
-    
+    if (!block.isDebris || hasRemoved.current) return; // Completely bail out if not debris (optimization)
+
     const age = Date.now() - block.createdAt;
     if (age > 8000) {
       // Shrink for the last 2 seconds
@@ -36,11 +39,12 @@ export const DynamicCube = ({ block }) => {
         meshRef.current.scale.setScalar(shrinkFactor);
       }
       if (shrinkFactor === 0) {
+        hasRemoved.current = true;
         removeDebris(block.key);
       }
     }
   });
-  
+
   return (
     <RigidBody
       ref={ref}
@@ -50,13 +54,16 @@ export const DynamicCube = ({ block }) => {
       onSleep={() => {
         if (ref.current && !block.isDebris) {
           const trans = ref.current.translation();
-          bakeCube(block.key, [trans.x, trans.y, trans.z]);
+          // Defer state update to next tick to avoid unmounting the RigidBody during Rapier physics step
+          setTimeout(() => {
+            bakeCube(block.key, [trans.x, trans.y, trans.z]);
+          }, 0);
         }
       }}
     >
-      <mesh 
+      <mesh
         ref={meshRef}
-        castShadow 
+        castShadow
         receiveShadow
         material={MaterialCache.getStandard(
           GlobalRegistry[block.texture]?.color || '#ffffff',

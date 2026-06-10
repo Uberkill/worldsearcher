@@ -1,187 +1,245 @@
 // pathfinderWorker.js
-// Calculates a 3D Vector Flow Field (Dijkstra Map) over a Voxel Grid
+// A* Pathfinding Worker for Voxel Environments
 
 const getChunkKey = (cx, cz) => `${cx},${cz}`;
 
-// A simple queue for BFS to avoid Garbage Collection stutter
-class FixedQueue {
-  constructor(size) {
-    this.data = new Int32Array(size * 3);
-    this.head = 0;
-    this.tail = 0;
+// Binary Heap for A* Priority Queue
+class MinHeap {
+  constructor() {
+    this.heap = [];
   }
-  push(x, y, z) {
-    this.data[this.tail * 3] = x;
-    this.data[this.tail * 3 + 1] = y;
-    this.data[this.tail * 3 + 2] = z;
-    this.tail++;
+  push(node) {
+    this.heap.push(node);
+    this.bubbleUp(this.heap.length - 1);
   }
-  shift() {
-    const h = this.head;
-    this.head++;
-    return [this.data[h * 3], this.data[h * 3 + 1], this.data[h * 3 + 2]];
+  pop() {
+    const min = this.heap[0];
+    const end = this.heap.pop();
+    if (this.heap.length > 0) {
+      this.heap[0] = end;
+      this.sinkDown(0);
+    }
+    return min;
   }
   isEmpty() {
-    return this.head === this.tail;
+    return this.heap.length === 0;
+  }
+  bubbleUp(n) {
+    const element = this.heap[n];
+    while (n > 0) {
+      let parentN = Math.floor((n + 1) / 2) - 1;
+      let parent = this.heap[parentN];
+      if (element.fScore >= parent.fScore) break;
+      this.heap[parentN] = element;
+      this.heap[n] = parent;
+      n = parentN;
+    }
+  }
+  sinkDown(n) {
+    const length = this.heap.length;
+    const element = this.heap[n];
+    while (true) {
+      let child2N = (n + 1) * 2;
+      let child1N = child2N - 1;
+      let swap = null;
+      if (child1N < length) {
+        let child1 = this.heap[child1N];
+        if (child1.fScore < element.fScore) swap = child1N;
+      }
+      if (child2N < length) {
+        let child2 = this.heap[child2N];
+        if (
+          child2.fScore < (swap === null ? element.fScore : this.heap[child1N].fScore)
+        ) {
+          swap = child2N;
+        }
+      }
+      if (swap === null) break;
+      this.heap[n] = this.heap[swap];
+      this.heap[swap] = element;
+      n = swap;
+    }
   }
 }
 
-let recycledBuffer = null;
+// Map for quick closed-set lookups
+const hashNode = (x, y, z) => `${x},${y},${z}`;
+
+// Heuristic: 3D Euclidean Distance
+const heuristic = (x1, y1, z1, x2, y2, z2) => {
+  return Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2 + (z1 - z2) ** 2);
+};
+
+const chunkCache = new Map();
 
 self.onmessage = function (e) {
-  if (e.data.recycleBuffer) {
-     recycledBuffer = e.data.recycleBuffer;
-     return;
+  const type = e.data.type || 'REQUEST_PATH';
+
+  if (type === 'UPDATE_CHUNK') {
+    const { chunkKey, buffer } = e.data;
+    chunkCache.set(chunkKey, buffer);
+    return;
   }
 
-  const { origin, radius, chunks } = e.data;
-  const startTime = performance.now();
+  if (type === 'REMOVE_CHUNK') {
+    const { chunkKey } = e.data;
+    chunkCache.delete(chunkKey);
+    return;
+  }
 
-  const originX = Math.floor(origin[0]);
-  const originY = Math.floor(origin[1]);
-  const originZ = Math.floor(origin[2]);
+  if (type !== 'REQUEST_PATH') return;
 
-  const width = radius * 2 + 1;
-  const height = radius * 2 + 1;
-  const depth = radius * 2 + 1;
-  const totalVoxels = width * height * depth;
+  const { id, sequenceID, start, end } = e.data;
+  
+  if (!start || !end) return;
 
-  // Cost map: 0 = goal, Infinity = unreached, >0 = distance
-  const costMap = new Float32Array(totalVoxels);
-  costMap.fill(Infinity);
+  const startX = Math.floor(start[0]);
+  const startY = Math.floor(start[1]);
+  const startZ = Math.floor(start[2]);
 
-  const getLocalIndex = (lx, ly, lz) => ly * width * depth + lz * width + lx;
+  const endX = Math.floor(end[0]);
+  const endY = Math.floor(end[1]);
+  const endZ = Math.floor(end[2]);
 
-  // Fast chunk data lookup
+  // Fast chunk data lookup using the worker-local chunk cache
   const isSolid = (wx, wy, wz) => {
-    if (wy < -64 || wy > 255) return false;
-    
+    if (wy < -32 || wy > 255) return false;
+
     const cx = Math.floor(wx / 16);
     const cz = Math.floor(wz / 16);
-    const chunkBuffer = chunks[getChunkKey(cx, cz)];
-    
+    const chunkBuffer = chunkCache.get(getChunkKey(cx, cz));
+
     if (!chunkBuffer) return true; // Unloaded chunk = solid boundary
-    
-    const lx = (wx % 16 + 16) % 16;
-    const lz = (wz % 16 + 16) % 16;
-    const ly = wy + 64; // Chunk index offset
-    
+
+    const lx = ((wx % 16) + 16) % 16;
+    const lz = ((wz % 16) + 16) % 16;
+    const ly = wy + 32; // Chunk index offset (Y_MIN is -32)
+
     const blockIndex = ly * 256 + lz * 16 + lx;
     const blockVal = chunkBuffer[blockIndex];
-    
-    // Block Value 0 = Air, >0 = Solid. (Ignoring specific liquid logic for now, water slows you down but isn't solid)
+
     return blockVal > 0;
   };
 
-  // 1. Dijkstra BFS Flood-Fill
-  const queue = new FixedQueue(totalVoxels);
-  queue.push(originX, originY, originZ);
-  
-  const startIndex = getLocalIndex(radius, radius, radius);
-  costMap[startIndex] = 0;
-
   // 26-way neighbors (3D)
   const neighbors = [];
-  for(let dx = -1; dx <= 1; dx++) {
-     for(let dy = -1; dy <= 1; dy++) {
-        for(let dz = -1; dz <= 1; dz++) {
-           if (dx !== 0 || dy !== 0 || dz !== 0) neighbors.push([dx, dy, dz]);
-        }
-     }
-  }
-
-  while (!queue.isEmpty()) {
-    const [wx, wy, wz] = queue.shift();
-    
-    const lx = wx - (originX - radius);
-    const ly = wy - (originY - radius);
-    const lz = wz - (originZ - radius);
-    
-    const currentIndex = getLocalIndex(lx, ly, lz);
-    const currentCost = costMap[currentIndex];
-
-    // Orthogonal neighbors first, diagonal second (for basic A* heuristic weight)
-    for (let i = 0; i < neighbors.length; i++) {
-       const [dx, dy, dz] = neighbors[i];
-       
-       const nx = lx + dx;
-       const ny = ly + dy;
-       const nz = lz + dz;
-       
-       if (nx < 0 || ny < 0 || nz < 0 || nx >= width || ny >= height || nz >= depth) continue;
-       
-       const nWorldX = wx + dx;
-       const nWorldY = wy + dy;
-       const nWorldZ = wz + dz;
-       
-       if (isSolid(nWorldX, nWorldY, nWorldZ)) continue;
-       
-       // Allow stepping up 1 block if there is headroom
-       if (dy === 1 && isSolid(wx, wy + 1, wz) && isSolid(wx, wy + 2, wz)) continue;
-       
-       // Calculate weight (1.0 for straight, 1.414 for diagonal, 1.732 for 3D diag)
-       const weight = Math.sqrt(dx*dx + dy*dy + dz*dz);
-       const newCost = currentCost + weight;
-       
-       const nextIndex = getLocalIndex(nx, ny, nz);
-       if (newCost < costMap[nextIndex]) {
-          costMap[nextIndex] = newCost;
-          queue.push(nWorldX, nWorldY, nWorldZ);
-       }
-    }
-  }
-
-  // 2. Generate Vector Flow Field (Gradients)
-  // 3 floats (XYZ) per voxel
-  const vectorField = recycledBuffer ? new Float32Array(recycledBuffer) : new Float32Array(totalVoxels * 3);
-  recycledBuffer = null;
-
-  for (let ly = 0; ly < height; ly++) {
-    for (let lz = 0; lz < depth; lz++) {
-      for (let lx = 0; lx < width; lx++) {
-        const i = getLocalIndex(lx, ly, lz);
-        if (costMap[i] === Infinity) continue; // Unreachable
-
-        let bestCost = costMap[i];
-        let bestDir = [0, 0, 0];
-
-        for (let j = 0; j < neighbors.length; j++) {
-           const [dx, dy, dz] = neighbors[j];
-           const nx = lx + dx;
-           const ny = ly + dy;
-           const nz = lz + dz;
-           
-           if (nx < 0 || ny < 0 || nz < 0 || nx >= width || ny >= height || nz >= depth) continue;
-           
-           const neighborCost = costMap[getLocalIndex(nx, ny, nz)];
-           if (neighborCost < bestCost) {
-              bestCost = neighborCost;
-              bestDir = [dx, dy, dz];
-           }
-        }
-        
-        // Normalize the best direction vector
-        const mag = Math.sqrt(bestDir[0]*bestDir[0] + bestDir[1]*bestDir[1] + bestDir[2]*bestDir[2]);
-        if (mag > 0) {
-           vectorField[i * 3] = bestDir[0] / mag;
-           vectorField[i * 3 + 1] = bestDir[1] / mag;
-           vectorField[i * 3 + 2] = bestDir[2] / mag;
-        }
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        if (dx !== 0 || dy !== 0 || dz !== 0) neighbors.push([dx, dy, dz]);
       }
     }
   }
 
-  const duration = performance.now() - startTime;
-  console.log(`[Pathfinder] Flow Field calculated in ${duration.toFixed(2)}ms.`);
+  const openSet = new MinHeap();
+  const cameFrom = new Map();
+  const gScore = new Map();
 
-  // Pass ownership of the heavy ArrayBuffer directly to main thread (0ms copy)
+  const startHash = hashNode(startX, startY, startZ);
+  gScore.set(startHash, 0);
+  
+  openSet.push({
+    x: startX,
+    y: startY,
+    z: startZ,
+    fScore: heuristic(startX, startY, startZ, endX, endY, endZ),
+  });
+
+  let nodesEvaluated = 0;
+  const MAX_NODES = 2000; // Strict limit to prevent "Pit of Despair" hangs
+  let closestNode = { x: startX, y: startY, z: startZ };
+  let minH = Infinity;
+
+  while (!openSet.isEmpty()) {
+    const current = openSet.pop();
+    const currentHash = hashNode(current.x, current.y, current.z);
+
+    // Goal reached
+    if (current.x === endX && current.y === endY && current.z === endZ) {
+      closestNode = current;
+      break;
+    }
+
+    nodesEvaluated++;
+    if (nodesEvaluated > MAX_NODES) {
+      break; // Abort and return partial path to closest node
+    }
+
+    const currentG = gScore.get(currentHash);
+
+    for (let i = 0; i < neighbors.length; i++) {
+      const [dx, dy, dz] = neighbors[i];
+      const nx = current.x + dx;
+      const ny = current.y + dy;
+      const nz = current.z + dz;
+
+      // Distance limit to prevent infinite searches
+      if (Math.abs(nx - startX) > 64 || Math.abs(nz - startZ) > 64) continue;
+
+      if (isSolid(nx, ny, nz)) continue;
+      
+      // Prevent diagonal clipping through solid blocks
+      if (dx !== 0 && dz !== 0) {
+        if (isSolid(current.x + dx, current.y, current.z) && isSolid(current.x, current.y, current.z + dz)) continue;
+      }
+
+      // Check headroom (2 blocks high)
+      if (isSolid(nx, ny + 1, nz)) continue;
+
+      // Cost calculation
+      let stepCost = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (dy > 0) stepCost += 2.0; // Jump penalty to prefer walking
+      if (dy < 0) stepCost += 0.5; // Fall preference
+
+      const tentativeG = currentG + stepCost;
+      const nHash = hashNode(nx, ny, nz);
+
+      if (!gScore.has(nHash) || tentativeG < gScore.get(nHash)) {
+        cameFrom.set(nHash, current);
+        gScore.set(nHash, tentativeG);
+        
+        const h = heuristic(nx, ny, nz, endX, endY, endZ);
+        if (h < minH) {
+          minH = h;
+          closestNode = { x: nx, y: ny, z: nz };
+        }
+
+        openSet.push({
+          x: nx,
+          y: ny,
+          z: nz,
+          fScore: tentativeG + h,
+        });
+      }
+    }
+  }
+
+  // Reconstruct path
+  const path = [];
+  let curr = closestNode;
+  while (curr) {
+    path.push(curr);
+    curr = cameFrom.get(hashNode(curr.x, curr.y, curr.z));
+  }
+  path.reverse(); // Start to End
+
+  // Convert to Transferable Float32Array (Memory Leak fix)
+  // Format: [x1, y1, z1, x2, y2, z2, ...]
+  const pathBuffer = new Float32Array(path.length * 3);
+  for (let i = 0; i < path.length; i++) {
+    pathBuffer[i * 3] = path[i].x + 0.5; // Center of voxel
+    pathBuffer[i * 3 + 1] = path[i].y;   // Bottom of voxel
+    pathBuffer[i * 3 + 2] = path[i].z + 0.5;
+  }
+
   self.postMessage(
-    { 
-       vectorField,
-       origin: [originX, originY, originZ],
-       radius,
-       width, height, depth
-    }, 
-    [vectorField.buffer]
+    {
+      type: 'PATH_RESULT',
+      id,
+      sequenceID,
+      pathBuffer,
+      length: path.length,
+    },
+    [pathBuffer.buffer] // Transfer ownership! Zero GC allocation!
   );
 };

@@ -1,0 +1,74 @@
+{
+  "grassland": {
+    "surface": "grass",
+    "subsurface": "dirt",
+    "roughness": 0.2,
+    "structures": ["TreeNormal", "TreeThick"],
+    "flora": ["tall_grass", "red_flower", "yellow_flower"],
+    "fauna": ["muck-pig"]
+  },
+  "forest": {
+    "surface": "grass",
+    "subsurface": "dirt",
+    "roughness": 0.4,
+    "structures": ["TreeNormal", "TreeThick"],
+    "flora": ["tall_grass", "red_flower"],
+    "fauna": ["muck-pig"]
+  },
+  "jungle": {
+    "surface": "grass",
+    "subsurface": "dirt",
+    "roughness": 1.0,
+    "structures": ["TreeThick"],
+    "flora": ["tall_grass"],
+    "fauna": []
+  },
+  "savanna": {
+    "surface": "dirt",
+    "subsurface": "stone",
+    "roughness": 0.6,
+    "structures": ["TreeSkinny"],
+    "flora": ["tall_grass"],
+    "fauna": ["wooly-grazer"]
+  },
+  "desert": {
+    "surface": "sand",
+    "subsurface": "sandstone",
+    "roughness": 0.1,
+    "structures": ["Cactus"],
+    "flora": [],
+    "fauna": []
+  },
+  "snow_peaks": {
+    "surface": "snow",
+    "subsurface": "stone",
+    "roughness": 1.5,
+    "structures": ["TreeSkinny"],
+    "flora": [],
+    "fauna": ["wooly-grazer"]
+  },
+  "tundra": {
+    "surface": "snow",
+    "subsurface": "dirt",
+    "roughness": 0.2,
+    "structures": [],
+    "flora": [],
+    "fauna": ["wooly-grazer"]
+  },
+  "alien_desert": {
+    "surface": "alien_sand",
+    "subsurface": "alien_sand",
+    "roughness": 1.2,
+    "structures": ["CrystalSpire"],
+    "flora": [],
+    "fauna": []
+  },
+  "boss_arena": {
+    "surface": "bedrock",
+    "subsurface": "stone",
+    "roughness": 0.5,
+    "structures": ["Ruins"],
+    "flora": [],
+    "fauna": ["beast"]
+  }
+}

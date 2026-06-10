@@ -6,7 +6,13 @@
     "isTransparent": false,
     "lightLevel": 0,
     "type": "tool",
-    "combat": { "type": "hitscan", "damage": 25, "range": 4, "cooldownMs": 500, "raycastRadius": 0.5 }
+    "combat": {
+      "type": "hitscan",
+      "damage": 25,
+      "range": 4,
+      "cooldownMs": 500,
+      "raycastRadius": 0.5
+    }
   },
   "gun": {
     "id": 23,
@@ -15,7 +21,12 @@
     "isTransparent": false,
     "lightLevel": 0,
     "type": "tool",
-    "combat": { "type": "projectile", "damage": 15, "speed": 40, "cooldownMs": 100 }
+    "combat": {
+      "type": "projectile",
+      "damage": 15,
+      "speed": 40,
+      "cooldownMs": 100
+    }
   },
   "pickaxe": {
     "id": 24,
@@ -24,7 +35,13 @@
     "isTransparent": false,
     "lightLevel": 0,
     "type": "tool",
-    "combat": { "type": "hitscan", "damage": 10, "range": 3, "cooldownMs": 600, "raycastRadius": 0.3 }
+    "combat": {
+      "type": "hitscan",
+      "damage": 10,
+      "range": 3,
+      "cooldownMs": 600,
+      "raycastRadius": 0.3
+    }
   },
   "lantern": {
     "id": 25,
@@ -41,7 +58,13 @@
     "isTransparent": false,
     "lightLevel": 0,
     "type": "tool",
-    "combat": { "type": "hitscan", "damage": 150, "range": 200, "cooldownMs": 1500, "areaOfEffect": 1.5 }
+    "combat": {
+      "type": "hitscan",
+      "damage": 150,
+      "range": 200,
+      "cooldownMs": 1500,
+      "areaOfEffect": 1.5
+    }
   },
   "grapple": {
     "id": 28,

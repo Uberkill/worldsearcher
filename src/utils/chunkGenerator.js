@@ -12,12 +12,26 @@
 import { createNoise2D, createNoise3D } from 'simplex-noise';
 import { getStructuresForChunk } from './structures';
 import { BlockIds, BlockById, BlockKeyById } from '../registry/BlockRegistry';
-import { setBlock, getIndex, CHUNK_VOLUME } from './chunkData';
+import {
+  setBlock,
+  getIndex,
+  CHUNK_VOLUME,
+  CHUNK_Y_MIN,
+  CHUNK_Y_MAX,
+  CHUNK_HEIGHT,
+  SEA_LEVEL,
+  CHUNK_PAD,
+  HALO_SIZE_X,
+  HALO_SIZE_Z,
+  CHUNK_SIZE_X,
+  CHUNK_SIZE_Z,
+} from './chunkData';
+import { getBiomeAt, getBiomeConfig } from './biomes';
 
 export function mulberry32(seed) {
   return () => {
     seed |= 0;
-    seed = (seed + 0x6D2B79F5) | 0;
+    seed = (seed + 0x6d2b79f5) | 0;
     let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4_294_967_296;
@@ -37,18 +51,18 @@ export function spatialHash(worldSeed, cx, cz) {
 
 // Lazy-loaded noise functions
 let noise2D;
-let biomeNoise2D;
+let tempNoise2D;
+let moistNoise2D;
 let caveNoise3D;
-let currentSeed = null;
 
-const norm = (n) => (n + 1) / 2;
+
+
 // ── fBm Noise Configuration ──
 const OCTAVES = 4;
-const BASE_FREQ = 0.015;
+
 const LACUNARITY = 2.0;
 const PERSISTENCE = 0.5;
-const BASE_HEIGHT = 64.0;
-const HEIGHT_SCALE = 32.0;
+
 
 // ── Main generation function ─────────────────────────────────────────────────
 let cachedWorldSeed = null;
@@ -56,96 +70,176 @@ let cachedWorldSeed = null;
 export const generateChunkPass1 = (cx, cz, worldSeed) => {
   if (worldSeed !== cachedWorldSeed) {
     cachedWorldSeed = worldSeed;
-    // CRITICAL FIX: The Simplex noise functions MUST be seeded by the global worldSeed, 
+    // CRITICAL FIX: The Simplex noise functions MUST be seeded by the global worldSeed,
     // NOT the chunkSeed! If you re-seed the noise per chunk, you completely destroy
     // the mathematical continuity of the noise, creating random sheer cliffs at every boundary.
     noise2D = createNoise2D(mulberry32(worldSeed));
-    biomeNoise2D = createNoise2D(mulberry32(worldSeed + 1));
-    caveNoise3D = createNoise3D(mulberry32(worldSeed + 2));
+    tempNoise2D = createNoise2D(mulberry32(worldSeed + 1));
+    moistNoise2D = createNoise2D(mulberry32(worldSeed + 2));
+    caveNoise3D = createNoise3D(mulberry32(worldSeed + 3));
   }
 
-  // Pass 1: Base Terrain (18x18x320 Flat Buffer)
-  const haloBuffer = new Uint16Array(18 * 320 * 18);
-  const getHaloIndex = (lx, y, lz) => (y + 64) * 324 + lz * 18 + lx;
-  const getSurfaceHeightMap = new Float32Array(18 * 18);
+  // Pass 1: Base Terrain Flat Buffer
+  const haloBuffer = new Uint16Array(HALO_SIZE_X * CHUNK_HEIGHT * HALO_SIZE_Z);
+  const getHaloIndex = (lx, y, lz) =>
+    (y - CHUNK_Y_MIN) * (HALO_SIZE_X * HALO_SIZE_Z) + lz * HALO_SIZE_X + lx;
+  const getSurfaceHeightMap = new Float32Array(HALO_SIZE_X * HALO_SIZE_Z);
 
-  for (let lx = 0; lx < 18; lx++) {
-    for (let lz = 0; lz < 18; lz++) {
-      const x = cx * 16 - 1 + lx;
-      const z = cz * 16 - 1 + lz;
-      
-      // OPTIMIZATION TRICK: 2D Base Height
+  for (let lx = 0; lx < HALO_SIZE_X; lx++) {
+    for (let lz = 0; lz < HALO_SIZE_Z; lz++) {
+      const x = cx * CHUNK_SIZE_X - CHUNK_PAD + lx;
+      const z = cz * CHUNK_SIZE_Z - CHUNK_PAD + lz;
+
       // Calculate max terrain height purely from 2D noise first
-      const raw2D = norm(noise2D(x * 0.005, z * 0.005));
-      const maxSurfaceHeight = Math.floor(BASE_HEIGHT + (raw2D * 2 - 1) * HEIGHT_SCALE * 1.5);
-      
-      // Determine surface biome textures
-      const biomeVal = norm(biomeNoise2D(x * 0.005, z * 0.005));
-      let surfaceTex = BlockIds['grass'];
-      let subTex = BlockIds['dirt'];
-      if (biomeVal < 0.2) { surfaceTex = BlockIds['alien_sand']; subTex = BlockIds['alien_sand']; }
-      else if (biomeVal > 0.8) { surfaceTex = BlockIds['snow']; subTex = BlockIds['stone']; }
+      // Calculate max terrain height using Fractal Brownian Motion (fBm) for jagged, organic detail
+      // Octave 1: Massive continent shapes (base layout)
+      const n1 = noise2D(x * 0.002, z * 0.002);
+      // Octave 2: Medium hills and valleys (adds the "ups and downs")
+      const n2 = noise2D(x * 0.01, z * 0.01) * 0.5;
+      // Octave 3: Small jagged details, cliffs, and ridges (removes the "smooth and round" look)
+      const n3 = noise2D(x * 0.03, z * 0.03) * 0.25;
 
-      let highestSolidY = -64;
+      // Determine the biome first so we can apply Dynamic Noise (Roughness)
+      const worldX = x; // x is already calculated globally relative to seed
+      const worldZ = z; // z is already calculated globally relative to seed
+      const biomeId = getBiomeAt(
+        worldX,
+        worldZ,
+        tempNoise2D,
+        moistNoise2D,
+        worldSeed
+      );
+      const biomeData = getBiomeConfig(biomeId);
+      const roughness =
+        biomeData.roughness !== undefined ? biomeData.roughness : 1.0;
 
-      for (let y = -64; y <= 255; y++) {
-        if (y === -64) { haloBuffer[getHaloIndex(lx, y, lz)] = BlockIds['bedrock']; highestSolidY = Math.max(highestSolidY, y); continue; }
-        
-        let isSolid = false;
-        
-        // 3D Noise Optimization Rule
-        if (y > maxSurfaceHeight + 20) {
-            // Instantly Output AIR
+      // Octave 4: Micro-details, scaled by biome roughness
+      const n4 = noise2D(x * 0.08, z * 0.08) * (0.125 * roughness);
+      // Octave 5: Extremely fine gravel/bumpy texture, scaled by biome roughness
+      const n5 = noise2D(x * 0.15, z * 0.15) * (0.0625 * roughness);
+
+      // Combine octaves and normalize roughly back to -1 to 1 range
+      const raw2D =
+        (n1 + n2 + n3 + n4 + n5) /
+        (1.75 + 0.125 * roughness + 0.0625 * roughness);
+
+      const distFromCenter = Math.sqrt(x * x + z * z);
+
+      // 1. Base values at spawn (100% safe, dry, rolling hills)
+      let amplitude = 30;
+      let baseHeight = 65;
+
+      // 2. MOUNTAIN OVERLOAD (200 to 500 blocks)
+      // As amplitude stretches, we push baseHeight UP equally.
+      // This forces the valleys to stay above SEA_LEVEL (30), preventing oceans, while peaks shoot up to 155!
+      if (distFromCenter > 200 && distFromCenter <= 500) {
+        const mountainGrowth = Math.min(30, (distFromCenter - 200) * 0.1); // Grows from 0 to 30
+        amplitude += mountainGrowth;
+        baseHeight += mountainGrowth;
+      }
+      // 3. OCEAN OVERLOAD (500+ blocks)
+      // Mountains are fully grown. Now we let the baseHeight plummet from 95 down to 45.
+      // This sinks the valleys deep below sea level, creating massive oceans in the far distance.
+      else if (distFromCenter > 500) {
+        amplitude = 60;
+        baseHeight = 95 - Math.min(50, (distFromCenter - 500) * 0.1);
+      }
+
+      const maxSurfaceHeight = Math.floor(baseHeight + raw2D * amplitude);
+
+      // Determine surface biome textures (biomeData is already calculated above)
+      const surfaceTex = BlockIds[biomeData.surface];
+      const subTex = BlockIds[biomeData.subsurface];
+
+      let highestSolidY = CHUNK_Y_MIN;
+
+      for (let y = CHUNK_Y_MIN; y <= CHUNK_Y_MAX; y++) {
+        if (y <= CHUNK_Y_MIN + 3) {
+          haloBuffer[getHaloIndex(lx, y, lz)] = BlockIds['bedrock'];
+          highestSolidY = Math.max(highestSolidY, y);
+          continue;
+        }
+
+        let isSolid;
+
+        if (y > maxSurfaceHeight) {
+          isSolid = false;
+        } else {
+          isSolid = true; // Base terrain is solid below maxSurfaceHeight
+        }
+
+        // --- STEP 1: Surface Water & Lava (Before Caves) ---
+        // If it's empty space below Y=30, fill it with water (oceans/lakes)
+        let isWater = false;
+        let isLava = false;
+
+        if (!isSolid) {
+          if (y <= SEA_LEVEL) {
+            isWater = true;
+          }
+        }
+
+        // Deep lava oceans at the absolute bottom
+        if (y < CHUNK_Y_MIN + 8) {
+          isLava = true;
+          isSolid = false;
+          isWater = false;
+        }
+
+        // --- STEP 2: Cave Carving (After Surface Definition) ---
+        // HYBRID TERRAIN: Only carve caves if we are near the surface to create overhangs
+        // Or if we want deep caves, we use 3D noise. But for performance, we only evaluate
+        // 3D noise if we are within 20 blocks of the max surface height.
+        if (isSolid && y < maxSurfaceHeight && y > maxSurfaceHeight - 20) {
+          const depthFactor = Math.min(1.0, (maxSurfaceHeight - y) / 20.0);
+
+          let amplitude = 1.0;
+          let frequency = 0.03;
+          let noiseValue = 0.0;
+          let maxAmplitude = 0.0;
+
+          for (let i = 0; i < OCTAVES; i++) {
+            noiseValue +=
+              caveNoise3D(
+                x * frequency,
+                y * Math.max(0.5, frequency * 2),
+                z * frequency
+              ) * amplitude;
+            maxAmplitude += amplitude;
+            amplitude *= PERSISTENCE;
+            frequency *= LACUNARITY;
+          }
+          noiseValue /= maxAmplitude;
+
+          // Carve out an overhang/cave
+          if (Math.abs(noiseValue) < 0.12 * depthFactor) {
             isSolid = false;
-        } else if (y < maxSurfaceHeight - 20) {
-            // Fast Cave Carving Optimization (1-Octave Spaghetti Caves)
-            const cv = caveNoise3D(x * 0.03, y * 0.03, z * 0.03);
-            isSolid = Math.abs(cv) > 0.15;
-        } else {
-            // The Transition Zone: Run expensive fBm
-            let amplitude = 1.0;
-            let frequency = BASE_FREQ;
-            let noiseValue = 0.0;
-            let maxAmplitude = 0.0;
-
-            for (let i = 0; i < OCTAVES; i++) {
-                noiseValue += caveNoise3D(x * frequency, y * frequency, z * frequency) * amplitude;
-                maxAmplitude += amplitude;
-                amplitude *= PERSISTENCE;
-                frequency *= LACUNARITY;
-            }
-            noiseValue /= maxAmplitude;
-            
-            const density = noiseValue - ((y - BASE_HEIGHT) / HEIGHT_SCALE);
-            isSolid = density > 0;
+          }
         }
 
+        // --- STEP 3: Texture Assignment ---
         if (isSolid) {
-            highestSolidY = Math.max(highestSolidY, y);
-            
-            // Assign Textures based on depth
-            if (y < maxSurfaceHeight - 3) {
-                haloBuffer[getHaloIndex(lx, y, lz)] = BlockIds['stone'];
-            } else {
-                haloBuffer[getHaloIndex(lx, y, lz)] = subTex; // Will be replaced by surfaceTex at the very top
-            }
-        } else {
-            // Only fill with water if we are near the surface (surface lakes/oceans)
-            // Do NOT flood deep underground caves!
-            if (y <= 30 && y > maxSurfaceHeight - 15) {
-                haloBuffer[getHaloIndex(lx, y, lz)] = BlockIds['water'];
-            } else if (y < -60) {
-                haloBuffer[getHaloIndex(lx, y, lz)] = BlockIds['lava']; // Deep lava!
-            }
+          highestSolidY = Math.max(highestSolidY, y);
+
+          // Assign Textures based on depth
+          if (y < maxSurfaceHeight - 3) {
+            haloBuffer[getHaloIndex(lx, y, lz)] = BlockIds['stone'];
+          } else {
+            haloBuffer[getHaloIndex(lx, y, lz)] = subTex; // Will be replaced by surfaceTex at the very top
+          }
+        } else if (isWater) {
+          haloBuffer[getHaloIndex(lx, y, lz)] = BlockIds['water'];
+        } else if (isLava) {
+          haloBuffer[getHaloIndex(lx, y, lz)] = BlockIds['lava'];
         }
       }
-      
+
       // Cap the highest solid block with the surface texture (if not underwater)
-      if (highestSolidY > 30) {
-          haloBuffer[getHaloIndex(lx, highestSolidY, lz)] = surfaceTex;
+      if (highestSolidY > SEA_LEVEL) {
+        haloBuffer[getHaloIndex(lx, highestSolidY, lz)] = surfaceTex;
       }
-      
-      getSurfaceHeightMap[lz * 18 + lx] = highestSolidY;
+
+      getSurfaceHeightMap[lz * HALO_SIZE_X + lx] = highestSolidY;
     }
   }
 
@@ -153,7 +247,7 @@ export const generateChunkPass1 = (cx, cz, worldSeed) => {
   // Pass 4: Visibility Culling & Output Extraction
   const neighborBlocks = {};
   const buffer = new Uint32Array(CHUNK_VOLUME);
-  
+
   const isOpaque = (lx, y, lz) => {
     const tex = haloBuffer[getHaloIndex(lx, y, lz)];
     return tex !== 0 && !BlockById[tex]?.isTransparent;
@@ -161,80 +255,166 @@ export const generateChunkPass1 = (cx, cz, worldSeed) => {
 
   const faceOpen = [false, false, true, true, false, false];
 
-   for (let lx = 0; lx < 18; lx++) {
-     for (let lz = 0; lz < 18; lz++) {
-       // Full chunk height: -64 (bedrock) to 255 (build limit)
-       for (let y = -64; y <= 255; y++) {
-          const tex = haloBuffer[getHaloIndex(lx, y, lz)];
-          if (tex === 0) continue;
-          
-          if (lx === 0 || lx === 17 || lz === 0 || lz === 17) {
-             const gx = cx * 16 - 1 + lx;
-             const gz = cz * 16 - 1 + lz;
-             neighborBlocks[`${gx},${y},${gz}`] = { texture: BlockKeyById[tex], level: BlockById[tex]?.isLiquid ? 7 : undefined };
-             continue;
-          }
-          
-          const hidden =
-            (y > -64 && y < 255) &&
-            isOpaque(lx, y + 1, lz) &&
-            isOpaque(lx, y - 1, lz) &&
-            isOpaque(lx - 1, y, lz) &&
-            isOpaque(lx + 1, y, lz) &&
-            isOpaque(lx, y, lz + 1) &&
-            isOpaque(lx, y, lz - 1);
+  for (let lx = 0; lx < HALO_SIZE_X; lx++) {
+    for (let lz = 0; lz < HALO_SIZE_Z; lz++) {
+      // Full chunk height
+      for (let y = CHUNK_Y_MIN; y <= CHUNK_Y_MAX; y++) {
+        const tex = haloBuffer[getHaloIndex(lx, y, lz)];
+        if (tex === 0) continue;
 
-          const health = BlockById[tex]?.health || 100;
-          const level = BlockById[tex]?.isLiquid ? 7 : 0;
-          
-          setBlock(buffer, getIndex(lx - 1, y, lz - 1), tex, health, hidden, level);
-          
-          if (lx === 16 && !isOpaque(lx + 1, y, lz)) faceOpen[0] = true;
-          if (lx === 1 && !isOpaque(lx - 1, y, lz)) faceOpen[1] = true;
-          if (lz === 16 && !isOpaque(lx, y, lz + 1)) faceOpen[4] = true;
-          if (lz === 1 && !isOpaque(lx, y, lz - 1)) faceOpen[5] = true;
-       }
-     }
-   }
+        if (
+          lx === 0 ||
+          lx === HALO_SIZE_X - 1 ||
+          lz === 0 ||
+          lz === HALO_SIZE_Z - 1
+        ) {
+          const gx = cx * CHUNK_SIZE_X - CHUNK_PAD + lx;
+          const gz = cz * CHUNK_SIZE_Z - CHUNK_PAD + lz;
+          neighborBlocks[`${gx},${y},${gz}`] = {
+            texture: BlockKeyById[tex],
+            level: BlockById[tex]?.isLiquid ? 7 : undefined,
+          };
+          continue;
+        }
+
+        const hidden =
+          y > CHUNK_Y_MIN &&
+          y < CHUNK_Y_MAX &&
+          isOpaque(lx, y + 1, lz) &&
+          isOpaque(lx, y - 1, lz) &&
+          isOpaque(lx - 1, y, lz) &&
+          isOpaque(lx + 1, y, lz) &&
+          isOpaque(lx, y, lz + 1) &&
+          isOpaque(lx, y, lz - 1);
+
+        const health = BlockById[tex]?.health || 100;
+        const level = BlockById[tex]?.isLiquid ? 7 : 0;
+
+        setBlock(
+          buffer,
+          getIndex(lx - 1, y, lz - 1),
+          tex,
+          health,
+          hidden,
+          level
+        );
+
+        if (lx === CHUNK_SIZE_X && !isOpaque(lx + 1, y, lz)) faceOpen[0] = true;
+        if (lx === 1 && !isOpaque(lx - 1, y, lz)) faceOpen[1] = true;
+        if (lz === CHUNK_SIZE_Z && !isOpaque(lx, y, lz + 1)) faceOpen[4] = true;
+        if (lz === 1 && !isOpaque(lx, y, lz - 1)) faceOpen[5] = true;
+      }
+    }
+  }
 
   // ── Pass 6: Greedy mesh arrays (computed in worker to keep main thread free) ──
   // Meshing has been moved to chunkWorker.js because it requires the Light Map.
-  
-  return { buffer, neighborBlocks, isModified: false, faceOpen, meshArrays: null, cx, cz, getSurfaceHeightMap };
+
+  return {
+    buffer,
+    neighborBlocks,
+    isModified: false,
+    faceOpen,
+    meshArrays: null,
+    cx,
+    cz,
+    getSurfaceHeightMap,
+  };
 };
 
 // ── Pass 2: Decorators & Overflow ────────────────────────────────────────────
-export const generateChunkPass2 = (cx, cz, buffer, getSurfaceHeightMap, worldSeed) => {
-   const overflow = [];
-   const getSurfaceHeight = (x, z) => {
-     const lx = x - (cx * 16 - 1);
-     const lz = z - (cz * 16 - 1);
-     if (lx >= 0 && lx < 18 && lz >= 0 && lz < 18) return getSurfaceHeightMap[lz * 18 + lx];
-     return undefined; // We only stamp structures if we know the surface height
-   };
+export const generateChunkPass2 = (
+  cx,
+  cz,
+  buffer,
+  getSurfaceHeightMap,
+  worldSeed
+) => {
+  if (worldSeed !== cachedWorldSeed) {
+    cachedWorldSeed = worldSeed;
+    noise2D = createNoise2D(mulberry32(worldSeed));
+    tempNoise2D = createNoise2D(mulberry32(worldSeed + 1));
+    moistNoise2D = createNoise2D(mulberry32(worldSeed + 2));
+    caveNoise3D = createNoise3D(mulberry32(worldSeed + 3));
+  }
+  const overflow = [];
+  const getSurfaceHeight = (x, z) => {
+    const lx = x - (cx * CHUNK_SIZE_X - CHUNK_PAD);
+    const lz = z - (cz * CHUNK_SIZE_Z - CHUNK_PAD);
+    if (lx >= 0 && lx < HALO_SIZE_X && lz >= 0 && lz < HALO_SIZE_Z)
+      return getSurfaceHeightMap[lz * HALO_SIZE_X + lx];
+    return undefined; // We only stamp structures if we know the surface height
+  };
 
-   const structures = getStructuresForChunk(cx, cz, getSurfaceHeight, worldSeed);
-   for (const s of structures) {
-     for (const block of s.template) {
-       const gx = s.rootX + block.dx;
-       const gy = s.rootY + block.dy;
-       const gz = s.rootZ + block.dz;
-       
-       const lx = gx - (cx * 16);
-       const lz = gz - (cz * 16);
-       
-       const bTex = BlockIds[block.texture];
-       if (!bTex) continue;
+  const structures = getStructuresForChunk(
+    cx,
+    cz,
+    getSurfaceHeight,
+    worldSeed,
+    tempNoise2D,
+    moistNoise2D
+  );
+  for (const s of structures) {
+    for (const block of s.template) {
+      const gx = s.rootX + block.dx;
+      const gy = s.rootY + block.dy;
+      const gz = s.rootZ + block.dz;
 
-       if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
-          // Inside local chunk!
-          setBlock(buffer, getIndex(lx, gy, lz), bTex, BlockById[bTex]?.health || 100, false, 0);
-       } else {
-          // Decorator Overflow! Goes to neighboring chunk!
-          overflow.push({ x: gx, y: gy, z: gz, id: bTex });
-       }
-     }
-   }
+      const lx = gx - cx * CHUNK_SIZE_X;
+      const lz = gz - cz * CHUNK_SIZE_Z;
 
-   return { buffer, overflow };
+      const bTex = BlockIds[block.texture];
+      if (bTex === undefined) continue;
+
+      // ROOTING LOGIC: If this is the bottom of the structure, extend it down to local terrain
+      if (block.dy === 0) {
+        const localSurfaceY = getSurfaceHeight(gx, gz);
+        if (localSurfaceY !== undefined && localSurfaceY < gy - 1) {
+          // The terrain here is LOWER than the structure root.
+          // We must build a pillar down to the local surface!
+          for (let downY = localSurfaceY + 1; downY < gy; downY++) {
+            if (lx >= 0 && lx < CHUNK_SIZE_X && lz >= 0 && lz < CHUNK_SIZE_Z) {
+              setBlock(
+                buffer,
+                getIndex(lx, downY, lz),
+                bTex,
+                BlockById[bTex]?.health || 100,
+                false,
+                0
+              );
+            } else {
+              overflow.push({ x: gx, y: downY, z: gz, id: bTex });
+            }
+          }
+        }
+      }
+
+      if (lx >= 0 && lx < CHUNK_SIZE_X && lz >= 0 && lz < CHUNK_SIZE_Z) {
+        // Inside local chunk!
+        const bDef = BlockById[bTex];
+        const idx = getIndex(lx, gy, lz);
+        const existingTex = buffer[idx] & 0x7f; // Texture is the lowest 7 bits
+        const existingDef = BlockById[existingTex];
+
+        // Safety Check: Never let a passable structure block (like grass) overwrite a solid existing block
+        if (bDef && bDef.isPassable && existingTex !== 0 && existingDef && !existingDef.isPassable) {
+           continue; 
+        }
+
+        setBlock(
+          buffer,
+          idx,
+          bTex,
+          bDef?.health || 100,
+          false,
+          0
+        );
+      } else {
+        // Decorator Overflow! Goes to neighboring chunk!
+        overflow.push({ x: gx, y: gy, z: gz, id: bTex });
+      }
+    }
+  }
+
+  return { buffer, overflow };
 };

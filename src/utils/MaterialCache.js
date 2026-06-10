@@ -16,12 +16,15 @@ class ECSMaterialCache {
   getStandard(colorHex, transparent = false, opacity = 1) {
     const key = `std_${colorHex}_${transparent}_${opacity}`;
     if (!this.cache.has(key)) {
-      this.cache.set(key, new THREE.MeshStandardMaterial({
-        color: colorHex,
-        transparent: transparent,
-        opacity: opacity,
-        depthWrite: !transparent,
-      }));
+      this.cache.set(
+        key,
+        new THREE.MeshStandardMaterial({
+          color: colorHex,
+          transparent: transparent,
+          opacity: opacity,
+          depthWrite: !transparent,
+        })
+      );
     }
     return this.cache.get(key);
   }
@@ -29,16 +32,25 @@ class ECSMaterialCache {
   /**
    * Retrieves or creates a MeshBasicMaterial
    */
-  getBasic(colorHex, visible = true, transparent = false, opacity = 1, wireframe = false) {
+  getBasic(
+    colorHex,
+    visible = true,
+    transparent = false,
+    opacity = 1,
+    wireframe = false
+  ) {
     const key = `bas_${colorHex}_${visible}_${transparent}_${opacity}_${wireframe}`;
     if (!this.cache.has(key)) {
-      this.cache.set(key, new THREE.MeshBasicMaterial({
-        color: colorHex,
-        visible: visible,
-        transparent: transparent,
-        opacity: opacity,
-        wireframe: wireframe
-      }));
+      this.cache.set(
+        key,
+        new THREE.MeshBasicMaterial({
+          color: colorHex,
+          visible: visible,
+          transparent: transparent,
+          opacity: opacity,
+          wireframe: wireframe,
+        })
+      );
     }
     return this.cache.get(key);
   }
@@ -49,11 +61,14 @@ class ECSMaterialCache {
   getLambert(colorHex, transparent = false, opacity = 1) {
     const key = `lam_${colorHex}_${transparent}_${opacity}`;
     if (!this.cache.has(key)) {
-      this.cache.set(key, new THREE.MeshLambertMaterial({
-        color: colorHex,
-        transparent: transparent,
-        opacity: opacity
-      }));
+      this.cache.set(
+        key,
+        new THREE.MeshLambertMaterial({
+          color: colorHex,
+          transparent: transparent,
+          opacity: opacity,
+        })
+      );
     }
     return this.cache.get(key);
   }

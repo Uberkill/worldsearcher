@@ -29,12 +29,23 @@
 import { useRef, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { BlockRegistry, BlockById, BlockKeyById } from '../registry/BlockRegistry';
-import { getIndex, getTextureId, CHUNK_Y_MIN, CHUNK_Y_MAX } from '../utils/chunkData';
+import {
+  BlockById,
+  BlockKeyById,
+} from '../registry/BlockRegistry';
+import {
+  getIndex,
+  getTextureId,
+  CHUNK_Y_MIN,
+  CHUNK_Y_MAX,
+} from '../utils/chunkData';
 import { useStore } from '../stores/useStore';
-import { useNetworkStore } from '../stores/useNetworkStore';
+import { useChunkStore } from '../stores/chunkSlice';
+import { useFlareStore } from '../stores/flareSlice';
+import { networkActions } from '../stores/networkActions';
 import { playerPosition } from '../globals';
-import { sfxManager } from '../utils/SFXManager';
+import { gameAudio } from '../audio/GameAudio';
+import { GlobalRegistry } from '../registry/Registry';
 
 const MAX_REACH = 8; // blocks
 
@@ -55,7 +66,9 @@ function castRayDDA(origin, dir, maxDist, chunks) {
   const ox = origin.x;
   const oy = origin.y;
   const oz = origin.z;
-  const dx = dir.x, dy = dir.y, dz = dir.z;
+  const dx = dir.x,
+    dy = dir.y,
+    dz = dir.z;
 
   // Starting block index
   let ix = Math.floor(ox);
@@ -86,21 +99,21 @@ function castRayDDA(origin, dir, maxDist, chunks) {
 
   for (let step = 0; step < maxSteps; step++) {
     // ── Look up block at current DDA cell ───────────────────────────────────
-    const bx = ix;           // block centre X  (integer)
-    const by = iy;           // block centre Y  (integer)
-    const bz = iz;           // block centre Z  (integer)
+    const bx = ix; // block centre X  (integer)
+    const by = iy; // block centre Y  (integer)
+    const bz = iz; // block centre Z  (integer)
 
     const cx = Math.floor(bx / 16);
     const cz = Math.floor(bz / 16);
     const chunk = chunks[`${cx},${cz}`];
     if (chunk) {
-      const lx = (bx % 16 + 16) % 16;
-      const lz = (bz % 16 + 16) % 16;
+      const lx = ((bx % 16) + 16) % 16;
+      const lz = ((bz % 16) + 16) % 16;
       const ly = by; // Y is already integer block index
       if (ly >= CHUNK_Y_MIN && ly <= CHUNK_Y_MAX) {
         if (!chunk.buffer) {
-           console.error("FATAL: chunk.buffer is undefined!", chunk);
-           return null;
+          console.error('FATAL: chunk.buffer is undefined!', chunk);
+          return null;
         }
         const val = chunk.buffer[getIndex(lx, ly, lz)];
         if (val !== undefined && val !== 0) {
@@ -121,21 +134,25 @@ function castRayDDA(origin, dir, maxDist, chunks) {
     if (tmX < tmY) {
       if (tmX < tmZ) {
         if (tmX > maxDist) return null;
-        ix += stepX; tmX += tDX;
+        ix += stepX;
+        tmX += tDX;
         face = [-stepX, 0, 0];
       } else {
         if (tmZ > maxDist) return null;
-        iz += stepZ; tmZ += tDZ;
+        iz += stepZ;
+        tmZ += tDZ;
         face = [0, 0, -stepZ];
       }
     } else {
       if (tmY < tmZ) {
         if (tmY > maxDist) return null;
-        iy += stepY; tmY += tDY;
+        iy += stepY;
+        tmY += tDY;
         face = [0, -stepY, 0];
       } else {
         if (tmZ > maxDist) return null;
-        iz += stepZ; tmZ += tDZ;
+        iz += stepZ;
+        tmZ += tDZ;
         face = [0, 0, -stepZ];
       }
     }
@@ -150,18 +167,18 @@ const _dir = new THREE.Vector3();
 export const BlockInteraction = () => {
   const { camera } = useThree();
 
-  const setHoverTarget = useStore(state => state.setHoverTarget);
-  const damageBlock    = useStore(state => state.damageBlock);
-  const addCube        = useStore(state => state.addCube);
+  const setHoverTarget = useStore((state) => state.setHoverTarget);
+  const damageBlock = useStore((state) => state.damageBlock);
+  const addCube = useStore((state) => state.addCube);
 
   // Last DDA result — updated every frame, consumed by mousedown handler
-  const hitRef         = useRef(null);
-  const prevTargetKey  = useRef(null); // "bx,by,bz" string — avoids calling setHoverTarget 60×/s
+  const hitRef = useRef(null);
+  const prevTargetKey = useRef(null); // "bx,by,bz" string — avoids calling setHoverTarget 60×/s
 
   // ── Fire DDA ray every frame for hover highlight ──────────────────────────
   useFrame(() => {
     camera.getWorldDirection(_dir);
-    const chunks = useStore.getState().chunks;
+    const chunks = useChunkStore.getState().chunks;
     const hit = castRayDDA(camera.position, _dir, MAX_REACH, chunks);
     hitRef.current = hit;
 
@@ -180,7 +197,7 @@ export const BlockInteraction = () => {
     const onMouseDown = (e) => {
       // Only act when the pointer is locked (game is focused, UI is closed)
       if (!document.pointerLockElement) return;
-      
+
       const hit = hitRef.current;
       if (!hit) return;
       const { block, bx, by, bz, face } = hit;
@@ -188,57 +205,119 @@ export const BlockInteraction = () => {
 
       // Handle Waypoint placement on Middle Mouse Click
       if (e.button === 1) {
-         const { broadcastWaypoint } = useNetworkStore.getState();
-         broadcastWaypoint(bx + 0.5 + nx * 0.5, by + 0.5 + ny * 0.5, bz + 0.5 + nz * 0.5);
-         return;
+        const { broadcastWaypoint } = networkActions.getState();
+        broadcastWaypoint(
+          bx + 0.5 + nx * 0.5,
+          by + 0.5 + ny * 0.5,
+          bz + 0.5 + nz * 0.5
+        );
+        return;
       }
-      
+
+      const state = useStore.getState();
+      if (state.isUIActive && state.isUIActive()) return;
+
+      // Handle Right Click for Interactive Blocks (Crafting Table, Chest)
+      if (e.button === 2) {
+         if (block.texture === 'crafting_table') {
+            if (state.toggleCraftingTable) {
+               document.exitPointerLock();
+               state.toggleCraftingTable();
+               gameAudio.playGlobal('click');
+            }
+         } else if (block.texture === 'chest') {
+            if (state.openChest) {
+               document.exitPointerLock();
+               state.openChest(bx, by, bz);
+               gameAudio.playGlobal('click');
+            }
+         }
+         return; // Don't process further right-clicks
+      }
+
       // Only process left-click for building/breaking
       if (e.button !== 0) return;
-      
-      const state = useStore.getState();
+
       const activeTexture = state.texture;
+
+      // Intercept flare break
+      if (block.texture === 'flare') {
+        const flares = useFlareStore.getState().placedFlares || [];
+        let flareId = null;
+        for (let i = 0; i < flares.length; i++) {
+          const vx = Math.floor(flares[i].pos[0] + flares[i].normal[0] * 0.1);
+          const vy = Math.floor(flares[i].pos[1] + flares[i].normal[1] * 0.1);
+          const vz = Math.floor(flares[i].pos[2] + flares[i].normal[2] * 0.1);
+          if (vx === bx && vy === by && vz === bz) {
+            flareId = flares[i].id;
+            break;
+          }
+        }
+        if (flareId) {
+          state.removeFlare(flareId);
+          gameAudio.playGlobal('break');
+        } else {
+          damageBlock(bx, by, bz, 100);
+          gameAudio.playGlobal('break');
+        }
+        return;
+      }
 
       // TNT always explodes, regardless of tool
       if (block.texture === 'tnt') {
         state.triggerExplosion(bx, by, bz);
-        sfxManager.play('explosion');
+        gameAudio.playGlobal('explosion');
         return;
       }
 
       if (e.altKey || activeTexture === 'pickaxe') {
         // Force-break (alt key) or pickaxe → high damage
         damageBlock(bx, by, bz, 100);
-        sfxManager.play('break');
+        gameAudio.playGlobal('break');
         if (block.texture === 'log') {
-          useStore.getState().unlockAchievement('getting_wood', 'Getting Wood', 'Punch a tree until it breaks', '🪵');
+          useStore
+            .getState()
+            .unlockAchievement(
+              'getting_wood',
+              'Getting Wood',
+              'Punch a tree until it breaks',
+              '🪵'
+            );
         }
       } else if (activeTexture === 'sword') {
         // Melee tool → moderate damage
         damageBlock(bx, by, bz, 35);
-        sfxManager.play('break');
-      } else if (activeTexture === 'gun') {
-        // Gun fires bullet via Player.jsx, do NOT melee the block
+        gameAudio.playGlobal('break');
+      } else if (
+        activeTexture === 'gun' ||
+        activeTexture === 'grapple' ||
+        activeTexture === 'gauss_rifle'
+      ) {
+        // Ranged tools handled in Player.jsx, do NOT place blocks or melee
+        return;
       } else if (activeTexture === 'flare') {
         // Place flare on the surface of the clicked face
         const placeX = bx + nx;
         const placeY = by + ny;
         const placeZ = bz + nz;
-        if (state.placeFlare(
+        state.placeFlare(
           [bx + 0.5 + nx * 0.5, by + 0.5 + ny * 0.5, bz + 0.5 + nz * 0.5],
           [nx, ny, nz],
           `${placeX},${placeY},${placeZ}`
-        )) {
-            // Note: placeFlare logic might need returning a boolean similar to addCube
-        }
-        if (addCube(placeX, placeY, placeZ)) {
-          sfxManager.play('place');
-        }
-      } else if (activeTexture === 'lantern' || activeTexture === 'flashlight') {
+        );
+        gameAudio.playGlobal('place');
+        state.consumeActiveItem();
+      } else if (
+        activeTexture === 'lantern' ||
+        activeTexture === 'flashlight'
+      ) {
         // Carried items — no block interaction
       } else {
         if (!activeTexture) return; // Prevent empty hand from placing dirt!
-        
+
+        const registryItem = GlobalRegistry[activeTexture];
+        if (registryItem && registryItem.type === 'tool') return;
+
         // Building block selected — place it adjacent to the hit face.
         const px = bx + nx;
         const py = by + ny;
@@ -247,18 +326,20 @@ export const BlockInteraction = () => {
         // Prevent placing block inside the player's physical hitbox
         const blockY = py; // py is now a pure integer
         const pPos = [playerPosition.x, playerPosition.y, playerPosition.z]; // [x, y, z] center of player capsule
-        const intersects = (
-          pPos[0] + 0.4 > px - 0.5 && pPos[0] - 0.4 < px + 0.5 &&
-          pPos[1] + 0.8 > blockY - 0.5 && pPos[1] - 0.8 < blockY + 0.5 &&
-          pPos[2] + 0.4 > pz - 0.5 && pPos[2] - 0.4 < pz + 0.5
-        );
+        const intersects =
+          pPos[0] + 0.4 > px &&
+          pPos[0] - 0.4 < px + 1 &&
+          pPos[1] + 0.6 > blockY &&
+          pPos[1] - 0.6 < blockY + 1 &&
+          pPos[2] + 0.4 > pz &&
+          pPos[2] - 0.4 < pz + 1;
 
         if (intersects) {
           return; // Blocked!
         }
 
         if (addCube(px, py, pz)) {
-          sfxManager.play('place');
+          gameAudio.playGlobal('place');
         }
       }
     };

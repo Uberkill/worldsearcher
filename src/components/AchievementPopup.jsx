@@ -1,10 +1,12 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useStore } from '../stores/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const AchievementPopup = () => {
-  const recentAchievement = useStore(state => state.recentAchievement);
-  const clearRecentAchievement = useStore(state => state.clearRecentAchievement);
+  const recentAchievement = useStore((state) => state.recentAchievement);
+  const clearRecentAchievement = useStore(
+    (state) => state.clearRecentAchievement
+  );
 
   useEffect(() => {
     if (recentAchievement) {
@@ -36,15 +38,31 @@ export const AchievementPopup = () => {
             gap: '16px',
             zIndex: 10000,
             boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-            pointerEvents: 'none'
+            pointerEvents: 'none',
           }}
         >
-          <div style={{ fontSize: '32px' }}>{recentAchievement.icon || '🏆'}</div>
+          <div style={{ fontSize: '32px' }}>
+            {recentAchievement.icon || '🏆'}
+          </div>
           <div>
-            <div style={{ color: '#fbbf24', fontSize: '14px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            <div
+              style={{
+                color: '#fbbf24',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+              }}
+            >
               Achievement Get!
             </div>
-            <div style={{ color: '#fff', fontSize: '18px', fontFamily: 'monospace' }}>
+            <div
+              style={{
+                color: '#fff',
+                fontSize: '18px',
+                fontFamily: 'monospace',
+              }}
+            >
               {recentAchievement.title}
             </div>
           </div>

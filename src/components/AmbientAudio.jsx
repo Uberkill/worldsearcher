@@ -1,215 +1,121 @@
-import { useEffect, useRef } from 'react';
-import { useStore } from '../stores/useStore';
-import * as Tone from 'tone';
-import { audioManager } from '../utils/AudioManager';
-import { sfxManager } from '../utils/SFXManager';
+import { useEffect, useRef, useState } from 'react';
+import { useEnvironmentStore } from '../stores/environmentSlice';
+import { gameAudio } from '../audio/GameAudio';
 
 export const AmbientAudio = () => {
-  const isNightTime = useStore(state => state.isNightTime);
-  const isRaining = useStore(state => state.isRaining);
-  const isUnderground = useStore(state => state.isUnderground);
-  
-  const audioInitialized = useRef(false);
-  const nodes = useRef({});
-  const stingerTimeout = useRef(null);
-  const wasNightRef = useRef(false);
+  const isRaining = useEnvironmentStore((state) => state.isRaining);
+  const synthRef = useRef(null);
+  const [audioReady, setAudioReady] = useState(false);
 
   useEffect(() => {
-    let isCancelled = false;
-    const handleInit = async () => {
-      if (audioInitialized.current) return;
-      
-      // MUST await sfxManager to finish Tone.Offline rendering, 
-      // otherwise Tone.context global will be hijacked by the offline context!
-      await audioManager.initialize();
-      await sfxManager.initialize();
-      
-      await Tone.start();
-      audioInitialized.current = true;
-      
-      const dest = audioManager.getAmbientDestination();
-      
-      // Global Occlusion Filter (The Cave Problem fix)
-      const occlusionFilter = new Tone.Filter(20000, "lowpass").connect(dest);
-      nodes.current.occlusionFilter = occlusionFilter;
-
-      // Master ambient volume
-      const masterVolume = new Tone.Volume(-Infinity).connect(occlusionFilter);
-      nodes.current.masterVolume = masterVolume;
-      
-      // Wind (Day)
-      const windGain = new Tone.Gain(0).connect(masterVolume);
-      const windNoise = new Tone.Noise("pink").start();
-      const windFilter = new Tone.Filter(300, "lowpass");
-      windNoise.chain(windFilter, windGain);
-      
-      // Crickets (Night, Clear)
-      const cricketsGain = new Tone.Gain(0).connect(masterVolume);
-      const cricketOsc = new Tone.Oscillator(4500, "triangle").start();
-      const cricketTremolo = new Tone.Tremolo(5, 1).start();
-      cricketOsc.chain(cricketTremolo, cricketsGain);
-      
-      // Rain (EQ3 dipped for music)
-      const rainGain = new Tone.Gain(0).connect(masterVolume);
-      const rainNoise = new Tone.Noise("pink").start();
-      const rainEQ = new Tone.EQ3({ low: 0, mid: -12, high: -2 }); // Dip mids so music cuts through
-      rainNoise.chain(rainEQ, rainGain);
-      
-      // Dread Drone (Night)
-      const dreadGain = new Tone.Gain(0).connect(masterVolume);
-      const dreadOsc = new Tone.Oscillator(80, "sine").start();
-      const dreadChebyshev = new Tone.Chebyshev(50); // Saturation for upper harmonics (laptop speaker psychoacoustics!)
-      const dreadLFO = new Tone.LFO(0.1, 0.2, 1).start(); // Pulsing volume
-      const dreadLfoGain = new Tone.Gain(1);
-      dreadLFO.connect(dreadLfoGain.gain);
-      dreadOsc.chain(dreadChebyshev, dreadLfoGain, dreadGain);
-      
-      nodes.current = {
-        ...nodes.current,
-        windGain, cricketsGain, rainGain, dreadGain,
-        windNoise, windFilter, cricketOsc, cricketTremolo,
-        rainNoise, rainEQ, dreadOsc, dreadChebyshev, dreadLFO, dreadLfoGain
-      };
-      
-      updateFades(useStore.getState().isNightTime, useStore.getState().isRaining);
-      updateVolume();
-      updateOcclusion(useStore.getState().isUnderground);
-      
-      // Start scary stinger loop
-      startStingerLoop();
-    };
-
-    const unlockAudio = () => {
-      if (Tone.context.state !== 'running') {
-        Tone.start().then(handleInit);
-      } else {
-        handleInit();
+    if (gameAudio.initialized && gameAudio.context) {
+      // eslint-disable-next-line
+      setAudioReady(true);
+      return;
+    }
+    const interval = setInterval(() => {
+      if (gameAudio.initialized && gameAudio.context) {
+      setAudioReady(true);
+        clearInterval(interval);
       }
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!audioReady) return;
+
+    const ctx = gameAudio.context;
+
+    // Create Rain Synthesizer (White Noise -> Lowpass Filters)
+    const bufferSize = ctx.sampleRate * 2; // 2 seconds of noise
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+
+    for (let i = 0; i < bufferSize; i++) {
+      // White noise from -1 to 1
+      output[i] = Math.random() * 2 - 1;
+    }
+
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+    noiseSource.loop = true;
+
+    // Filter 1: Lowpass for the deep rumble of rain
+    const lowpass1 = ctx.createBiquadFilter();
+    lowpass1.type = 'lowpass';
+    lowpass1.frequency.value = 400;
+
+    // Filter 2: Bandpass for the "pitter patter" high-end splash
+    const bandpass = ctx.createBiquadFilter();
+    bandpass.type = 'bandpass';
+    bandpass.frequency.value = 3500;
+    bandpass.Q.value = 1.0;
+
+    // Filter 3: High-shelf to soften harsh digital highs
+    const highShelf = ctx.createBiquadFilter();
+    highShelf.type = 'highshelf';
+    highShelf.frequency.value = 6000;
+    highShelf.gain.value = -12;
+
+    const rainGain = ctx.createGain();
+    rainGain.gain.value = 0; // Start silent
+
+    // Route: Noise -> Filters -> Gain -> SFX Bus
+    noiseSource.connect(lowpass1);
+    lowpass1.connect(rainGain);
+
+    noiseSource.connect(bandpass);
+    bandpass.connect(highShelf);
+    highShelf.connect(rainGain);
+
+    if (gameAudio.sfxGain) {
+      rainGain.connect(gameAudio.sfxGain);
+    } else {
+      rainGain.connect(ctx.destination);
+    }
+
+    noiseSource.start(0);
+
+    synthRef.current = {
+      source: noiseSource,
+      gain: rainGain,
+      ctx: ctx,
     };
 
-    document.addEventListener('pointerlockchange', unlockAudio);
     return () => {
-      isCancelled = true;
-      document.removeEventListener('pointerlockchange', unlockAudio);
-      Object.values(nodes.current).forEach(node => {
-        if (node && !node.disposed) node.dispose();
-      });
-      nodes.current = {};
-      audioInitialized.current = false;
-      if (stingerTimeout.current) clearTimeout(stingerTimeout.current);
+      try {
+        noiseSource.stop();
+      } catch (_e) {}
+      noiseSource.disconnect();
+      lowpass1.disconnect();
+      bandpass.disconnect();
+      highShelf.disconnect();
+      rainGain.disconnect();
     };
-  }, []);
-  
-  const startStingerLoop = () => {
-     if (stingerTimeout.current) clearTimeout(stingerTimeout.current);
-     
-     const loop = () => {
-        const state = useStore.getState();
-        if (state.isNightTime) {
-           sfxManager.play('scary_stinger');
-        }
-        // Random interval between 15 and 45 seconds
-        stingerTimeout.current = setTimeout(loop, 15000 + Math.random() * 30000);
-     };
-     
-     stingerTimeout.current = setTimeout(loop, 10000); // initial offset
-  };
-
-  const updateVolume = () => {
-    if (!audioInitialized.current || !nodes.current.masterVolume) return;
-    const state = useStore.getState();
-    const vol = state.isMuted ? 0 : (state.masterVolume * state.musicVolume);
-    
-    if (vol <= 0) {
-      nodes.current.masterVolume.volume.value = -Infinity;
-    } else {
-      const amplitude = vol / 100;
-      nodes.current.masterVolume.volume.value = 20 * Math.log10(amplitude);
-    }
-  };
-
-  const updateFades = (night, raining) => {
-    if (!audioInitialized.current || !nodes.current.windGain) return;
-    
-    const { windGain, cricketsGain, rainGain, dreadGain, masterVolume } = nodes.current;
-    const fadeTime = 3;
-    
-    // Wind: active during day
-    if (!night && !raining) {
-      windGain.gain.rampTo(0.2, fadeTime);
-    } else {
-      windGain.gain.rampTo(0, fadeTime);
-    }
-    
-    // Crickets: active during night, but ONLY if not raining
-    if (night && !raining) {
-      cricketsGain.gain.rampTo(0.1, fadeTime);
-    } else {
-      cricketsGain.gain.rampTo(0, fadeTime);
-    }
-    
-    // Rain: active when raining
-    if (raining) {
-      rainGain.gain.rampTo(0.5, fadeTime);
-    } else {
-      rainGain.gain.rampTo(0, fadeTime);
-    }
-    
-    // Dread Drone: active at night
-    if (night) {
-      dreadGain.gain.rampTo(0.1, fadeTime); // Keep the dread drone low so it's a subconscious hum
-    } else {
-      dreadGain.gain.rampTo(0, fadeTime);
-    }
-
-    // Nightfall Warning Alarm (re-implemented in Tone.js)
-    if (night && !wasNightRef.current) {
-       // Just transitioned to night!
-       const alarmOsc = new Tone.Oscillator(4500, "triangle").start();
-       const alarmGain = new Tone.Gain(0).connect(masterVolume);
-       alarmOsc.connect(alarmGain);
-       
-       alarmGain.gain.rampTo(0.001, 1);
-       alarmGain.gain.setValueAtTime(0.001, Tone.now() + 4);
-       alarmGain.gain.linearRampToValueAtTime(0, Tone.now() + 10);
-       
-       setTimeout(() => {
-          alarmOsc.dispose();
-          alarmGain.dispose();
-       }, 11000);
-    }
-    wasNightRef.current = night;
-  };
-  
-  const updateOcclusion = (underground) => {
-    if (!audioInitialized.current || !nodes.current.occlusionFilter) return;
-    // Hysteresis fix: smooth 1.5s transition
-    if (underground) {
-       nodes.current.occlusionFilter.frequency.rampTo(400, 1.5);
-    } else {
-       nodes.current.occlusionFilter.frequency.rampTo(20000, 1.5);
-    }
-  };
+  }, [audioReady]);
 
   useEffect(() => {
-    const unsubscribe = useStore.subscribe(
-      (state) => ({ 
-        masterVolume: state.masterVolume, 
-        musicVolume: state.musicVolume, 
-        isMuted: state.isMuted 
-      }),
-      () => updateVolume()
-    );
-    return () => unsubscribe();
-  }, []);
+    if (!synthRef.current) return;
+    const { gain, ctx } = synthRef.current;
 
-  useEffect(() => {
-    updateFades(isNightTime, isRaining);
-  }, [isNightTime, isRaining]);
-  
-  useEffect(() => {
-    updateOcclusion(isUnderground);
-  }, [isUnderground]);
+    // Check state of the WebAudio context (user gesture restriction)
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
+
+    const now = ctx.currentTime;
+    // Fade in/out over 2 seconds
+    gain.gain.cancelScheduledValues(now);
+
+    if (isRaining) {
+      gain.gain.setValueAtTime(gain.gain.value, now);
+      gain.gain.linearRampToValueAtTime(0.3, now + 2.0); // Rain target volume
+    } else {
+      gain.gain.setValueAtTime(gain.gain.value, now);
+      gain.gain.linearRampToValueAtTime(0.0, now + 2.0);
+    }
+  }, [isRaining, audioReady]);
 
   return null;
 };

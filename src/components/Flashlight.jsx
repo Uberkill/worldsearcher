@@ -28,11 +28,11 @@ export const Lantern = () => {
     const on = useStore.getState().texture === 'lantern';
     // Move the scene-level light to exactly where the camera is each frame
     lightRef.current.position.copy(camera.position);
-    
+
     // Point the spotlight forward using reused vector
     camera.getWorldDirection(_dir);
     target.position.copy(camera.position).add(_dir.multiplyScalar(10));
-    
+
     lightRef.current.intensity = on ? 40 : 0;
   });
 

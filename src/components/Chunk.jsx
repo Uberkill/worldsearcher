@@ -20,17 +20,31 @@
  *    DDA algorithm against the raw CPU block grid — not these mesh triangles.
  */
 
-import { useRef, useState, useLayoutEffect, useEffect, useMemo, memo } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import React, {
+  useRef,
+  useState,
+  useLayoutEffect,
+  useEffect,
+} from 'react';
+import { useFrame } from '@react-three/fiber';
+
+// Stable module-level function — defined once, never reallocated per React render.
+// Replaces inline arrow functions on every chunk mesh which caused GC pressure.
+const onChunkBeforeRender = (_renderer, _scene, camera) => {
+  if (window.__DEBUG_STATS__ && camera.type === 'PerspectiveCamera') {
+    window.__DEBUG_STATS__.chunksRendered++;
+  }
+};
 import * as THREE from 'three';
 import { useStore } from '../stores/useStore';
-import { BlockRegistry, BlockById, BlockKeyById } from '../registry/BlockRegistry';
-import { getTextureId, getIsHidden, CHUNK_Y_MIN } from '../utils/chunkData';
-
+import { useChunkStore } from '../stores/chunkSlice';
+import { useEnvironmentStore } from '../stores/environmentSlice';
 import { getTextureAtlas } from '../utils/TextureAtlas';
 import { createChunkMaterial } from '../materials/ChunkMaterial';
 import { ChunkFlora } from './ChunkFlora';
 
-export const materialCache = new Map();
+import { materialCache } from '../utils/ChunkMaterialCache';
 
 let solidMaterial = null;
 let transparentMaterial = null;
@@ -58,7 +72,7 @@ materialCache.set('transparent', getTransparentMaterial());
 // ── Build BufferGeometry objects from pre-computed typed arrays ──────────────────
 // This is the FAST PATH — pure Three.js object creation, no geometry computation.
 
-function buildGeometriesFromArrays(meshArrays, cx, cz) {
+function buildGeometriesFromArrays(meshArrays, _cx, _cz) {
   const result = {};
 
   for (const [name, data] of Object.entries(meshArrays)) {
@@ -67,154 +81,185 @@ function buildGeometriesFromArrays(meshArrays, cx, cz) {
       result[name] = { isRawArray: true, data };
       continue;
     }
-    
-    const { pos, norm, color, uv, idx } = data;
-    if (!pos || pos.length === 0) continue;
-    
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    g.setAttribute('normal',   new THREE.BufferAttribute(norm, 3, false));
-    if (color && color.length > 0) {
-      g.setAttribute('packedData', new THREE.BufferAttribute(color, 1));
-    }
-    if (uv && uv.length > 0) {
-      g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-    }
-    g.setIndex(new THREE.Uint32BufferAttribute(idx, 1));
-    
-    // Debug logging for GL_INVALID_OPERATION
-    let maxIdx = 0;
-    for (let i = 0; i < idx.length; i++) {
+
+    result[name] = [];
+    if (!Array.isArray(data)) continue;
+
+    for (const subChunk of data) {
+      const { pos, norm, color, uv, idx } = subChunk;
+      if (!pos || pos.length === 0) continue;
+
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      g.setAttribute('normal', new THREE.BufferAttribute(norm, 3, false));
+      if (color && color.length > 0) {
+        g.setAttribute('packedData', new THREE.BufferAttribute(color, 1));
+      }
+      if (uv && uv.length > 0) {
+        g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+      }
+      g.setIndex(new THREE.Uint32BufferAttribute(idx, 1));
+
+      // Debug logging for GL_INVALID_OPERATION
+      let maxIdx = 0;
+      for (let i = 0; i < idx.length; i++) {
         if (idx[i] > maxIdx) maxIdx = idx[i];
-    }
-    if (maxIdx >= pos.length / 3) {
-        console.error(`Chunk geometry error in ${name}! maxIdx: ${maxIdx}, pos.count: ${pos.length / 3}`);
-    }
+      }
+      if (maxIdx >= pos.length / 3) {
+        console.error(
+          `Chunk geometry error in ${name}! maxIdx: ${maxIdx}, pos.count: ${pos.length / 3}`
+        );
+      }
 
-    
-    const meta = meshArrays['__meta'];
-    if (meta && meta.boundingBox && meta.boundingBox.min[0] !== Infinity) {
-      const { min, max } = meta.boundingBox;
-      g.boundingBox = new THREE.Box3(
-        new THREE.Vector3(min[0], min[1], min[2]),
-        new THREE.Vector3(max[0] + 1, max[1] + 1, max[2] + 1) // +1 to cover the full block width
-      );
-      g.boundingSphere = new THREE.Sphere();
-      g.boundingBox.getBoundingSphere(g.boundingSphere);
-    } else {
-      g.computeBoundingSphere(); // Fallback if no meta
-    }
+      const meta = meshArrays['__meta'];
+      if (meta && meta.boundingBox && meta.boundingBox.min[0] !== Infinity) {
+        const { min, max } = meta.boundingBox;
+        g.boundingBox = new THREE.Box3(
+          new THREE.Vector3(min[0], min[1], min[2]),
+          new THREE.Vector3(max[0] + 1, max[1] + 1, max[2] + 1) // +1 to cover the full block width
+        );
+        g.boundingSphere = new THREE.Sphere();
+        g.boundingBox.getBoundingSphere(g.boundingSphere);
+      } else {
+        g.computeBoundingSphere(); // Fallback if no meta
+      }
 
-    result[name] = { geometry: g };
+      result[name].push({ geometry: g });
+    }
   }
   return result;
 }
 
 // ── Chunk component ───────────────────────────────────────────────────────────
 
-export const Chunk = memo(({ chunkKey, shadowsEnabled }) => {
-  const chunkData = useStore(state => state.chunks[chunkKey]);
-  const clearVisualMeshArrays = useStore(state => state.clearVisualMeshArrays);
+export const Chunk = React.memo(({ chunkKey }) => {
+  const groupRef = useRef();
+  const chunkData = useChunkStore((state) => state.chunks[chunkKey]);
+  const clearVisualMeshArrays = useStore(
+    (state) => state.clearVisualMeshArrays
+  );
+  const shadowsEnabled = useStore((state) => state.shadowQuality === 'visual');
   const [cx, cz] = chunkKey.split(',').map(Number);
-
-
-
 
   // Double‑buffered geometry handling – safe disposal without race conditions
   const [geometries, setGeometries] = useState({});
-  // Holds the previous geometry set for disposal after the layout commit
-  const prevGeosRef = useRef({});
 
   useLayoutEffect(() => {
     // Build new BufferGeometries from the latest meshArrays (if any)
-    if (!chunkData || !chunkData.meshArrays || Object.keys(chunkData.meshArrays).length === 0) return;
-    
+    if (
+      !chunkData ||
+      !chunkData.meshArrays ||
+      Object.keys(chunkData.meshArrays).length === 0
+    ) {
+      setGeometries({});
+      return;
+    }
+
     const newGeos = buildGeometriesFromArrays(chunkData.meshArrays, cx, cz);
-    
+
     // Track the currently active geometries for this render cycle
     setGeometries(newGeos);
-    prevGeosRef.current = newGeos;
-    
+
     // Cleanup function runs when this chunk updates OR unmounts.
     // It must dispose the geometries CREATED IN THIS RUN (newGeos),
     // because React will have already rendered the next updated state.
     return () => {
-      for (const [name, obj] of Object.entries(newGeos)) {
+      const buffersToRecycle = [];
+      for (const [_name, obj] of Object.entries(newGeos)) {
         if (!obj) continue;
-        
-        if (obj.isRawArray) continue;
-        
-        const g = obj.geometry;
-        if (!g || !g.attributes) continue;
-        
-        g.dispose();
+
+        if (obj.isRawArray) {
+          if (obj.data && obj.data.buffer && obj.data.buffer.byteLength > 0) {
+            buffersToRecycle.push(obj.data.buffer);
+          } else if (Array.isArray(obj.data)) {
+            for (const d of obj.data) {
+              if (d && d.buffer && d.buffer.byteLength > 0) {
+                buffersToRecycle.push(d.buffer);
+              }
+            }
+          }
+          continue;
+        }
+
+        for (const sub of obj) {
+          const g = sub.geometry;
+          if (!g || !g.attributes) continue;
+
+          // Extract ArrayBuffers for recycling before throwing them away
+          ['position', 'normal', 'color', 'uv', 'packedData'].forEach(attr => {
+             if (g.attributes[attr] && g.attributes[attr].array && g.attributes[attr].array.buffer) {
+                 if (g.attributes[attr].array.buffer.byteLength > 0) {
+                     buffersToRecycle.push(g.attributes[attr].array.buffer);
+                 }
+             }
+          });
+          if (g.index && g.index.array && g.index.array.buffer) {
+             if (g.index.array.buffer.byteLength > 0) {
+                 buffersToRecycle.push(g.index.array.buffer);
+             }
+          }
+
+          g.dispose();
+        }
+      }
+      
+      if (buffersToRecycle.length > 0) {
+          useStore.getState().queueBuffersForRecycling(buffersToRecycle);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chunkData?.meshArrays, chunkKey, clearVisualMeshArrays]);
 
-  // Ensure any remaining geometries are disposed when the component finally unmounts
-  useEffect(() => () => {
-     for (const [name, obj] of Object.entries(prevGeosRef.current)) {
-       if (!obj) continue;
-       
-       if (obj.isRawArray) continue;
-       
-       const g = obj.geometry || obj;
-       
-       // Dispose FIRST, so Three.js can iterate attributes and delete WebGL buffers!
-       g.dispose();
-       
-       // Nullify to prevent React Strict Mode from trying to recycle detached buffers again
-       if (g.attributes) {
-           g.attributes.position = null;
-           g.attributes.normal = null;
-           g.attributes.color = null;
-           g.attributes.uv = null;
-       }
-       g.index = null;
-    }
-  }, []);
+  // Native culling is handled at the mesh level via frustumCulled={true}
 
   if (Object.keys(geometries).length === 0) {
     return null;
   }
 
+  const arrayGroup = geometries['solid'] || geometries['transparent'];
+  const g = arrayGroup && arrayGroup.length > 0 ? arrayGroup[0].geometry : null;
+  const chunkBB = g?.boundingBox || null;
+
   const meshGroup = (
-    <group name={`chunk-visuals-${chunkKey}`} >
-      {geometries['solid'] && (
-        <mesh 
-          key="solid"
-          geometry={geometries['solid'].geometry}
+    <group ref={groupRef} name={`chunk-visuals-${chunkKey}`} boundingBox={chunkBB}>
+      {geometries['solid'] && geometries['solid'].map((obj, i) => (
+        <mesh
+          key={`solid-${i}`}
+          geometry={obj.geometry}
           material={getSolidMaterial()}
           castShadow={shadowsEnabled}
           receiveShadow={shadowsEnabled}
-          onBeforeRender={() => { if (window.__DEBUG_STATS__) window.__DEBUG_STATS__.chunksRendered++; }}
+          frustumCulled={true}
+          onBeforeRender={onChunkBeforeRender}
         />
-      )}
-      {geometries['transparent'] && (
+      ))}
+      {geometries['transparent'] && geometries['transparent'].map((obj, i) => (
         <mesh
-          key="transparent"
-          geometry={geometries['transparent'].geometry}
+          key={`transparent-${i}`}
+          geometry={obj.geometry}
           material={getTransparentMaterial()}
-          castShadow={shadowsEnabled}
+          castShadow={false}
           receiveShadow={shadowsEnabled}
-          onBeforeRender={() => { if (window.__DEBUG_STATS__) window.__DEBUG_STATS__.chunksRendered++; }}
+          frustumCulled={true}
+          onBeforeRender={onChunkBeforeRender}
         />
-      )}
-      {chunkData?.meshArrays?.__flora && chunkData.meshArrays.__flora.length > 0 && (
-         <ChunkFlora 
-             key="flora" 
-             floraData={chunkData.meshArrays.__flora} 
-             shadowsEnabled={shadowsEnabled} 
-             meta={chunkData.meshArrays.__meta}
-         />
-      )}
+      ))}
+      {chunkData?.meshArrays?.__flora &&
+        chunkData.meshArrays.__flora.packed?.length > 0 &&
+        (() => {
+          if (!window.__CHUNK_FLORA_RENDER_ATTEMPT__)
+            window.__CHUNK_FLORA_RENDER_ATTEMPT__ = true;
+          return (
+            <ChunkFlora
+              key="flora"
+              floraData={chunkData.meshArrays.__flora}
+              shadowsEnabled={shadowsEnabled}
+              meta={chunkData.meshArrays.__meta}
+            />
+          );
+        })()}
     </group>
   );
 
-  return (
-    <group name={`chunk-${chunkKey}`}>
-        {meshGroup}
-    </group>
-  );
+  return <group name={`chunk-${chunkKey}`}>{meshGroup}</group>;
 });

@@ -1,0 +1,22 @@
+# Ignore documents and media files to run AST-only code graph extraction
+*.txt
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.wav
+*.mp3
+*.ogg
+*.ico
+*.gif
+*.webp
+*.pdf
+index.html
+graphify-out
+graphify-out/**
+.agents
+.agents/**
+.kunsdd
+.kunsdd/**
+
+

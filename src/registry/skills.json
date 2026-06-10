@@ -1,0 +1,64 @@
+{
+  "skills": [
+    {
+      "id": "combat_damage_1",
+      "name": "Sharpened Edge I",
+      "category": "Combat",
+      "cost": 100,
+      "icon": "sword",
+      "description": "Increases overall melee damage by 10%.",
+      "prerequisites": [],
+      "modifiers": {
+        "playerDamageMult": 1.1
+      }
+    },
+    {
+      "id": "combat_damage_2",
+      "name": "Sharpened Edge II",
+      "category": "Combat",
+      "cost": 500,
+      "icon": "sword",
+      "description": "Increases overall melee damage by 25%.",
+      "prerequisites": ["combat_damage_1"],
+      "modifiers": {
+        "playerDamageMult": 1.25
+      }
+    },
+    {
+      "id": "traversal_jump_1",
+      "name": "Lightweight I",
+      "category": "Traversal",
+      "cost": 150,
+      "icon": "feather",
+      "description": "Increases jump height by 15%.",
+      "prerequisites": [],
+      "modifiers": {
+        "playerJumpMult": 1.15
+      }
+    },
+    {
+      "id": "magic_mana_1",
+      "name": "Deep Well I",
+      "category": "Magic",
+      "cost": 200,
+      "icon": "potion",
+      "description": "Increases maximum Mana by 50.",
+      "prerequisites": [],
+      "modifiers": {
+        "playerMaxMana": 150
+      }
+    },
+    {
+      "id": "magic_power_1",
+      "name": "Battery Expansion I",
+      "category": "Magic",
+      "cost": 200,
+      "icon": "zap",
+      "description": "Increases maximum Power by 50.",
+      "prerequisites": [],
+      "modifiers": {
+        "playerMaxPower": 150
+      }
+    }
+  ]
+}

@@ -3,12 +3,10 @@ import { ATLAS_GRID_SIZE } from '../utils/TextureAtlas';
 
 export const createChunkMaterial = (textureAtlas, isTransparent = false) => {
   const material = isTransparent
-    ? new THREE.MeshPhongMaterial({
+    ? new THREE.MeshLambertMaterial({
         map: textureAtlas,
         transparent: true,
         alphaTest: 0.1, // Discard fully transparent pixels
-        shininess: 60,
-        specular: new THREE.Color('#ffffff'),
         depthWrite: false,
         vertexColors: false, // We explicitly use standard vertex colors for geometry binding
       })
@@ -48,7 +46,8 @@ export const createChunkMaterial = (textureAtlas, isTransparent = false) => {
     );
 
     // 1. Declare our custom uniforms
-    shader.fragmentShader = `
+    shader.fragmentShader =
+      `
       uniform float uAtlasGridSize;
       uniform float uTime;
       uniform float uDebugLighting;
@@ -74,6 +73,7 @@ export const createChunkMaterial = (textureAtlas, isTransparent = false) => {
            localUv.y = fract(localUv.y + uTime * 0.1);
         }
         
+        localUv.y = 1.0 - localUv.y; // Fix upside-down textures from flipY=false
         localUv = clamp(localUv, 0.001, 0.999);
         vec2 atlasUv = (vec2(tileX, tileY) + localUv) / uAtlasGridSize;
         
@@ -83,7 +83,7 @@ export const createChunkMaterial = (textureAtlas, isTransparent = false) => {
       `
     );
 
-    // 3. We MUST override color_fragment! 
+    // 3. We MUST override color_fragment!
     // Three.js normally multiplies diffuseColor by vColor here.
     // Since our vColor contains [light, texId, 0], this would break the colors!
     shader.fragmentShader = shader.fragmentShader.replace(
@@ -93,31 +93,38 @@ export const createChunkMaterial = (textureAtlas, isTransparent = false) => {
       `
     );
 
-    // 4. Inject our Hybrid Voxel Lighting logic into the Lambert lighting step
     // 4. Inject our Hybrid Voxel Lighting logic AFTER the Lambert lighting step
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <lights_fragment_end>',
       `
       #include <lights_fragment_end>
       
-      // Calculate Voxel Light Values (0.0 to 1.0)
-      float skyLight = max(0.05, vSun / 15.0);
-      float torchLight = vBlk / 15.0;
+      // Calculate Non-Linear Voxel Light Values (Gamma correction for better falloff)
+      float rawSky = max(0.0, vSun / 15.0);
+      float rawTorch = vBlk / 15.0;
+      
+      float skyLight = pow(rawSky, 2.0); 
+      float torchLight = pow(rawTorch, 2.2);
       float aoFactor = 0.5 + (vAo / 3.0) * 0.5;
       
-      // Voxel Colors
-      vec3 torchColor = vec3(1.2, 0.9, 0.5) * torchLight;
+      // Fake Face Normal Shading for Torchlight (Restores 3D Depth in Caves)
+      float faceShade = 1.0;
+      if (abs(normal.x) > 0.5) faceShade = 0.8;
+      else if (abs(normal.z) > 0.5) faceShade = 0.6;
+      else if (normal.y < -0.5) faceShade = 0.5;
       
-      // Link Three.js Ambient Light to Voxel Sky Light!
-      // This makes caves pitch black except for torches.
-      reflectedLight.indirectDiffuse *= skyLight;
+      vec3 torchColor = vec3(1.2, 0.9, 0.5) * torchLight * faceShade;
       
-      // Add Torch Light directly to ambient!
+      // Modulate Direct Global Light (Sun)
+      reflectedLight.directDiffuse *= skyLight;
+      
+      // Modulate Indirect Light (Sky Ambient + AO)
+      // Keep a tiny 0.05 floor so the surface of the moon isn't completely pitch black
+      reflectedLight.indirectDiffuse *= max(0.05, skyLight); 
+      reflectedLight.indirectDiffuse *= aoFactor; // AO only affects ambient/indirect!
+      
+      // Add Torch Light (already face-shaded) directly to indirect diffuse!
       reflectedLight.indirectDiffuse += torchColor * diffuseColor.rgb;
-      
-      // Apply Voxel Ambient Occlusion to ALL light!
-      reflectedLight.indirectDiffuse *= aoFactor;
-      reflectedLight.directDiffuse *= aoFactor;
       
       // Apply Debug Lighting heatmap if active
       if (uDebugLighting > 0.5) {
@@ -140,7 +147,7 @@ export const createChunkMaterial = (textureAtlas, isTransparent = false) => {
     shader.uniforms.uAtlasGridSize = { value: ATLAS_GRID_SIZE };
     shader.uniforms.uTime = { value: 0 };
     shader.uniforms.uDebugLighting = { value: 0 };
-    
+
     // We attach the shader to the material so we can access it later (e.g. for animations)
     material.userData.shader = shader;
   };

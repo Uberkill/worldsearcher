@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useStore } from '../stores/useStore';
 import { useKeyboard } from '../hooks/useKeyboard';
 import { GlobalRegistry } from '../registry/Registry';
@@ -9,10 +9,10 @@ export const Hotbar = () => {
   const setActiveHotbarIndex = useStore((state) => state.setActiveHotbarIndex);
   const coins = useStore((state) => state.coins);
   const keys = useKeyboard();
-  const isInventoryOpen = useStore(state => state.isInventoryOpen);
-  const isMenuOpen = useStore(state => state.isMenuOpen);
-  const isSettingsOpen = useStore(state => state.isSettingsOpen);
-  const isDead = useStore(state => state.isDead);
+  const isInventoryOpen = useStore((state) => state.isInventoryOpen);
+  const isMenuOpen = useStore((state) => state.isMenuOpen);
+  const isSettingsOpen = useStore((state) => state.isSettingsOpen);
+  const isDead = useStore((state) => state.isDead);
 
   const hotbarItems = useMemo(() => {
     const items = inventory.slice(0, 9);
@@ -23,8 +23,8 @@ export const Hotbar = () => {
   // We will conditionally return null after all hooks
 
   useEffect(() => {
-    if (isInventoryOpen) return;
-    
+    if (useStore.getState().isInventoryOpen) return;
+
     // Keyboard 1-9
     if (keys.slot1) setActiveHotbarIndex(0);
     if (keys.slot2) setActiveHotbarIndex(1);
@@ -36,9 +36,11 @@ export const Hotbar = () => {
     if (keys.slot8) setActiveHotbarIndex(7);
     if (keys.slot9) setActiveHotbarIndex(8);
   }, [keys, setActiveHotbarIndex]);
-  
+
   const activeIdxRef = useRef(activeHotbarIndex);
-  useEffect(() => { activeIdxRef.current = activeHotbarIndex; }, [activeHotbarIndex]);
+  useEffect(() => {
+    activeIdxRef.current = activeHotbarIndex;
+  }, [activeHotbarIndex]);
 
   // Handle mouse wheel scrolling — registers once, reads latest index via ref
   // Handle mouse wheel scrolling and Q to drop
@@ -53,10 +55,12 @@ export const Hotbar = () => {
         }
       }
     };
-    
+
     const handleKeyDown = (e) => {
       if (document.pointerLockElement && e.code === 'KeyQ') {
-        useStore.getState().dropItemFromSlot('inventory', activeIdxRef.current, false);
+        useStore
+          .getState()
+          .dropItemFromSlot('inventory', activeIdxRef.current, false);
       }
     };
 
@@ -67,7 +71,7 @@ export const Hotbar = () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [setActiveHotbarIndex]); // no activeHotbarIndex dep — use ref instead
-  
+
   const activeItem = hotbarItems[activeHotbarIndex];
   const activeReg = activeItem ? GlobalRegistry[activeItem.texture] : null;
 
@@ -79,27 +83,34 @@ export const Hotbar = () => {
       <div className="coin-display">
         ⚙ <span className="coin-amount">{coins}</span>
       </div>
-      
+
       {activeReg && (
         <div className="active-item-name">
           {activeReg.name} {activeItem.count > 1 ? `(${activeItem.count})` : ''}
         </div>
       )}
-      
+
       <div className="hotbar-container">
         <div className="hotbar-group blocks-group">
           {hotbarItems.map((item, idx) => {
-            const color = item ? GlobalRegistry[item.texture]?.color || '#fff' : 'transparent';
+            const color = item
+              ? GlobalRegistry[item.texture]?.color || '#fff'
+              : 'transparent';
             return (
-              <div 
-                key={`hb-${idx}`} 
+              <div
+                key={`hb-${idx}`}
                 className={`hotbar-slot ${activeHotbarIndex === idx ? 'active' : ''}`}
                 onClick={() => setActiveHotbarIndex(idx)}
               >
                 <div className="hotbar-number">{idx + 1}</div>
                 {item && (
-                  <div className="hotbar-icon" style={{ backgroundColor: color }}>
-                    {item.count > 1 && <span className="item-count">{item.count}</span>}
+                  <div
+                    className="hotbar-icon"
+                    style={{ backgroundColor: color }}
+                  >
+                    {item.count > 1 && (
+                      <span className="item-count">{item.count}</span>
+                    )}
                   </div>
                 )}
               </div>

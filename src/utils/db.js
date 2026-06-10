@@ -1,13 +1,24 @@
 import { get, set, del, keys } from 'idb-keyval';
 import { BlockIds } from '../registry/BlockRegistry';
-import { setBlock, getIndex } from './chunkData';
+import { setBlock, getIndex, CHUNK_VOLUME } from './chunkData';
+import { playerPosition, playerRotation } from '../globals';
+
+let currentSlotId = sessionStorage.getItem('saveSlotId') || 'default';
+
+export const setDbSlotId = (slotId) => {
+  currentSlotId = slotId;
+  sessionStorage.setItem('saveSlotId', slotId);
+};
 
 const getSlotPrefix = () => {
-  return sessionStorage.getItem('saveSlotId') || 'default';
+  return currentSlotId;
 };
 
 export const compressRLE = (bufferInput) => {
-  const uint32Array = bufferInput instanceof Uint32Array ? bufferInput : new Uint32Array(bufferInput);
+  const uint32Array =
+    bufferInput instanceof Uint32Array
+      ? bufferInput
+      : new Uint32Array(bufferInput);
   const rle = [];
   let currentVal = uint32Array[0];
   let count = 1;
@@ -25,21 +36,26 @@ export const compressRLE = (bufferInput) => {
 };
 
 export const decompressRLE = (rleArray) => {
-  const rleUint32 = rleArray instanceof Uint32Array ? rleArray : new Uint32Array(rleArray.buffer || rleArray);
-  const arr = new Uint32Array(81920);
-  let idx = 0;
+  const rleUint32 =
+    rleArray instanceof Uint32Array
+      ? rleArray
+      : new Uint32Array(rleArray.buffer || rleArray);
+  const arr = new Uint32Array(CHUNK_VOLUME);
+  let arrIdx = 0;
   for (let i = 0; i < rleUint32.length; i += 2) {
     const count = rleUint32[i];
-    const val = rleUint32[i+1];
-    arr.fill(val, idx, idx + count);
-    idx += count;
+    const val = rleUint32[i + 1];
+    for (let c = 0; c < count; c++) {
+      if (arrIdx < CHUNK_VOLUME) arr[arrIdx++] = val;
+    }
   }
   return arr;
 };
 
-const migrateLegacyChunk = (legacyData) => {
-  const buffer = new Uint32Array(81920);
-  
+// Legacy DB migration
+export const migrateLegacyChunk = (legacyData) => {
+  const buffer = new Uint32Array(CHUNK_VOLUME);
+
   if (legacyData.buffer) {
     // Failsafe: if the buffer was saved while detached (0 length), regenerate it
     if (legacyData.buffer.byteLength < 327680) return null;
@@ -51,35 +67,42 @@ const migrateLegacyChunk = (legacyData) => {
     for (const key in legacyData.blocks) {
       const b = legacyData.blocks[key];
       if (b.pos) {
-        const lx = (b.pos[0] % 16 + 16) % 16;
-        const lz = (b.pos[2] % 16 + 16) % 16;
+        const lx = ((b.pos[0] % 16) + 16) % 16;
+        const lz = ((b.pos[2] % 16) + 16) % 16;
         const ly = Math.round(b.pos[1] - 0.5); // block-center Y back to integer
-        
+
         let tex = b.texture;
         if (typeof tex === 'string') {
           tex = BlockIds[tex] || 1; // fallback to 1 (dirt) if not found
         }
-        setBlock(buffer, getIndex(lx, ly, lz), tex, b.health||100, b.isHidden?1:0, b.level||0);
+        setBlock(
+          buffer,
+          getIndex(lx, ly, lz),
+          tex,
+          b.health || 100,
+          b.isHidden ? 1 : 0,
+          b.level || 0
+        );
       }
     }
-  } 
+  }
   // Legacy Packed format
   else if (legacyData.packedBuffer) {
-     const pb = legacyData.packedBuffer;
-     for (let i = 0; i < pb.length; i+=7) {
-        const lx = (pb[i] % 16 + 16) % 16;
-        const ly = pb[i+1];
-        const lz = (pb[i+2] % 16 + 16) % 16;
-        const isHidden = pb[i+3];
-        const tex = pb[i+4];
-        const health = pb[i+5];
-        const level = pb[i+6];
-        setBlock(buffer, getIndex(lx, ly, lz), tex, health, isHidden, level);
-     }
+    const pb = legacyData.packedBuffer;
+    for (let i = 0; i < pb.length; i += 7) {
+      const lx = ((pb[i] % 16) + 16) % 16;
+      const ly = pb[i + 1];
+      const lz = ((pb[i + 2] % 16) + 16) % 16;
+      const isHidden = pb[i + 3];
+      const tex = pb[i + 4];
+      const health = pb[i + 5];
+      const level = pb[i + 6];
+      setBlock(buffer, getIndex(lx, ly, lz), tex, health, isHidden, level);
+    }
   } else {
     return null;
   }
-  
+
   return { buffer, isMigrated: true };
 };
 
@@ -91,60 +114,81 @@ let flushPromise = null;
 
 export const flushWAL = async () => {
   if (walCache.size === 0) return;
-  
+
   if (isFlushing) {
     // Wait for the current flush to finish, then flush again for any new items
     await flushPromise;
     if (walCache.size > 0) return flushWAL();
     return;
   }
-  
+
   isFlushing = true;
-  
+
   flushPromise = (async () => {
     const entries = Array.from(walCache.entries());
     try {
-      // Process writes sequentially to prevent IDB transaction limits and QuotaExceededErrors
-      for (const [key, data] of entries) {
-         await set(key, data);
-         // Only delete from cache if the save succeeded AND the chunk wasn't modified again during the await
-         if (walCache.get(key) === data) {
+      const BATCH_SIZE = 5;
+      for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+        const batch = entries.slice(i, i + BATCH_SIZE);
+        await Promise.all(batch.map(async ([key, data]) => {
+          await set(key, data);
+          if (walCache.get(key) === data) {
             walCache.delete(key);
-         }
+          }
+        }));
+        // Let the event loop breathe to prevent main thread blocking and allow GC
+        await new Promise(r => setTimeout(r, 5));
       }
     } catch (err) {
       console.error('Failed to flush WAL to IndexedDB', err);
-      if (err.name === 'QuotaExceededError' || err.message?.includes('Quota')) {
-         // Dispatch a custom event so the UI can display a high-priority warning
-         window.dispatchEvent(new CustomEvent('storage_quota_exceeded'));
+      if (err.name === 'QuotaExceededError' || err?.message?.includes('Quota')) {
+        window.dispatchEvent(new CustomEvent('storage_quota_exceeded'));
       }
     } finally {
       isFlushing = false;
     }
   })();
-  
+
   await flushPromise;
 };
 
 export let skipAutoSaveOnExit = false;
-export const setSkipAutoSave = (val) => { skipAutoSaveOnExit = val; };
+export const setSkipAutoSave = (val) => {
+  skipAutoSaveOnExit = val;
+};
 
-document.addEventListener('visibilitychange', () => {
+const visibilityListener = () => {
   if (document.visibilityState === 'hidden' && !skipAutoSaveOnExit) {
     if (window.useStore) {
-       // Force a synchronous extraction of modified chunks into the WAL
-       window.useStore.getState().saveWorld();
+      const pos = [playerPosition.x, playerPosition.y, playerPosition.z];
+      const rot = [
+        playerRotation.x,
+        playerRotation.y,
+        playerRotation.z,
+        playerRotation.w,
+      ];
+      window.useStore.getState().savePlayerState(pos, rot);
+      // Force a synchronous extraction of modified chunks into the WAL
+      window.useStore.getState().saveWorld();
     }
     flushWAL();
   }
-});
+};
+
+if (typeof window !== 'undefined') {
+  if (window.__DB_VISIBILITY_LISTENER__) {
+    document.removeEventListener('visibilitychange', window.__DB_VISIBILITY_LISTENER__);
+  }
+  window.__DB_VISIBILITY_LISTENER__ = visibilityListener;
+  document.addEventListener('visibilitychange', visibilityListener);
+}
 
 export const saveChunkToDB = async (chunkKey, chunkData) => {
-  const key = `${getSlotPrefix()}_chunk_${chunkKey}`;
+  const key = `${getSlotPrefix()}_chunk_v14_${chunkKey}`;
   // Compress immediately to prevent QuotaExceededError and array mutations
   const rleBuffer = compressRLE(chunkData.buffer);
   walCache.set(key, { rleBuffer });
-  
+
   if (!walTimer) {
     walTimer = setTimeout(() => {
       walTimer = null;
@@ -162,27 +206,33 @@ const processIdbQueue = async () => {
   idbActiveCount++;
   const task = idbQueue.shift();
   try {
-    const key = `${getSlotPrefix()}_chunk_${task.chunkKey}`;
-    
+    const key = `${getSlotPrefix()}_chunk_v14_${task.chunkKey}`;
+
     // Check WAL first to prevent reading stale DB data before a flush
     if (walCache.has(key)) {
-       const walData = walCache.get(key);
-       if (walData.rleBuffer) {
-           task.resolve({ buffer: decompressRLE(walData.rleBuffer).buffer, isMigrated: true });
-       } else {
-           task.resolve({ buffer: walData.buffer.slice(0), isMigrated: true });
-       }
+      const walData = walCache.get(key);
+      if (walData.rleBuffer) {
+        task.resolve({
+          buffer: decompressRLE(walData.rleBuffer).buffer,
+          isMigrated: true,
+        });
+      } else {
+        task.resolve({ buffer: walData.buffer.slice(0), isMigrated: true });
+      }
     } else {
-       const res = await get(key);
-       if (res) {
-         if (res.rleBuffer) {
-            task.resolve({ buffer: decompressRLE(res.rleBuffer).buffer, isMigrated: true });
-         } else {
-            task.resolve(migrateLegacyChunk(res));
-         }
-       } else {
-         task.resolve(null);
-       }
+      const res = await get(key);
+      if (res) {
+        if (res.rleBuffer) {
+          task.resolve({
+            buffer: decompressRLE(res.rleBuffer).buffer,
+            isMigrated: true,
+          });
+        } else {
+          task.resolve(migrateLegacyChunk(res));
+        }
+      } else {
+        task.resolve(null);
+      }
     }
   } catch (err) {
     console.error('Failed to load chunk from IndexedDB', err);
@@ -201,14 +251,14 @@ export const loadChunkFromDB = (chunkKey) => {
 };
 
 export const cancelLoadFromDB = (chunkKey) => {
-  const idx = idbQueue.findIndex(t => t.chunkKey === chunkKey);
+  const idx = idbQueue.findIndex((t) => t.chunkKey === chunkKey);
   if (idx !== -1) {
     idbQueue.splice(idx, 1);
   }
 };
 
 export const deleteChunkFromDB = async (chunkKey) => {
-  const key = `${getSlotPrefix()}_chunk_${chunkKey}`;
+  const key = `${getSlotPrefix()}_chunk_v14_${chunkKey}`;
   if (walCache.has(key)) walCache.delete(key);
   await del(key);
 };
@@ -232,77 +282,105 @@ export const clearSlotDB = async (slotId) => {
   }
 };
 
+// --- WORLD ENTITIES EXPORTER ---
+export const saveWorldEntities = async (data) => {
+  const prefix = getSlotPrefix();
+  await set(`${prefix}_world_entities`, data);
+};
+
+export const loadWorldEntities = async () => {
+  const prefix = getSlotPrefix();
+  return await get(`${prefix}_world_entities`);
+};
+
 // --- WORLD EXPORTER (.vx Blob) ---
 
-export const exportSlot = async (slotId) => {
+export const exportSlotBlob = async (slotId) => {
   const allKeys = await keys();
-  const slotKeys = allKeys.filter(k => k.startsWith(`${slotId}_`));
-  
+  const slotKeys = allKeys.filter((k) => k.startsWith(`${slotId}_`));
+
   const exportData = {
-     version: 2, // Upgraded to v2 to include playerState and other JSON data
-     metadata: localStorage.getItem(`saveMetadata_${slotId}`),
-     chunks: {},
-     otherData: {}
+    version: 2, // Upgraded to v2 to include playerState and other JSON data
+    metadata: localStorage.getItem(`saveMetadata_${slotId}`),
+    chunks: {},
+    otherData: {},
   };
-  
+
   for (const k of slotKeys) {
-     const data = await get(k);
-     if (data && data.rleBuffer) {
-        exportData.chunks[k] = data.rleBuffer;
-     } else if (data && data.buffer) {
-        exportData.chunks[k] = compressRLE(data.buffer);
-     } else if (data) {
-        // This captures player_state, achievements, etc.
-        exportData.otherData[k] = data;
-     }
+    const data = await get(k);
+    if (data && data.rleBuffer) {
+      exportData.chunks[k] = data.rleBuffer;
+    } else if (data && data.buffer) {
+      exportData.chunks[k] = compressRLE(data.buffer);
+    } else if (data) {
+      // This captures player_state, achievements, etc.
+      exportData.otherData[k] = data;
+    }
   }
-  
+
   const jsonStr = JSON.stringify(exportData);
   const blob = new Blob([jsonStr], { type: 'application/json' });
+  return blob;
+};
+
+export const exportSlot = async (slotId) => {
+  const blob = await exportSlotBlob(slotId);
   const url = URL.createObjectURL(blob);
-  
+
   const a = document.createElement('a');
   a.href = url;
   a.download = `world_searcher_${slotId}.vx`;
   a.click();
-  
+
   URL.revokeObjectURL(url);
+};
+
+export const importSlotBlob = async (slotId, exportData) => {
+  if (!exportData.version) throw new Error('Invalid .vx data');
+
+  await clearSlotDB(slotId);
+  localStorage.setItem(`saveMetadata_${slotId}`, exportData.metadata);
+
+  if (exportData.chunks) {
+    for (const [key, rleArray] of Object.entries(exportData.chunks)) {
+      const firstUnderscore = key.indexOf('_');
+      const targetKey = `${slotId}${key.substring(firstUnderscore)}`;
+      await set(targetKey, { rleBuffer: rleArray });
+    }
+  }
+
+  if (exportData.version >= 2 && exportData.otherData) {
+    for (const [key, data] of Object.entries(exportData.otherData)) {
+      const firstUnderscore = key.indexOf('_');
+      const targetKey = `${slotId}${key.substring(firstUnderscore)}`;
+      await set(targetKey, data);
+    }
+  }
 };
 
 export const importSlot = async (slotId, file) => {
   return new Promise((resolve, reject) => {
-     const reader = new FileReader();
-     reader.onload = async (e) => {
-        try {
-           const exportData = JSON.parse(e.target.result);
-           if (!exportData.version) throw new Error("Invalid .vx file");
-           
-           await clearSlotDB(slotId);
-           localStorage.setItem(`saveMetadata_${slotId}`, exportData.metadata);
-           
-           if (exportData.chunks) {
-             for (const [key, rleArray] of Object.entries(exportData.chunks)) {
-                const firstUnderscore = key.indexOf('_');
-                const targetKey = `${slotId}${key.substring(firstUnderscore)}`;
-                await set(targetKey, { rleBuffer: rleArray });
-             }
-           }
-           
-           if (exportData.version >= 2 && exportData.otherData) {
-             for (const [key, data] of Object.entries(exportData.otherData)) {
-                const firstUnderscore = key.indexOf('_');
-                const targetKey = `${slotId}${key.substring(firstUnderscore)}`;
-                await set(targetKey, data);
-             }
-           }
-           resolve();
-        } catch (err) {
-           console.error('Import failed', err);
-           reject(err);
-        }
-     };
-     reader.onerror = reject;
-     reader.readAsText(file);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const exportData = JSON.parse(e.target.result);
+        await importSlotBlob(slotId, exportData);
+        resolve();
+      } catch (err) {
+        console.error('Import failed', err);
+        reject(err);
+      }
+    };
+    reader.onerror = reject;
+    reader.readAsText(file);
   });
 };
 
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    if (window.__DB_VISIBILITY_LISTENER__) {
+      document.removeEventListener('visibilitychange', window.__DB_VISIBILITY_LISTENER__);
+    }
+    if (walTimer) clearTimeout(walTimer);
+  });
+}

@@ -47,14 +47,24 @@ export const useKeyboard = () => {
 
   const handleKeyDown = useCallback((e) => {
     if (e.repeat) return; // Prevent OS key repeat from causing constant React re-renders
-    
+
     // Ignore all inputs if user is typing in a text field
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
     const action = actionByKey(e.code);
     if (action) {
       // Prevent movement if the game isn't capturing the mouse
-      if (!document.pointerLockElement && ['moveForward', 'moveBackward', 'moveLeft', 'moveRight', 'jump', 'sprint'].includes(action)) {
+      if (
+        !document.pointerLockElement &&
+        [
+          'moveForward',
+          'moveBackward',
+          'moveLeft',
+          'moveRight',
+          'jump',
+          'sprint',
+        ].includes(action)
+      ) {
         return;
       }
       setActions((prev) => ({
@@ -77,7 +87,7 @@ export const useKeyboard = () => {
   useEffect(() => {
     const handlePointerLockChange = () => {
       if (!document.pointerLockElement) {
-        setActions(prev => ({
+        setActions((prev) => ({
           ...prev,
           moveForward: false,
           moveBackward: false,
@@ -95,7 +105,10 @@ export const useKeyboard = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('keyup', handleKeyUp);
-      document.removeEventListener('pointerlockchange', handlePointerLockChange);
+      document.removeEventListener(
+        'pointerlockchange',
+        handlePointerLockChange
+      );
     };
   }, [handleKeyDown, handleKeyUp]);
 

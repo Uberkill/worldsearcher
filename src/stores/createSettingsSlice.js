@@ -1,7 +1,11 @@
 // Persisted settings slice — saved to localStorage so they survive reloads
 const load = (key, fallback) => {
-  try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : fallback; }
-  catch { return fallback; }
+  try {
+    const v = localStorage.getItem(key);
+    return v !== null ? JSON.parse(v) : fallback;
+  } catch {
+    return fallback;
+  }
 };
 
 export const createSettingsSlice = (set, get) => ({
@@ -11,16 +15,16 @@ export const createSettingsSlice = (set, get) => ({
 
   // Audio
   masterVolume: load('setting_masterVolume', 0.8),
-  sfxVolume:    load('setting_sfxVolume', 1.0),
-  musicVolume:  load('setting_musicVolume', 0.5),
-  isMuted:      load('setting_isMuted', false),
+  sfxVolume: load('setting_sfxVolume', 1.0),
+  musicVolume: load('setting_musicVolume', 0.5),
+  isMuted: load('setting_isMuted', false),
 
   // Game Mode
   gameMode: load('setting_gameMode', 'survival'), // 'survival' | 'creative' | 'hardcore'
 
   // Graphics
   renderDistance: load('setting_renderDistance', 8),
-  shadowQuality:  load('setting_shadowQuality', 'visual'), // 'visual' | 'performance'
+  shadowQuality: load('setting_shadowQuality', 'visual'), // 'visual' | 'performance'
 
   // UI & Debug
   isSettingsOpen: false,
@@ -57,12 +61,16 @@ export const createSettingsSlice = (set, get) => ({
     localStorage.setItem('setting_shadowQuality', JSON.stringify(v));
     set({ shadowQuality: v });
   },
-  openSettings:  () => set((state) => {
-    if (state.isDead) return {};
-    return { isSettingsOpen: true };
-  }),
+  openSettings: () =>
+    set((state) => {
+      if (state.isDead) return {};
+      return { isSettingsOpen: true };
+    }),
   closeSettings: () => set({ isSettingsOpen: false }),
-  toggleDebugLighting: () => set((state) => ({ debugLighting: !state.debugLighting })),
-  toggleDebugPhysics: () => set((state) => ({ debugPhysics: !state.debugPhysics })),
-  toggleDebugShadows: () => set((state) => ({ debugShadows: !state.debugShadows })),
+  toggleDebugLighting: () =>
+    set((state) => ({ debugLighting: !state.debugLighting })),
+  toggleDebugPhysics: () =>
+    set((state) => ({ debugPhysics: !state.debugPhysics })),
+  toggleDebugShadows: () =>
+    set((state) => ({ debugShadows: !state.debugShadows })),
 });

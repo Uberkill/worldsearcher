@@ -32,9 +32,11 @@ const registerTexture = (filename) => {
 };
 
 // 0 is reserved for air, so we use empty/fallback for ID 0
-registerTexture("fallback");
+registerTexture('fallback');
 
-export const FaceMappings = new Array(256).fill(null).map(() => ({ top: 0, bottom: 0, side: 0 }));
+export const FaceMappings = new Array(256)
+  .fill(null)
+  .map(() => ({ top: 0, bottom: 0, side: 0 }));
 
 Object.keys(BlockRegistry).forEach((key) => {
   const id = BlockIds[key];
@@ -47,10 +49,12 @@ Object.keys(BlockRegistry).forEach((key) => {
       FaceMappings[id] = {
         top: registerTexture(conf.textures.top),
         bottom: registerTexture(conf.textures.bottom),
-        side: registerTexture(conf.textures.side)
+        side: registerTexture(conf.textures.side),
       };
     } else {
-      FaceMappings[id] = { top: id, bottom: id, side: id }; 
+      const fallbackColor = conf.color || '#ffffff';
+      const tex = registerTexture(`color:${fallbackColor}`);
+      FaceMappings[id] = { top: tex, bottom: tex, side: tex };
     }
   }
 });

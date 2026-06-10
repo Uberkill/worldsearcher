@@ -1,0 +1,15 @@
+{
+  "name": "Alien_Tree_Normal",
+  "palette": {
+    "L": "log",
+    "F": "leaves"
+  },
+  "layers": [
+    ["     ", "     ", "  L  ", "     ", "     "],
+    ["     ", "     ", "  L  ", "     ", "     "],
+    ["     ", "     ", "  L  ", "     ", "     "],
+    [" FFF ", "FFFFF", "FFLFF", "FFFFF", " FFF "],
+    [" FFF ", " FFF ", " FLF ", " FFF ", " FFF "],
+    ["  F  ", " FFF ", "  F  ", "     ", "     "]
+  ]
+}

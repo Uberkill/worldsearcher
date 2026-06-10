@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../stores/useStore';
+import { useEnvironmentStore } from '../stores/environmentSlice';
 
 export const Clock = () => {
   const [timeStr, setTimeStr] = useState('06:00');
@@ -8,13 +9,17 @@ export const Clock = () => {
 
   useEffect(() => {
     // Subscribe to store changes manually to avoid re-rendering entire component tree on 60fps
-    const unsubscribe = useStore.subscribe(
-      (state) => ({ worldTime: state.worldTime, daysElapsed: state.daysElapsed, isNight: state.isNightTime }),
+    const unsubscribe = useEnvironmentStore.subscribe(
+      (state) => ({
+        worldTime: state.worldTime,
+        daysElapsed: state.daysElapsed,
+        isNight: state.isNightTime,
+      }),
       (state) => {
         const hours = Math.floor(state.worldTime);
         const minutes = Math.floor((state.worldTime % 1) * 60);
         const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-        
+
         setTimeStr(formattedTime);
         setDayStr(`Day ${state.daysElapsed}`);
         setIsNight(state.isNight);

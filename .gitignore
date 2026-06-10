@@ -28,6 +28,8 @@ dist-ssr
 *.py
 diag_*.png
 diag_*.json
+*_output.json
+search_*.json
 *_log.txt
 subagent_logs.txt
 messages.txt

@@ -1,7 +1,7 @@
-import { memo, useMemo, useRef, useEffect } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import { useStore } from '../stores/useStore';
+import { useFlareStore } from '../stores/flareSlice';
 import { useShallow } from 'zustand/react/shallow';
-import { playerPosition } from '../globals';
 import * as THREE from 'three';
 
 // ── Shared geometries (module-level, allocated once) ──────────────────────────
@@ -10,63 +10,45 @@ const FLAME_GEO = new THREE.CylinderGeometry(0.0, 0.075, 0.14, 8); // cone tip
 const EMBER_GEO = new THREE.SphereGeometry(0.06, 8, 6);
 
 const STICK_MAT = new THREE.MeshLambertMaterial({ color: '#7a5230' }); // brown wood
-const FLAME_MAT = new THREE.MeshBasicMaterial({ color: '#ff6600' });   // orange cone
-const EMBER_MAT = new THREE.MeshBasicMaterial({ color: '#ffee22' });   // bright yellow tip
+const FLAME_MAT = new THREE.MeshBasicMaterial({ color: '#ff6600' }); // orange cone
+const EMBER_MAT = new THREE.MeshBasicMaterial({ color: '#ffee22' }); // bright yellow tip
 
-const MAX_LIGHTS = 6;
 const MAX_FLARES = 5000;
 
 export const Flares = () => {
-  const flares = useStore(useShallow(state => state.placedFlares));
-  
+  const flares = useFlareStore(useShallow((state) => state.placedFlares));
+
   const stickRef = useRef();
   const flameRef = useRef();
   const emberRef = useRef();
-  
+
   const dummyStick = useMemo(() => new THREE.Object3D(), []);
   const dummyFlame = useMemo(() => new THREE.Object3D(), []);
   const dummyEmber = useMemo(() => new THREE.Object3D(), []);
 
-  const playerChunkX = useStore(state => state.playerChunkX);
-  const playerChunkZ = useStore(state => state.playerChunkZ);
-
-  // Pick closest flares for point lights
-  const lightPositions = useMemo(() => {
-    if (!flares || flares.length === 0) return [];
-    const px = playerPosition.x;
-    const py = playerPosition.y;
-    const pz = playerPosition.z;
-
-    const sorted = [...flares].sort((a, b) => {
-      const da = (a.pos[0]-px)**2 + (a.pos[1]-py)**2 + (a.pos[2]-pz)**2;
-      const db = (b.pos[0]-px)**2 + (b.pos[1]-py)**2 + (b.pos[2]-pz)**2;
-      return da - db;
-    });
-
-    return sorted.slice(0, MAX_LIGHTS).map(f => {
-       const [nx, ny, nz] = f.normal;
-       return [
-         f.pos[0] + nx * 0.06,
-         f.pos[1] + ny * 0.06 + 0.5,
-         f.pos[2] + nz * 0.06
-       ];
-    });
-  }, [flares, playerChunkX, playerChunkZ]);
-
   useEffect(() => {
     if (!stickRef.current || !flameRef.current || !emberRef.current) return;
-    
+
     for (let i = 0; i < flares.length; i++) {
       const f = flares[i];
       const [nx, ny, nz] = f.normal;
-      
-      let rx = 0, ry = 0, rz = 0;
-      if (ny > 0.5) { rx = 0; }
-      else if (ny < -0.5) { rx = Math.PI; }
-      else if (nx > 0.5) { rz = -Math.PI * 0.35; }
-      else if (nx < -0.5) { rz = Math.PI * 0.35; }
-      else if (nz > 0.5) { rx = Math.PI * 0.35; }
-      else { rx = -Math.PI * 0.35; }
+
+      let rx = 0,
+        ry = 0,
+        rz = 0;
+      if (ny > 0.5) {
+        rx = 0;
+      } else if (ny < -0.5) {
+        rx = Math.PI;
+      } else if (nx > 0.5) {
+        rz = -Math.PI * 0.35;
+      } else if (nx < -0.5) {
+        rz = Math.PI * 0.35;
+      } else if (nz > 0.5) {
+        rx = Math.PI * 0.35;
+      } else {
+        rx = -Math.PI * 0.35;
+      }
 
       const mx = f.pos[0] + nx * 0.06;
       const my = f.pos[1] + ny * 0.06;
@@ -83,24 +65,28 @@ export const Flares = () => {
       stickRef.current.setMatrixAt(i, dummyStick.matrix);
 
       // Flame Dummy (offset Y=0.37 local)
-      const fPos = new THREE.Vector3(0, 0.37, 0).applyQuaternion(quat).add(dummyStick.position);
+      const fPos = new THREE.Vector3(0, 0.37, 0)
+        .applyQuaternion(quat)
+        .add(dummyStick.position);
       dummyFlame.position.copy(fPos);
       dummyFlame.quaternion.copy(quat);
       dummyFlame.updateMatrix();
       flameRef.current.setMatrixAt(i, dummyFlame.matrix);
 
       // Ember Dummy (offset Y=0.46 local)
-      const ePos = new THREE.Vector3(0, 0.46, 0).applyQuaternion(quat).add(dummyStick.position);
+      const ePos = new THREE.Vector3(0, 0.46, 0)
+        .applyQuaternion(quat)
+        .add(dummyStick.position);
       dummyEmber.position.copy(ePos);
       dummyEmber.quaternion.copy(quat);
       dummyEmber.updateMatrix();
       emberRef.current.setMatrixAt(i, dummyEmber.matrix);
     }
-    
+
     stickRef.current.count = flares.length;
     flameRef.current.count = flares.length;
     emberRef.current.count = flares.length;
-    
+
     stickRef.current.instanceMatrix.needsUpdate = true;
     flameRef.current.instanceMatrix.needsUpdate = true;
     emberRef.current.instanceMatrix.needsUpdate = true;
@@ -108,20 +94,21 @@ export const Flares = () => {
 
   return (
     <group>
-      <instancedMesh ref={stickRef} args={[STICK_GEO, STICK_MAT, MAX_FLARES]} frustumCulled={false} />
-      <instancedMesh ref={flameRef} args={[FLAME_GEO, FLAME_MAT, MAX_FLARES]} frustumCulled={false} />
-      <instancedMesh ref={emberRef} args={[EMBER_GEO, EMBER_MAT, MAX_FLARES]} frustumCulled={false} />
-      
-      {lightPositions.map((pos, i) => (
-        <pointLight
-          key={i}
-          position={pos}
-          color="#ffaa00"
-          intensity={1.2}
-          distance={15}
-          decay={1.5}
-        />
-      ))}
+      <instancedMesh
+        ref={stickRef}
+        args={[STICK_GEO, STICK_MAT, MAX_FLARES]}
+        frustumCulled={false}
+      />
+      <instancedMesh
+        ref={flameRef}
+        args={[FLAME_GEO, FLAME_MAT, MAX_FLARES]}
+        frustumCulled={false}
+      />
+      <instancedMesh
+        ref={emberRef}
+        args={[EMBER_GEO, EMBER_MAT, MAX_FLARES]}
+        frustumCulled={false}
+      />
     </group>
   );
 };

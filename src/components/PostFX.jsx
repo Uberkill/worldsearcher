@@ -1,6 +1,11 @@
-import { EffectComposer, Bloom, Vignette, ToneMapping } from '@react-three/postprocessing';
+import {
+  EffectComposer,
+  Bloom,
+  Vignette,
+  ToneMapping,
+} from '@react-three/postprocessing';
 import { BlendFunction, ToneMappingMode } from 'postprocessing';
-import { useStore } from '../stores/useStore';
+import { useEnvironmentStore } from '../stores/environmentSlice';
 
 // NOTE: SSAO removed — its blue-noise sampling kernel tiles visibly across
 // flat voxel surfaces (all block faces are 90° planes, which tricks SSAO into
@@ -8,10 +13,10 @@ import { useStore } from '../stores/useStore';
 // below give a better visual result without any artifacts.
 
 export const PostFX = () => {
-  const isNight = useStore(state => state.isNightTime);
+  const isNight = useEnvironmentStore((state) => state.isNightTime);
 
   return (
-    <EffectComposer multisampling={4}>
+    <EffectComposer multisampling={0}>
       {/* Bloom — soft glow on bright sky pixels and sun disc */}
       <Bloom
         luminanceThreshold={isNight ? 0.3 : 0.88}

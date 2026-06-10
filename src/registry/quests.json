@@ -1,0 +1,58 @@
+{
+  "main_quests": [
+    {
+      "id": "mq_01",
+      "syncLevel": 1,
+      "title": "Awakening",
+      "description": "You have awakened in an unknown world. Gather basic resources to establish a foothold.",
+      "objectives": [
+        { "type": "mine", "target": "wood", "amount": 10 },
+        { "type": "mine", "target": "stone", "amount": 5 }
+      ],
+      "rewards": {
+        "data": 500,
+        "items": [{ "texture": "sword", "count": 1 }]
+      }
+    },
+    {
+      "id": "mq_02",
+      "syncLevel": 2,
+      "title": "The First Defense",
+      "description": "Hostile entities have been detected. Build a shelter and prepare for combat.",
+      "objectives": [
+        { "type": "kill", "target": "zombie", "amount": 5 },
+        { "type": "craft", "target": "crafting_table", "amount": 1 }
+      ],
+      "rewards": {
+        "data": 1000,
+        "items": [{ "texture": "lantern", "count": 1 }]
+      }
+    }
+  ],
+  "side_quests_pool": [
+    {
+      "id": "sq_bounty_01",
+      "title": "Zombie Exterminator",
+      "description": "Clear out the local zombie population.",
+      "objectives": [
+        { "type": "kill", "target": "zombie", "amount": 10 }
+      ],
+      "rewards": {
+        "data": 150,
+        "coins": 50
+      }
+    },
+    {
+      "id": "sq_gather_01",
+      "title": "Miner's Request",
+      "description": "Gather raw materials for construction.",
+      "objectives": [
+        { "type": "mine", "target": "stone", "amount": 50 }
+      ],
+      "rewards": {
+        "data": 100,
+        "coins": 20
+      }
+    }
+  ]
+}

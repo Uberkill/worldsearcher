@@ -1,5 +1,8 @@
 import * as THREE from 'three';
-import { BlockRegistry, BlockIds, TextureRegistry } from '../registry/BlockRegistry';
+import {
+  BlockRegistry,
+  TextureRegistry,
+} from '../registry/BlockRegistry';
 
 export const ATLAS_GRID_SIZE = 16;
 export const ATLAS_TILE_SIZE = 128; // Updated for 128x128 textures
@@ -12,7 +15,10 @@ export const getTextureAtlas = () => {
   const canvas = document.createElement('canvas');
   canvas.width = ATLAS_GRID_SIZE * ATLAS_TILE_SIZE;
   canvas.height = ATLAS_GRID_SIZE * ATLAS_TILE_SIZE;
-  const ctx = canvas.getContext('2d', { willReadFrequently: true, alpha: true });
+  const ctx = canvas.getContext('2d', {
+    willReadFrequently: true,
+    alpha: true,
+  });
 
   // Make everything completely transparent initially
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -21,20 +27,29 @@ export const getTextureAtlas = () => {
   texture.magFilter = THREE.NearestFilter;
   texture.minFilter = THREE.NearestFilter;
   texture.colorSpace = THREE.SRGBColorSpace;
-  texture.generateMipmaps = false; 
+  texture.generateMipmaps = false;
   texture.flipY = false;
 
   // We loop through TextureRegistry (which are filenames)
   // ID 0 is reserved for 'fallback' air, so we skip it or just handle it gracefully
   TextureRegistry.forEach((filename, id) => {
     if (id === 0) return;
-    
+
     const tileX = (id % ATLAS_GRID_SIZE) * ATLAS_TILE_SIZE;
     const tileY = Math.floor(id / ATLAS_GRID_SIZE) * ATLAS_TILE_SIZE;
 
     // Default Fallback Color based on ID hash if image fails to load
     const fallbackHue = (id * 137.5) % 360;
-    
+
+    if (filename.startsWith('color:')) {
+      const color = filename.split(':')[1];
+      ctx.globalAlpha = 1.0;
+      ctx.fillStyle = color;
+      ctx.fillRect(tileX, tileY, ATLAS_TILE_SIZE, ATLAS_TILE_SIZE);
+      texture.needsUpdate = true;
+      return;
+    }
+
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
@@ -48,13 +63,13 @@ export const getTextureAtlas = () => {
       let matchedBlockColor = null;
       let matchedOpacity = 1.0;
       for (const [key, block] of Object.entries(BlockRegistry)) {
-         if (filename.includes(key)) {
-            matchedBlockColor = block.color;
-            matchedOpacity = block.opacity !== undefined ? block.opacity : 1.0;
-            break;
-         }
+        if (filename.includes(key)) {
+          matchedBlockColor = block.color;
+          matchedOpacity = block.opacity !== undefined ? block.opacity : 1.0;
+          break;
+        }
       }
-      
+
       ctx.globalAlpha = matchedOpacity;
       ctx.fillStyle = matchedBlockColor || `hsl(${fallbackHue}, 50%, 50%)`;
       ctx.fillRect(tileX, tileY, ATLAS_TILE_SIZE, ATLAS_TILE_SIZE);
@@ -63,25 +78,6 @@ export const getTextureAtlas = () => {
     };
     // Trigger load from public dir
     img.src = `/textures/blocks/${filename}`;
-  });
-
-  // Also support legacy IDs that might not be in the JSON yet
-  Object.keys(BlockRegistry).forEach((key) => {
-    const block = BlockRegistry[key];
-    const id = BlockIds[key];
-    if (block.isTool) return;
-    
-    // If the legacy ID is greater than the JSON texture registry length, 
-    // it means it hasn't been mapped via FaceMappings. Fallback paint it.
-    if (id >= TextureRegistry.length) {
-       const tileX = (id % ATLAS_GRID_SIZE) * ATLAS_TILE_SIZE;
-       const tileY = Math.floor(id / ATLAS_GRID_SIZE) * ATLAS_TILE_SIZE;
-       ctx.globalAlpha = block.opacity !== undefined ? block.opacity : 1.0;
-       ctx.fillStyle = block.color || '#ffffff';
-       ctx.fillRect(tileX, tileY, ATLAS_TILE_SIZE, ATLAS_TILE_SIZE);
-       ctx.globalAlpha = 1.0;
-       texture.needsUpdate = true;
-    }
   });
 
   generatedAtlas = texture;
