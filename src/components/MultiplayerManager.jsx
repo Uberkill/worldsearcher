@@ -262,22 +262,7 @@ const PlayerAvatar = ({ id }) => {
 };
 
 export const MultiplayerManager = () => {
-  const { connectionStatus, broadcastMovement, players, playerId } = networkActions();
-  const { camera } = useThree();
-  const lastBroadcast = useRef(0);
-
-  useFrame(() => {
-    if (connectionStatus !== 'connected' || !camera) return;
-
-    const now = performance.now();
-    if (now - lastBroadcast.current > 50) {
-      lastBroadcast.current = now;
-      const pos = playerPosition;
-      _euler.setFromQuaternion(camera.quaternion, 'YXZ');
-
-      broadcastMovement(playerId, pos.x, pos.y, pos.z, _euler.x, _euler.y, _euler.z);
-    }
-  });
+  const { connectionStatus, players, playerId } = networkActions();
 
   React.useEffect(() => {
     if (connectionStatus !== 'connected') return;

@@ -10,7 +10,7 @@ import { create } from 'zustand';
 import Peer from 'peerjs';
 import { getSeed, setWorldSeed } from '../worldSeed';
 import { compressRLE, decompressRLE, flushWAL } from '../utils/db';
-import { playerPosition } from '../globals';
+import { playerPosition, playerRotation } from '../globals';
 
 const chatKeys = new Set(['chatMessages', 'isTyping']);
 const syncKeys = new Set(['players', 'guestHealthMap', 'enemySyncBuffers', 'queuedDeltas', 'waypoints']);
@@ -427,7 +427,23 @@ export const networkActions = create((rawSet, rawGet) => {
               }
            });
         }, 5000);
-      set({ pingInterval });
+
+        // 30Hz Positional Sync Loop (Host)
+        const positionalSyncInterval = setInterval(() => {
+          const netState = get();
+          if (netState.connectionStatus !== 'connected') return;
+          
+          // Broadcast our current position to peers
+          netState.sendBinary(1, {
+             x: playerPosition.x,
+             y: playerPosition.y,
+             z: playerPosition.z,
+             pitch: playerRotation.x,
+             yaw: playerRotation.y
+          });
+        }, 33); // ~30Hz
+
+      set({ pingInterval, positionalSyncInterval });
     });
 
     peer.on('connection', (conn) => {
@@ -611,7 +627,21 @@ export const networkActions = create((rawSet, rawGet) => {
              }
           }, 5000);
 
-          set({ peer, isHost: false, roomCode: code.toUpperCase(), connections: [conn], pingInterval: watchdog });
+          // 30Hz Positional Sync Loop (Guest)
+          const positionalSyncInterval = setInterval(() => {
+            const netState = get();
+            if (netState.connectionStatus !== 'connected') return;
+            
+            netState.sendBinary(1, {
+               x: playerPosition.x,
+               y: playerPosition.y,
+               z: playerPosition.z,
+               pitch: playerRotation.x,
+               yaw: playerRotation.y
+            });
+          }, 33);
+
+          set({ peer, isHost: false, roomCode: code.toUpperCase(), connections: [conn], pingInterval: watchdog, positionalSyncInterval });
         
         // Phase 2: Ghost Rooms Timeout Failsafe
         setTimeout(() => {
@@ -661,8 +691,9 @@ export const networkActions = create((rawSet, rawGet) => {
     if (intentional) {
        window.__INTENTIONAL_DISCONNECT__ = true;
     }
-    const { peer, connections, unreliableConnections, pingInterval } = get();
+    const { peer, connections, unreliableConnections, pingInterval, positionalSyncInterval } = get();
     if (pingInterval) clearInterval(pingInterval);
+    if (positionalSyncInterval) clearInterval(positionalSyncInterval);
     connections.forEach(c => c.close());
     unreliableConnections.forEach(c => c.close());
     if (peer) peer.destroy();
@@ -1247,14 +1278,18 @@ export const networkActions = create((rawSet, rawGet) => {
           if (useStore) {
              const chunk = useChunkStore.getState().chunks[data.chunkKey];
              if (chunk && chunk.isModified && chunk.buffer) {
-                 try { senderConn.send({ type: 'WORLD_SYNC_RLE', chunkKey: data.chunkKey, rle: compressRLE(chunk.buffer) }); } catch { /* ignore */ }
+                 compressRLE(chunk.buffer).then(rle => {
+                     try { senderConn.send({ type: 'WORLD_SYNC_RLE', chunkKey: data.chunkKey, rle }); } catch { /* ignore */ }
+                 });
              } else if (chunk && !chunk.isModified) {
                  try { senderConn.send({ type: 'CHUNK_PRISTINE', chunkKey: data.chunkKey }); } catch { /* ignore */ }
              } else {
                  import('../utils/db').then(({ loadChunkFromDB }) => {
                     loadChunkFromDB(data.chunkKey).then(dbChunk => {
                        if (dbChunk && dbChunk.isModified && dbChunk.buffer) {
-                           try { senderConn.send({ type: 'WORLD_SYNC_RLE', chunkKey: data.chunkKey, rle: compressRLE(dbChunk.buffer) }); } catch { /* ignore */ }
+                           compressRLE(dbChunk.buffer).then(rle => {
+                               try { senderConn.send({ type: 'WORLD_SYNC_RLE', chunkKey: data.chunkKey, rle }); } catch { /* ignore */ }
+                           });
                        } else {
                            try { senderConn.send({ type: 'CHUNK_PRISTINE', chunkKey: data.chunkKey }); } catch { /* ignore */ }
                        }
@@ -1277,18 +1312,18 @@ export const networkActions = create((rawSet, rawGet) => {
        }
     }
     else if (data.type === 'WORLD_SYNC_RLE') {
-       const resolver = state.chunkRequests[data.chunkKey];
-       if (resolver) {
-          resolver(decompressRLE(data.rle).buffer);
-          set(prev => {
-             const next = { ...prev.chunkRequests };
-             delete next[data.chunkKey];
-             return { chunkRequests: next, inFlightChunkRequests: Math.max(0, prev.inFlightChunkRequests - 1) };
-          });
-          get().processChunkQueue();
-          
-          // Process queued deltas
-          setTimeout(() => {
+       decompressRLE(data.rle).then(decompressed => {
+           const resolver = state.chunkRequests[data.chunkKey];
+           if (resolver) {
+              resolver(decompressed.buffer);
+              set(prev => {
+                 const next = { ...prev.chunkRequests };
+                 delete next[data.chunkKey];
+                 return { chunkRequests: next, inFlightChunkRequests: Math.max(0, prev.inFlightChunkRequests - 1) };
+              });
+              get().processChunkQueue();
+              
+              // Process queued deltas STRICTLY after resolution
               const queued = get().queuedDeltas[data.chunkKey];
               if (queued && queued.length > 0) {
                   const useStore = getGameStore();
@@ -1301,13 +1336,13 @@ export const networkActions = create((rawSet, rawGet) => {
                       return { queuedDeltas: nextQ };
                   });
               }
-          }, 0);
-       } else {
-          const useStore = getGameStore();
-          if (useStore) {
-            useStore.getState().applyWorldSync({ [data.chunkKey]: decompressRLE(data.rle).buffer });
-          }
-       }
+           } else {
+              const useStore = getGameStore();
+              if (useStore) {
+                useStore.getState().applyWorldSync({ [data.chunkKey]: decompressed.buffer });
+              }
+           }
+       });
     }
     else if (data.type === 'PLAYER_MOVE') {
       if (state.isHost) {
@@ -1338,13 +1373,26 @@ export const networkActions = create((rawSet, rawGet) => {
       }
 
       set(prev => {
-        const currentBuffer = prev.players[data.id]?.positionBuffer || [];
-        const newSnapshot = { 
-           pos: [data.x, data.y, data.z], 
-           rot: [data.rx, data.ry, data.rz], 
-           timestamp: Date.now() 
-        };
-        const newBuffer = [...currentBuffer, newSnapshot].slice(-20); // Keep 1 second of history at 20Hz
+        const p = useSyncStore.getState().players[data.id];
+        if (p) {
+          if (!p.positionBuffer) p.positionBuffer = [];
+          const newSnapshot = { 
+             pos: [data.x, data.y, data.z], 
+             rot: [data.rx, data.ry, data.rz], 
+             timestamp: Date.now() 
+          };
+          p.positionBuffer.push(newSnapshot);
+          if (p.positionBuffer.length > 20) p.positionBuffer.shift();
+          
+          p.x = data.x;
+          p.y = data.y;
+          p.z = data.z;
+          p.rx = data.rx;
+          p.ry = data.ry;
+          p.rz = data.rz;
+          p.lastUpdate = Date.now();
+          return {}; // Do not trigger React re-render
+        }
         
         return {
           players: {
@@ -1355,7 +1403,7 @@ export const networkActions = create((rawSet, rawGet) => {
               rx: data.rx, ry: data.ry, rz: data.rz,
               name: data.name || prev.players[data.id]?.name,
               lastUpdate: Date.now(),
-              positionBuffer: newBuffer
+              positionBuffer: prev.players[data.id]?.positionBuffer || []
             }
           }
         };
@@ -1465,7 +1513,7 @@ export const networkActions = create((rawSet, rawGet) => {
         useStore.getState().applyNetworkDelta(data.chunkKey, data.deltas);
       }
       
-      // Host rebroadcasts delta to other clients
+      // Host rebroadcast delta to other clients
       if (state.isHost) {
          get().connections.forEach(conn => {
             if (conn.peer !== senderConn.peer) {
@@ -1544,30 +1592,40 @@ export const networkActions = create((rawSet, rawGet) => {
           const rz = view.getFloat32(57, true);
           
           set(prev => {
-             const currentBuffer = prev.players[id]?.positionBuffer || [];
-             const lastTime = currentBuffer.length > 0 ? currentBuffer[currentBuffer.length - 1].timestamp : Date.now() - 50;
-             // Smooth jitter: assume 50ms pacing, but resync if drift exceeds 250ms
-             let newTimestamp = lastTime + 50;
-             if (Math.abs(newTimestamp - Date.now()) > 250) newTimestamp = Date.now();
-             
-             const newSnapshot = { 
-                pos: [x, y, z], 
-                rot: [rx, ry, rz], 
-                timestamp: newTimestamp 
-             };
-             const newBuffer = [...currentBuffer, newSnapshot].slice(-20);
-             
-             return {
-                players: {
-                   ...prev.players,
-                   [id]: {
-                      ...prev.players[id],
-                      x, y, z, rx, ry, rz,
-                      positionBuffer: newBuffer,
-                      lastUpdate: Date.now()
-                   }
-                }
-             };
+            const p = useSyncStore.getState().players[id];
+            if (p) {
+               if (!p.positionBuffer) p.positionBuffer = [];
+               const currentBuffer = p.positionBuffer;
+               const lastTime = currentBuffer.length > 0 ? currentBuffer[currentBuffer.length - 1].timestamp : Date.now() - 50;
+               // Smooth jitter: assume 50ms pacing, but resync if drift exceeds 250ms
+               let newTimestamp = lastTime + 50;
+               if (Math.abs(newTimestamp - Date.now()) > 250) newTimestamp = Date.now();
+               
+               const newSnapshot = { 
+                  pos: [x, y, z], 
+                  rot: [rx, ry, rz], 
+                  timestamp: newTimestamp 
+               };
+               currentBuffer.push(newSnapshot);
+               if (currentBuffer.length > 20) currentBuffer.shift();
+               
+               p.x = x; p.y = y; p.z = z;
+               p.rx = rx; p.ry = ry; p.rz = rz;
+               p.lastUpdate = Date.now();
+               return {}; // Do not trigger React re-render
+            }
+            
+            return {
+               players: {
+                  ...prev.players,
+                  [id]: {
+                     ...prev.players[id],
+                     x, y, z, rx, ry, rz,
+                     lastUpdate: Date.now(),
+                     positionBuffer: []
+                  }
+               }
+            };
           });
           
           if (state.isHost) {
@@ -1795,6 +1853,36 @@ export const networkActions = create((rawSet, rawGet) => {
     delete newPlayers[id];
     return { players: newPlayers };
   }),
+
+  sendBinary: (type, data) => {
+       const state = get();
+       if (type === 1) { // PLAYER_MOVE
+          const buffer = new ArrayBuffer(63);
+          const view = new DataView(buffer);
+          view.setUint8(0, 1);
+          
+          const id = state.playerId;
+          for (let i = 0; i < 36; i++) {
+             view.setUint8(1 + i, i < id.length ? id.charCodeAt(i) : 0);
+          }
+          
+          view.setFloat32(37, data.x, true);
+          view.setFloat32(41, data.y, true);
+          view.setFloat32(45, data.z, true);
+          view.setFloat32(49, data.pitch, true);
+          view.setFloat32(53, data.yaw, true);
+          view.setUint32(57, 0, true); // anim
+          
+          window.__sendSeq = (window.__sendSeq || 0) + 1;
+          view.setUint16(61, window.__sendSeq % 65535, true);
+          
+          if (state.isHost) {
+             state.unreliableConnections.forEach(c => { try { c.send(buffer); } catch {} });
+          } else {
+             state.connections.forEach(c => { try { c.send(buffer); } catch {} });
+          }
+       }
+    },
   
   cullDeadConnection: (id) => {
      const state = get();

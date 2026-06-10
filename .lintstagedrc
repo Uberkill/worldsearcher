@@ -1,4 +1,4 @@
 {
-  "*.{js,jsx}": ["prettier --write", "eslint --fix"],
+  "*.{js,jsx}": ["prettier --write", "eslint --fix", "node scripts/check_architecture.js"],
   "*.{json,css,md,html}": ["prettier --write"]
 }

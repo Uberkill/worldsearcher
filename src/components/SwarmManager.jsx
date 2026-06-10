@@ -99,6 +99,13 @@ export const SwarmManager = ({ type, max }) => {
     pathIndexes: new Uint16Array(max),
     paths: new Float32Array(max * 30 * 3), // Max 30 waypoints, 3 floats each
     lastPathRequest: new Float64Array(max),
+    // Decoupled 144Hz Interpolation State
+    visualX: new Float32Array(max),
+    visualY: new Float32Array(max),
+    visualZ: new Float32Array(max),
+    netX: new Float32Array(max),
+    netY: new Float32Array(max),
+    netZ: new Float32Array(max),
   });
 
   // Track free entity indices for fast allocation
@@ -322,20 +329,13 @@ export const SwarmManager = ({ type, max }) => {
               ? physicsRef.current.at(i)
               : physicsRef.current[i];
           if (rb) {
-            const oldPos = rb.translation();
-            const distSq =
-              (ent.x - oldPos.x) ** 2 +
-              (ent.y - oldPos.y) ** 2 +
-              (ent.z - oldPos.z) ** 2;
-            if (distSq > 25) {
-              rb.setNextKinematicTranslation({ x: ent.x, y: ent.y, z: ent.z });
-            } else {
-              const lerpFactor = 1.0 - Math.exp(-10 * (1 / ServerTickMetrics.tps));
-              const nextX = oldPos.x + (ent.x - oldPos.x) * lerpFactor;
-              const nextY = oldPos.y + (ent.y - oldPos.y) * lerpFactor;
-              const nextZ = oldPos.z + (ent.z - oldPos.z) * lerpFactor;
-              rb.setNextKinematicTranslation({ x: nextX, y: nextY, z: nextZ });
-            }
+            // Set 30Hz Network Target for 144Hz Interpolation
+            p.netX[i] = ent.x;
+            p.netY[i] = ent.y;
+            p.netZ[i] = ent.z;
+
+            // Instantly snap physics collider to target so hitboxes are accurate
+            rb.setNextKinematicTranslation({ x: ent.x, y: ent.y, z: ent.z });
             rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
 
             if (!Number.isNaN(ent.yaw)) {
@@ -350,7 +350,7 @@ export const SwarmManager = ({ type, max }) => {
     } else if (
       netState.isHost &&
       netState.connections.length > 0 &&
-      now - lastBroadcastRef.current > 100
+      now - lastBroadcastRef.current > 33
     ) {
       const entities = [];
       for (let i = 0; i < max; i++) {
@@ -491,6 +491,10 @@ export const SwarmManager = ({ type, max }) => {
         rb.setTranslation({ x: i * 2, y: -100, z: 0 }, true);
         rb.setLinvel({ x: 0, y: 0, z: 0 }, true);
         rb.sleep();
+        
+        p.visualX[i] = i * 2;
+        p.visualY[i] = -100;
+        p.visualZ[i] = 0;
 
         // Hide meshes
         _mat.makeTranslation(0, -100, 0);
@@ -761,11 +765,16 @@ export const SwarmManager = ({ type, max }) => {
     } // End of runFixedTick loop
   };
 
-  useFrame(({ clock }) => {
+  useFrame((state, delta) => {
     if (!physicsRef.current) return;
-    const time = clock.getElapsedTime();
+    const time = state.clock.getElapsedTime();
     const p = pool.current;
     const cfg = SWARM_CONFIG[type] || SWARM_CONFIG['shadowman'];
+
+    // Use shared frame delta for all enemies to prevent stutter!
+    const frameDelta = delta || 0.016;
+    const lerpFactor = Math.min(1.0, frameDelta * 15.0);
+
     for (let i = 0; i < max; i++) {
       if (p.active[i] === 0) continue;
       const rb = typeof physicsRef.current.at === 'function' ? physicsRef.current.at(i) : physicsRef.current[i];
@@ -782,7 +791,26 @@ export const SwarmManager = ({ type, max }) => {
       const rbRot = rb.rotation();
       const baseQ = _q.set(rbRot.x, rbRot.y, rbRot.z, rbRot.w);
       const rPos = rb.translation();
-      _pos.set(rPos.x, rPos.y, rPos.z);
+      
+      // Decoupled 144Hz Visual Interpolation
+      // The visual mesh smoothly chases either the physics body (Host) or network target (Guest)
+      let targetX = isGuest ? p.netX[i] : rPos.x;
+      let targetY = isGuest ? p.netY[i] : rPos.y;
+      let targetZ = isGuest ? p.netZ[i] : rPos.z;
+
+      // Teleport visual mesh if distance is too large (e.g., spawn or rubber-band)
+      const distSq = (targetX - p.visualX[i]) ** 2 + (targetY - p.visualY[i]) ** 2 + (targetZ - p.visualZ[i]) ** 2;
+      if (distSq > 25 || p.visualY[i] < -50) {
+         p.visualX[i] = targetX;
+         p.visualY[i] = targetY;
+         p.visualZ[i] = targetZ;
+      } else {
+         p.visualX[i] += (targetX - p.visualX[i]) * lerpFactor;
+         p.visualY[i] += (targetY - p.visualY[i]) * lerpFactor;
+         p.visualZ[i] += (targetZ - p.visualZ[i]) * lerpFactor;
+      }
+
+      _pos.set(p.visualX[i], p.visualY[i], p.visualZ[i]);
 
       // Dynamically align visual meshes to the bottom of the physics collider
       const bottomY = _pos.y - cfg.hitbox[1] / 2;

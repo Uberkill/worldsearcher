@@ -13,13 +13,13 @@
 - **Physics Engine Broken Reads**: Fixed `structuralPhysics.js` and `fluidSystem.js` failing to compute gravity and liquids because they were reading from the old decoupled state object.
 - **Missing Environment Shadows**: Fixed a hardcoded `castShadow={false}` on `Chunk.jsx` and `ChunkFlora.jsx` meshes, dynamically connecting them back to the `shadowQuality` setting so terrain casts realistic shadows again.
 
-## Current State of the Code
-- The world engine is stable and runs smoothly. 
-- Voxel generation, mesh building, and asynchronous lighting are correctly deferred to Web Workers and smoothly uploaded to the GPU via double buffering without stuttering.
-- Block interactions, gravity simulations, and fluid updates accurately interact with the decoupled Chunk Store.
-- Object cleanup successfully disposes Three.js buffer geometries before React unmounts them to prevent WebGL VRAM leaks.
+## Native Rendering Pipeline (React Virtual DOM Bypass)
+- **Eliminated React Thrashing**: Previously, attempting to map hundreds of `Instance` items within `<InstancedMesh>` via React resulted in complete UI locking due to massive diffing operations. 
+- **`ChunkRenderer.jsx`**: We instituted a Native Imperative Pipeline. Instead of passing state down as props, `ChunkRenderer` takes raw Web Worker payloads and pushes them directly into Three.js `InstancedMesh` buffers (`mesh.current.setMatrixAt`).
+- **Zero-Copy Architecture**: Large payload data (like terrain RLE and binary arrays) are now transferred between threads via standard Transferable Objects to guarantee no clone allocation memory spikes.
 
-## Immediate Next Steps
-- **Complete Decoupling**: Identify and eliminate any remaining legacy `get()` and `set()` wrappers in `worldActions.js` that rely on Strangulation Proxy patches, transitioning them fully to direct slice calls.
-- **Combat & Swarm Managers**: Verify that Enemy AI and Swarm managers are fully capable of reading terrain data from the decoupled `chunkStore` for pathfinding.
-- **Worker Optimization**: Monitor worker thread pool scaling under extreme conditions (like massive consecutive explosive chain reactions) to ensure the message queue doesn't lock up.
+## Current State of the Code
+- The world engine is highly stable.
+- Voxel generation, mesh building, and asynchronous lighting are correctly deferred to Web Workers and smoothly uploaded to the GPU.
+- Memory usage remains flat because we aggressively utilize `Float32Array` object pooling across physics and geometry generation.
+- Object cleanup successfully disposes Three.js buffer geometries before React unmounts them to prevent WebGL VRAM leaks.

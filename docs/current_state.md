@@ -7,6 +7,11 @@
   - True Multi-threaded Procedural Generation and Naive/Greedy Meshing (`chunkWorkerPool.js`, `chunkWorker.js`).
   - Hardware-accelerated InstancedMesh extraction for Flora (Tall Grass, Flowers) bypassing greedy meshing for performance (`ChunkFlora.jsx`).
 
+- **Native Imperative Pipeline & Off-Thread Logic:**
+  - `ChunkRenderer.jsx` utilizes an imperative pipeline, natively pushing matrices to `<InstancedMesh>` buffers to completely bypass React's Virtual DOM reconciliation overhead.
+  - Zero-copy data transfer pipelines via `dbWorker.js` completely offload heavy RLE compression and database reading from the main thread to eliminate stop-the-world garbage collection pauses.
+  - Custom Static Analyzer (`scripts/check_architecture.js`) enforces zero-allocation loops via Git pre-commit hooks to permanently prevent performance regressions.
+
 - **Rendering & Shaders:**
   - Dynamic Custom Texture Atlas generated on the fly via Canvas (`TextureAtlas.js`).
   - Highly advanced Voxel Lighting System packed into vertex attributes (Sunlight, Blocklight, and AO in a single 32-bit integer).
@@ -48,6 +53,9 @@
   - Voxel light propagation across chunk boundaries relies on tightly synchronized worker thread responses. Edge cases during rapid block placement/breaking on chunk borders can occasionally result in brief asynchronous light flickering.
 - **Game UI / Menus:**
   - The UI (TailwindCSS overlays) lacks advanced user settings, server browsers, and intricate crafting grids, remaining largely foundational.
+
+- **Graphify Analysis - Disconnected Nodes:**
+  - Graphify's architectural analysis identified **271 isolated nodes** (functions/modules with ≤ 1 connection). This indicates a significant amount of "dark code", unused boilerplate (e.g., standard npm package files), or undocumented modules that should be audited.
 
 ## Immediate Next Steps
 

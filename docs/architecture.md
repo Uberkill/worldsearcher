@@ -32,8 +32,8 @@ To maintain fluid visuals, the camera and local player meshes read high-frequenc
 ├── components/         # React Components (UI and 3D Scene Elements)
 │   ├── ui/             # 2D DOM Overlays (TitleScreen, Inventory, HUD, SpectorModal)
 │   ├── Player.jsx      # Rapier Kinematic Character Controller
-│   ├── Chunk.jsx       # 3D Mesh Renderer for terrain chunks
-│   ├── ChunkFlora.jsx  # InstancedMesh renderer for grass and flowers
+│   ├── ChunkRenderer.jsx # Native Three.js Imperative Render Pipeline (Bypasses React for extreme performance)
+│   ├── ChunkPhysics.jsx  # Invisible physics colliders for chunk geometry
 │   ├── Enemies.jsx     # Spawner and SwarmManager for entities
 │   ├── HostCombat.jsx  # Host-authoritative hitscan & projectile logic
 │   ├── Tombstones.jsx  # Death system dropped items
@@ -49,15 +49,24 @@ To maintain fluid visuals, the camera and local player meshes read high-frequenc
 │   ├── chunkGenerator.js # Procedural generation (Simplex Noise)
 │   ├── greedyMesh.js   # Custom Naive/Greedy meshing with embedded AO/Lighting
 │   ├── workerPool.js   # Web Worker management and queueing
-│   └── db.js           # IndexedDB wrappers and RLE compression
-├── workers/            # Off-thread Web Workers
-│   └── chunkWorker.js  # Heavy terrain generation and meshing (No UI thread blocking)
+│   └── db.js           # Async Proxy to the IndexedDB Web Worker
+├── workers/            # Off-thread Web Workers (DO NOT BLOCK THE MAIN THREAD)
+│   ├── chunkWorker.js  # Heavy terrain generation and meshing
+│   └── dbWorker.js     # IndexedDB I/O and RLE Array Decompression
 ├── materials/          # Custom WebGL Shaders and Texture Atlas
 │   ├── ChunkMaterial.js # Custom ShaderMaterial for voxel lighting & AO
 │   └── TextureAtlas.js  # Canvas-based automatic texture atlas compiler
+├── scripts/            # Build & CI/CD Scripts
+│   └── check_architecture.js # Custom AST Linter that enforces zero-allocation loops
 └── registry/           # Game Data Configurations
     └── blocks.json     # Master block definition file (IDs, attributes, textures)
 ```
+
+## Graphify Architectural Insights
+A recent Graphify AST analysis of the codebase highlighted several critical architectural bottlenecks and central "God Nodes" that future refactors must be aware of:
+- **The Core God Node (`useStore`)**: `useStore` is the most highly connected module in the entire project, acting as a bridge across 18 distinct communities (Networking, Swarm Management, Audio, Rendering, Chunk Logic). While Zustand slices help, `useStore.js` itself is a massive bottleneck.
+- **Import Cycles**: There is a known 3-file import cycle: `src/audio/GameAudio.js -> src/stores/useStore.js -> src/stores/createPlayerSlice.js -> src/audio/GameAudio.js`. Be extremely careful when adding imports to these files to prevent circular initialization crashes.
+- **Disconnected Tech Debt**: The codebase currently contains 271 "isolated nodes" (functions or modules with 1 or fewer AST connections). These represent deprecated features or stubbed modules that should be audited and removed.
 
 ## Database Schema (IndexedDB)
 

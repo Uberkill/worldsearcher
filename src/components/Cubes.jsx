@@ -14,10 +14,11 @@ import { useFrame } from '@react-three/fiber';
 import { DynamicCube } from './DynamicCube';
 import { FallingStructure } from './FallingStructure';
 import { ChunkPhysics } from './ChunkPhysics';
-import { Chunk } from './Chunk';
-import { materialCache } from '../utils/ChunkMaterialCache';
+import { ChunkRenderer } from './ChunkRenderer';
+import { materialCache, initMaterials } from '../utils/ChunkMaterialCache';
 import * as THREE from 'three';
 
+initMaterials();
 
 const projScreenMatrix = new THREE.Matrix4();
 
@@ -30,27 +31,13 @@ export const Cubes = memo(() => {
   );
   const debris = useInventoryStore(useShallow((state) => state.debris || []));
 
-  // All active chunks are rendered through this array to ensure individual meshes.
-  const overflowChunks = useChunkStore(
-    useShallow((state) => state.overflowChunks || [])
-  );
-  const shadowsEnabled = useStore((state) => state.shadowQuality === 'visual');
-
   useFrame((state) => {
     // Pop chunks off the Staggered Upload Queue
     const store = useStore.getState();
     const chunkStore = useChunkStore.getState();
     const len = chunkStore.pendingMeshMounts?.length || 0;
-    // Upload chunks to the GPU in batches sized by how many are waiting.
-    // Higher limits = faster pop-in but slightly more frame stutter on slow machines.
-    // Raised from 5→12 peak and 2→4 normal to reduce the visual "one at a time" effect.
-    let batchSize = 1;
-    if (len > 100) batchSize = 12;
-    else if (len > 30) batchSize = 6;
-    else if (len > 10) batchSize = 4;
-    else if (len > 3) batchSize = 2;
-    batchSize = Math.min(len, batchSize);
-
+    // Upload a max of 2 chunks per frame during initial load (len>10) to prevent VRAM timeout/TDR, then trickle 1/frame
+    const batchSize = Math.min(len, len > 10 ? 2 : 1);
     if (batchSize > 0) {
       store.mountNextMesh(batchSize);
     }
@@ -76,14 +63,8 @@ export const Cubes = memo(() => {
 
   return (
     <>
-      {/* Individual Chunks (Native Frustum Culling) */}
-      {overflowChunks.map((chunkKey) => (
-        <Chunk
-          key={`chunk-${chunkKey}`}
-          chunkKey={chunkKey}
-          shadowsEnabled={shadowsEnabled}
-        />
-      ))}
+      {/* Native Render Pipeline (bypasses React reconciliation) */}
+      <ChunkRenderer />
 
       {/* Entity-Aware Physics Grid: Renders ONLY invisible TrimeshColliders */}
       {activePhysicsChunks.map((chunkKey) => (

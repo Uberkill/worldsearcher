@@ -3,8 +3,8 @@ import { useChunkStore } from '../stores/chunkSlice';
 
 let getPass1Cache = null;
 const POOL_SIZE = Math.min(
-  Math.max((navigator.hardwareConcurrency || 2) - 1, 1),
-  8
+  Math.max(Math.floor((navigator.hardwareConcurrency || 2) / 2), 1),
+  4
 );
 
 class WorkerManager {

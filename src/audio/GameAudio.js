@@ -75,9 +75,9 @@ class GameAudioSystem {
 
     this.masterGain.connect(this.context.destination);
 
-    // Override Three.js AudioListener's internal destination to route through our Master Bus
+    // Override Three.js AudioListener's internal destination to route through our SFX Bus
     this.listener.gain.disconnect();
-    this.listener.gain.connect(this.masterGain);
+    this.listener.gain.connect(this.sfxGain);
 
     // 3. Load Assets
     await this.loadAssets();
@@ -136,9 +136,6 @@ class GameAudioSystem {
         const globalSound = new THREE.Audio(this.listener);
         globalSound.setBuffer(buffer);
         globalSound.setVolume(name.startsWith('ui_') ? 1.0 : 0.6); // Slightly quieter for non-UI global sounds
-        // Connect to SFX bus instead of master
-        globalSound.disconnect();
-        globalSound.getOutput().connect(this.sfxGain);
         this.uiSounds.set(name, globalSound);
       } catch (err) {
         console.warn(`Failed to load audio: ${name}`, err);
@@ -235,9 +232,9 @@ class GameAudioSystem {
     const now = this.context.currentTime;
     const currentVol = this.musicGain.gain.value;
     this.musicGain.gain.cancelScheduledValues(now);
-    this.musicGain.gain.setValueAtTime(currentVol * 0.2, now);
+    this.musicGain.gain.setValueAtTime(Math.max(0.001, currentVol * 0.2), now);
     this.musicGain.gain.exponentialRampToValueAtTime(
-      useStore.getState().musicVolume * 0.5,
+      Math.max(0.001, useStore.getState().musicVolume * 0.5),
       now + 1.5
     );
   }

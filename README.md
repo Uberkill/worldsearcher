@@ -1,5 +1,21 @@
 # World Search - Custom Voxel Engine
 
+> [!WARNING]  
+> **AI AGENTS:** Before modifying this codebase, you MUST read [`docs/AI_AGENT_WARNINGS.md`](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/AI_AGENT_WARNINGS.md). Failure to follow these architectural rules will destroy the engine's performance.
+
+## Documentation Index
+All core architectural notes, rules, and system guides are located in the `docs/` folder:
+- **[AI Warnings & Rules](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/AI_AGENT_WARNINGS.md)** (CRITICAL)
+- **[Architecture & Engine Data](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/architecture.md)**
+- **[Current State & Tech Debt](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/current_state.md)**
+- **[Graphify Insights](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/GRAPHIFY_INSIGHTS.md)**
+- **[Combat & Entities](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/COMBAT.md)**
+- **[Memory & State Management](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/MEMORY.md)**
+- **[Design & Vibe](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/design.md)**
+- **[Design System (ECS)](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/design_system.md)**
+- **[Game Modes](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/GAME_MODES.md)**
+- **[Host Commands](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/COMMANDS.md)**
+
 A high-performance, deterministic custom voxel engine built natively for the browser. This project leverages WebGL, WebWorkers, and WebRTC to deliver a seamless, procedurally generated multiplayer experience.
 
 ## Technology Stack

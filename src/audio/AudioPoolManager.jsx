@@ -30,6 +30,9 @@ export const AudioPoolManager = ({ poolSize = 15 }) => {
       ) => {
         if (!gameAudio.initialized) return;
 
+        // Prevent audio explosion on click by ignoring spatial requests while suspended
+        if (gameAudio.context && gameAudio.context.state === 'suspended') return;
+
         // 1. Voice Culling (Concurrency)
         if (!gameAudio.canPlayVoice(soundName)) return;
 
@@ -67,6 +70,7 @@ export const AudioPoolManager = ({ poolSize = 15 }) => {
           positionArray[1],
           positionArray[2]
         );
+        voice.obj.updateMatrixWorld();
 
         // We create the PositionalAudio imperatively to attach it to the dummy Object3D
         if (!voice.audio) {
@@ -76,26 +80,37 @@ export const AudioPoolManager = ({ poolSize = 15 }) => {
           voice.audio.setDistanceModel('linear');
           voice.audio.setRolloffFactor(1);
           voice.obj.add(voice.audio);
+          
+          voice.audio.voiceRef = voice;
 
-          // Connect to the SFX bus instead of directly to Master
-          voice.audio.disconnect();
-          voice.audio.getOutput().connect(gameAudio.sfxGain);
+          // Cleanup when finished, preserving Three.js internal state updates
+          voice.audio.onEnded = function () {
+            THREE.PositionalAudio.prototype.onEnded.call(this);
+            if (this.voiceRef) {
+              this.voiceRef.active = false;
+              this.voiceRef.playing = false;
+              gameAudio.releaseVoice(this.voiceRef.soundName);
+            }
+          };
         }
 
-        // Randomize pitch to prevent machine-gunning
         voice.audio.setPlaybackRate(0.9 + Math.random() * 0.2);
         voice.audio.setVolume(volume);
         voice.audio.setBuffer(buffer);
 
-        // Cleanup when finished
-        voice.audio.onEnded = () => {
-          voice.active = false;
-          voice.playing = false;
-          gameAudio.releaseVoice(soundName);
-        };
-
         voice.audio.play();
         voice.playing = true;
+
+        // Safety fallback to prevent pool leaks if onEnded doesn't fire
+        if (voice.timeoutId) clearTimeout(voice.timeoutId);
+        const durationMs = (buffer.duration * 1000) / voice.audio.playbackRate;
+        voice.timeoutId = setTimeout(() => {
+          if (voice.active && voice.playing) {
+            voice.active = false;
+            voice.playing = false;
+            gameAudio.releaseVoice(voice.soundName);
+          }
+        }, durationMs + 200);
 
         // Dynamic Ducking for heavy impacts
         if (soundName === 'explosion') {

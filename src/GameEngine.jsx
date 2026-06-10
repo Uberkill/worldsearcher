@@ -187,8 +187,7 @@ export default function GameEngine() {
                 <Physics
                   debug={debugPhysics}
                   gravity={[0, -30, 0]}
-                  timeStep={1/30}
-                  updatePriority={-1}
+                  timeStep="vary"
                 >
                   <Player />
                   <Cubes />

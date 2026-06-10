@@ -6,7 +6,7 @@ import { useInventoryStore } from './inventorySlice';
 import { v4 as uuidV4 } from 'uuid';
 import { saveChunkToDB, loadChunkFromDB, clearDB, cancelLoadFromDB, flushWAL } from '../utils/db';
 import { BlockRegistry, BlockById, BlockKeyById, BlockIds } from '../registry/BlockRegistry';
-import { setBlock, getIndex, getTextureId, CHUNK_Y_MIN, CHUNK_Y_MAX, getIsHidden, CHUNK_VOLUME } from '../utils/chunkData';
+import { setBlock, getIndex, getTextureId, CHUNK_Y_MIN, CHUNK_Y_MAX, getIsHidden, CHUNK_VOLUME, getHealth } from '../utils/chunkData';
 import { chunkWorkerPool } from '../utils/workerPool';
 import { getSeed } from '../worldSeed';
 import { tickFluids, wakeFluidsAround } from '../utils/fluidSystem';
@@ -270,7 +270,7 @@ export const worldActions = (rawSet, rawGet) => {
       })();
     },
     resetWorld: async () => {
-      if (useStore.getState().isResetting) return;
+      if (get().isResetting) return;
       rawSet({
         isResetting: true
       });
@@ -411,7 +411,7 @@ export const worldActions = (rawSet, rawGet) => {
               processingNetworkDeltas.add(chunkKey);
               setTimeout(async () => {
                 try {
-                  const processingDeltas = useStore.getState().pendingDeltas[chunkKey];
+                  const processingDeltas = get().pendingDeltas[chunkKey];
                   if (!processingDeltas) return;
                   (() => {
                     const prev = getCombinedState(rawGet);
@@ -481,8 +481,8 @@ export const worldActions = (rawSet, rawGet) => {
                   console.error('Silent delta save failed', e);
                 } finally {
                   processingNetworkDeltas.delete(chunkKey);
-                  if (useStore.getState().pendingDeltas[chunkKey]) {
-                    useStore.getState().applyNetworkDelta(chunkKey, []);
+                  if (get().pendingDeltas[chunkKey]) {
+                    get().applyNetworkDelta(chunkKey, []);
                   }
                 }
               }, 0);
@@ -1395,7 +1395,13 @@ export const worldActions = (rawSet, rawGet) => {
           }
         }
         if (!chunkData && !skipDB) {
-          chunkData = await loadChunkFromDB(chunkKey);
+          const cachedBuffer = await loadChunkFromDB(chunkKey);
+          // SELF-HEALING PROTOCOL:
+          // Detect heavily corrupted or 0-byte chunks from previous database bugs
+          // and fall back to procedural generation to patch the void.
+          if (cachedBuffer && cachedBuffer.buffer && cachedBuffer.buffer.byteLength >= 294912) {
+            chunkData = cachedBuffer;
+          }
         }
         if (cancelledChunks.has(chunkKey)) {
           inFlightChunks.delete(chunkKey);
@@ -1615,7 +1621,7 @@ export const worldActions = (rawSet, rawGet) => {
         }
         chunkData.rebuildId = 0;
         chunkData.physicsRebuildId = 0;
-        const pending = useStore.getState().pendingDeltas[chunkKey];
+        const pending = get().pendingDeltas[chunkKey];
         if (pending) {
           for (let i = 0; i < pending.length; i += 2) {
             chunkData.buffer[pending[i]] = pending[i + 1];
@@ -1762,10 +1768,17 @@ export const worldActions = (rawSet, rawGet) => {
         cancelledChunks.add(chunkKey);
         return;
       }
+      // Fix: Data Loss Bug (Sprint-Away)
+      // If the chunk is dirty, save it to the WAL before destroying its RAM buffer!
+      const chunkData = useChunkStore.getState().chunks[chunkKey];
+      if (chunkData && chunkData.isModified) {
+        saveChunkToDB(chunkKey, chunkData);
+      }
+
       // Remove from dirty-set rebuild system so no ghost worker fires after unload
       dirtyChunkSet.delete(chunkKey);
       inFlightRebuildSet.delete(chunkKey);
-      const chunkData = useChunkStore.getState().chunks[chunkKey];
+      
       if (!chunkData) return;
       (() => {
         const prev = getCombinedState(rawGet);
@@ -2607,7 +2620,7 @@ export const worldActions = (rawSet, rawGet) => {
       if (health === 511) return; // Infinity
 
       if (health - amount <= 0) {
-        useStore.getState().removeCube(x, y, z);
+        get().removeCube(x, y, z);
       } else {
         (() => {
           const prev = getCombinedState(rawGet);
@@ -2735,7 +2748,7 @@ export const worldActions = (rawSet, rawGet) => {
       debris: prev.debris.filter(d => d.key !== debrisKey)
     })),
     saveWorld: async () => {
-      if (useStore.getState().isResetting) return;
+      if (get().isResetting) return;
       const chunks = useChunkStore.getState().chunks;
       const chunksToSave = [];
 

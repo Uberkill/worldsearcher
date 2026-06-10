@@ -245,7 +245,7 @@ export const DynamicSky = () => {
       if (Math.abs(timeDifference) > 1.0) {
         localTimeRef.current = netState.hostWorldTime;
       } else {
-        localTimeRef.current += timeDifference * 0.05;
+        localTimeRef.current += timeDifference * delta * 2.0;
       }
     }
 
@@ -390,7 +390,8 @@ export const DynamicSky = () => {
 
     // CRITICAL PATCH: Break the shadow map death spiral
     const currentPos = state.camera.position;
-    const distMovedSq = lastPosRef.current.distanceToSquared(currentPos);
+    // Only track 2D movement (X and Z). Jumping/falling (Y) should NOT trigger massive shadow updates!
+    const distMovedSq = Math.pow(lastPosRef.current.x - currentPos.x, 2) + Math.pow(lastPosRef.current.z - currentPos.z, 2);
     let shadowNeedsUpdate = false;
 
     // Suppress shadow map updates while the GPU is busy uploading chunk geometry.
@@ -400,14 +401,15 @@ export const DynamicSky = () => {
     const pendingMounts = useChunkStore.getState().pendingMeshMounts?.length ?? 0;
     const shadowBusy = pendingMounts > 8;
 
-    if (!shadowBusy && distMovedSq > 25) {
+    shadowTimerRef.current += delta;
+
+    // Update shadows if moved > 32 blocks horizontally, max once every 2 seconds
+    if (!shadowBusy && distMovedSq > 1024 && shadowTimerRef.current > 2.0) {
       shadowNeedsUpdate = true;
       lastPosRef.current.copy(currentPos);
-    }
-
-    // 1fps Throttle to shadows for smooth time-of-day shadow updates
-    shadowTimerRef.current += delta;
-    if (!shadowBusy && shadowTimerRef.current > 1.0) {
+      shadowTimerRef.current = 0;
+    } else if (!shadowBusy && shadowTimerRef.current > 5.0) {
+      // 5fps Throttle to shadows for smooth time-of-day shadow updates
       shadowTimerRef.current = 0;
       shadowNeedsUpdate = true;
     }

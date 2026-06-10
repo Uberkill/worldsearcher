@@ -11,3 +11,9 @@ createRoot(document.getElementById('root')).render(
     <App />
   </StrictMode>
 );
+window.addEventListener('error', (e) => {
+  console.error('GLOBAL ERROR CAPTURED:', e.error?.stack || e.message);
+});
+window.addEventListener('error', (e) => {
+  fetch('http://localhost:5174/', { method: 'POST', body: e.error?.stack || e.message }).catch(()=>{});
+});

@@ -443,7 +443,7 @@ export const DebugOverlay = () => {
       const workerQueue = wStats.queueLength || 0;
       const mountQueue = useChunkStore.getState().pendingMeshMounts?.length || 0;
       const batched = 0;
-      const overflows = useChunkStore.getState().overflowChunks?.length || 0;
+      const visualCount = useChunkStore.getState().overflowChunks?.length || 0;
       const pendUnloads = stats.pendingUnloads || 0;
       const failed = stats.failedChunks || 0;
       const netReqs = stats.netRequests || 0;
@@ -502,9 +502,9 @@ export const DebugOverlay = () => {
       );
       write('dbg-pipe-batched', batched, '#a78bfa');
       write(
-        'dbg-pipe-overflow',
-        overflows,
-        overflows > 0 ? '#fbbf24' : '#555555'
+        'dbg-pipe-visual',
+        visualCount,
+        visualCount > 0 ? '#fbbf24' : '#555555'
       );
       write(
         'dbg-pipe-unload',
@@ -659,7 +659,7 @@ export const DebugOverlay = () => {
             <StatRow label="In-Flight (Gen)" valueId="dbg-pipe-flight" />
             <StatRow label="Mount Queue" valueId="dbg-pipe-mount" />
             <StatRow label="Batched (WebGL)" valueId="dbg-pipe-batched" />
-            <StatRow label="Overflows" valueId="dbg-pipe-overflow" />
+            <StatRow label="Visual Chunks" valueId="dbg-pipe-visual" />
             <StatRow label="Pending Unloads" valueId="dbg-pipe-unload" />
             <StatRow label="Async DB Deltas" valueId="dbg-pipe-deltas" />
             <StatRow label="Failed" valueId="dbg-pipe-failed" />

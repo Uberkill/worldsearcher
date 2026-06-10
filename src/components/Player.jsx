@@ -60,6 +60,9 @@ const CollisionLayers = {
 const _direction = new Vector3();
 const _frontVector = new Vector3();
 const _sideVector = new Vector3();
+const _intendedDirection = new Vector3();
+let _intendedJump = false;
+let _intendedSpeedY = 0;
 const _yAxis = new Vector3(0, 1, 0);
 const _camPos = new Vector3();
 const _grappleTarget = new Vector3();
@@ -77,6 +80,7 @@ export const Player = () => {
     useKeyboard();
   const [isFlying, setIsFlying] = useState(false);
   const playerRef = useRef();
+  const meshRef = useRef();
   const processedDamageRef = useRef(new Set());
   const isTeleporting = useRef(false);
   const lastJump = useRef(0);
@@ -581,10 +585,6 @@ export const Player = () => {
       }
     }
 
-    // Camera follows player — reuse _camPos
-    _camPos.set(translation.x, translation.y + 0.6, translation.z);
-    camera.position.copy(_camPos);
-
     // Liquid Detection
     let isInLiquid = false;
     let liquidDamage = 0;
@@ -742,28 +742,17 @@ export const Player = () => {
       playerRef.current.setGravityScale(isFlying ? 0 : 1, true);
     }
 
-    _direction.set(0, 0, 0);
-    if (moveForward) _direction.add(_frontVector);
-    if (moveBackward) _direction.sub(_frontVector);
-    if (moveRight) _direction.add(_sideVector);
-    if (moveLeft) _direction.sub(_sideVector);
-
-    _direction.normalize().multiplyScalar(currentSpeed);
-
     linvel = playerRef.current.linvel();
 
     if (isFlying) {
-      let flyY = 0;
-      if (jump) flyY = currentSpeed;
-      else if (sprint) flyY = -currentSpeed;
       playerRef.current.setLinvel(
-        { x: _direction.x, y: flyY, z: _direction.z },
+        { x: _intendedDirection.x, y: _intendedSpeedY, z: _intendedDirection.z },
         true
       );
     } else {
       // Normal walking: preserve gravity Y velocity
       playerRef.current.setLinvel(
-        { x: _direction.x, y: linvel.y, z: _direction.z },
+        { x: _intendedDirection.x, y: linvel.y, z: _intendedDirection.z },
         true
       );
     }
@@ -799,7 +788,7 @@ export const Player = () => {
 
     if (
       isGrounded &&
-      _direction.lengthSq() > 0.1 &&
+      _intendedDirection.lengthSq() > 0.1 &&
       Date.now() - lastStep.current > 350 &&
       !isFlying &&
       !isInLiquid
@@ -809,7 +798,7 @@ export const Player = () => {
     }
 
     const { playerJumpMult, playerPower } = state;
-    if (jump && !isFlying) {
+    if (_intendedJump && !isFlying) {
       if (isInLiquid) {
         playerRef.current.setLinvel({ x: linvel.x, y: 3, z: linvel.z }, true);
       } else if (isGrounded && Date.now() - lastJump.current > 300) {
@@ -822,7 +811,7 @@ export const Player = () => {
       }
     }
 
-    if (isInLiquid && !jump && linvel.y < -2) {
+    if (isInLiquid && !_intendedJump && linvel.y < -2) {
       // Terminal velocity falling in liquid
       playerRef.current.setLinvel({ x: linvel.x, y: -2, z: linvel.z }, true);
     } else if (!isFlying && linvel.y < -35) {
@@ -831,11 +820,55 @@ export const Player = () => {
     }
   };
 
-  useFrame(() => {
-    if (!playerRef.current) return;
-    const translation = playerRef.current.translation();
-    _camPos.set(translation.x, translation.y + 0.6, translation.z);
-    camera.position.copy(_camPos);
+  useFrame((state, delta) => {
+    // Poll Keyboard & Steer Vectors at 144Hz
+    const storeState = useStore.getState();
+    const isCreative = storeState.gameMode?.toLowerCase() === 'creative';
+    
+    let currentSpeed = SPEED;
+    if (sprint) {
+      if (storeState.playerPower > 0 || isCreative) {
+        currentSpeed = SPEED * 1.6;
+      } else {
+        currentSpeed = SPEED * 0.7;
+      }
+    } else if (!isCreative && storeState.playerPower <= 0) {
+      currentSpeed = SPEED * 0.7;
+    }
+    if (isFlying) currentSpeed *= 3;
+
+    _frontVector.set(0, 0, -1);
+    _frontVector.applyQuaternion(camera.quaternion);
+    _frontVector.y = 0;
+    _frontVector.normalize();
+    _sideVector.copy(_frontVector).cross(camera.up).normalize();
+
+    _direction.set(0, 0, 0);
+    if (moveForward) _direction.add(_frontVector);
+    if (moveBackward) _direction.sub(_frontVector);
+    if (moveRight) _direction.add(_sideVector);
+    if (moveLeft) _direction.sub(_sideVector);
+
+    _intendedDirection.copy(_direction.normalize().multiplyScalar(currentSpeed));
+    _intendedJump = jump;
+    
+    if (isFlying) {
+      if (jump) _intendedSpeedY = currentSpeed;
+      else if (sprint) _intendedSpeedY = -currentSpeed;
+      else _intendedSpeedY = 0;
+    }
+
+    if (!meshRef.current) return;
+    meshRef.current.getWorldPosition(_camPos);
+    
+    // Mathematically interpolate the camera to chase the 60Hz physics body
+    // This perfectly replaces the buggy `interpolate={true}` prop!
+    const targetY = _camPos.y + 0.6;
+    const lerpFactor = Math.min(1.0, delta * 20.0);
+    
+    camera.position.x += (_camPos.x - camera.position.x) * lerpFactor;
+    camera.position.y += (targetY - camera.position.y) * lerpFactor;
+    camera.position.z += (_camPos.z - camera.position.z) * lerpFactor;
   });
 
   return (
@@ -857,7 +890,7 @@ export const Player = () => {
         collisionGroups={CollisionLayers.PLAYER}
       />
       {/* Invisible player body — physics only */}
-      <mesh visible={false}>
+      <mesh ref={meshRef} visible={false}>
         <sphereGeometry args={[0.4]} />
       </mesh>
     </RigidBody>

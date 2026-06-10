@@ -425,10 +425,10 @@ export const ChunkManager = () => {
     }
 
     // Advance the generator by processing chunks per frame.
-    // Budget raised 20→40: doubles load-request dispatch rate during sweeps.
+    // Budget lowered to 2 to prevent flooding IndexedDB with queries per second, which freezes the browser.
     if (sweepGen.current) {
       let steps = 0;
-      while (steps < 40) {
+      while (steps < 2) {
         const { value, done } = sweepGen.current.next();
         if (done) {
           if (window.__DEBUG_STATS__) {

@@ -14,142 +14,40 @@ const getSlotPrefix = () => {
   return currentSlotId;
 };
 
-export const compressRLE = (bufferInput) => {
-  const uint32Array =
-    bufferInput instanceof Uint32Array
-      ? bufferInput
-      : new Uint32Array(bufferInput);
-  const rle = [];
-  let currentVal = uint32Array[0];
-  let count = 1;
-  for (let i = 1; i < uint32Array.length; i++) {
-    if (uint32Array[i] === currentVal) {
-      count++;
-    } else {
-      rle.push(count, currentVal);
-      currentVal = uint32Array[i];
-      count = 1;
-    }
+// Worker setup
+const worker = new Worker(new URL('../workers/dbWorker.js', import.meta.url), { type: 'module' });
+let messageIdCounter = 0;
+const pendingRequests = new Map();
+
+worker.onmessage = (e) => {
+  const { id, result, error } = e.data;
+  if (pendingRequests.has(id)) {
+    const { resolve, reject } = pendingRequests.get(id);
+    pendingRequests.delete(id);
+    if (error) reject(new Error(error));
+    else resolve(result);
   }
-  rle.push(count, currentVal);
-  return new Uint32Array(rle);
 };
 
-export const decompressRLE = (rleArray) => {
-  const rleUint32 =
-    rleArray instanceof Uint32Array
-      ? rleArray
-      : new Uint32Array(rleArray.buffer || rleArray);
-  const arr = new Uint32Array(CHUNK_VOLUME);
-  let arrIdx = 0;
-  for (let i = 0; i < rleUint32.length; i += 2) {
-    const count = rleUint32[i];
-    const val = rleUint32[i + 1];
-    for (let c = 0; c < count; c++) {
-      if (arrIdx < CHUNK_VOLUME) arr[arrIdx++] = val;
-    }
-  }
-  return arr;
+const sendWorkerRequest = (type, payload, transferList = []) => {
+  return new Promise((resolve, reject) => {
+    const id = messageIdCounter++;
+    pendingRequests.set(id, { resolve, reject });
+    worker.postMessage({ id, type, payload }, transferList);
+  });
 };
 
-// Legacy DB migration
-export const migrateLegacyChunk = (legacyData) => {
-  const buffer = new Uint32Array(CHUNK_VOLUME);
-
-  if (legacyData.buffer) {
-    // Failsafe: if the buffer was saved while detached (0 length), regenerate it
-    if (legacyData.buffer.byteLength < 327680) return null;
-    return legacyData; // Already ECS format
-  }
-
-  // Legacy Object format
-  if (legacyData.blocks) {
-    for (const key in legacyData.blocks) {
-      const b = legacyData.blocks[key];
-      if (b.pos) {
-        const lx = ((b.pos[0] % 16) + 16) % 16;
-        const lz = ((b.pos[2] % 16) + 16) % 16;
-        const ly = Math.round(b.pos[1] - 0.5); // block-center Y back to integer
-
-        let tex = b.texture;
-        if (typeof tex === 'string') {
-          tex = BlockIds[tex] || 1; // fallback to 1 (dirt) if not found
-        }
-        setBlock(
-          buffer,
-          getIndex(lx, ly, lz),
-          tex,
-          b.health || 100,
-          b.isHidden ? 1 : 0,
-          b.level || 0
-        );
-      }
-    }
-  }
-  // Legacy Packed format
-  else if (legacyData.packedBuffer) {
-    const pb = legacyData.packedBuffer;
-    for (let i = 0; i < pb.length; i += 7) {
-      const lx = ((pb[i] % 16) + 16) % 16;
-      const ly = pb[i + 1];
-      const lz = ((pb[i + 2] % 16) + 16) % 16;
-      const isHidden = pb[i + 3];
-      const tex = pb[i + 4];
-      const health = pb[i + 5];
-      const level = pb[i + 6];
-      setBlock(buffer, getIndex(lx, ly, lz), tex, health, isHidden, level);
-    }
-  } else {
-    return null;
-  }
-
-  return { buffer, isMigrated: true };
+export const compressRLE = async (bufferInput) => {
+  const uint32Array = bufferInput instanceof Uint32Array ? bufferInput : new Uint32Array(bufferInput);
+  return await sendWorkerRequest('COMPRESS', { buffer: uint32Array });
 };
 
-const walCache = new Map();
-let walTimer = null;
-
-let isFlushing = false;
-let flushPromise = null;
-
+export const decompressRLE = async (rleArray) => {
+  const rleUint32 = rleArray instanceof Uint32Array ? rleArray : new Uint32Array(rleArray.buffer || rleArray);
+  return await sendWorkerRequest('DECOMPRESS', { rleBuffer: rleUint32 });
+};
 export const flushWAL = async () => {
-  if (walCache.size === 0) return;
-
-  if (isFlushing) {
-    // Wait for the current flush to finish, then flush again for any new items
-    await flushPromise;
-    if (walCache.size > 0) return flushWAL();
-    return;
-  }
-
-  isFlushing = true;
-
-  flushPromise = (async () => {
-    const entries = Array.from(walCache.entries());
-    try {
-      const BATCH_SIZE = 5;
-      for (let i = 0; i < entries.length; i += BATCH_SIZE) {
-        const batch = entries.slice(i, i + BATCH_SIZE);
-        await Promise.all(batch.map(async ([key, data]) => {
-          await set(key, data);
-          if (walCache.get(key) === data) {
-            walCache.delete(key);
-          }
-        }));
-        // Let the event loop breathe to prevent main thread blocking and allow GC
-        await new Promise(r => setTimeout(r, 5));
-      }
-    } catch (err) {
-      console.error('Failed to flush WAL to IndexedDB', err);
-      if (err.name === 'QuotaExceededError' || err?.message?.includes('Quota')) {
-        window.dispatchEvent(new CustomEvent('storage_quota_exceeded'));
-      }
-    } finally {
-      isFlushing = false;
-    }
-  })();
-
-  await flushPromise;
+  await sendWorkerRequest('FLUSH_WAL', {});
 };
 
 export let skipAutoSaveOnExit = false;
@@ -184,83 +82,20 @@ if (typeof window !== 'undefined') {
 }
 
 export const saveChunkToDB = async (chunkKey, chunkData) => {
-  const key = `${getSlotPrefix()}_chunk_v14_${chunkKey}`;
-  // Compress immediately to prevent QuotaExceededError and array mutations
-  const rleBuffer = compressRLE(chunkData.buffer);
-  walCache.set(key, { rleBuffer });
-
-  if (!walTimer) {
-    walTimer = setTimeout(() => {
-      walTimer = null;
-      flushWAL();
-    }, 5000); // 5 second debounce
-  }
+  const uint32Array = chunkData.buffer instanceof Uint32Array ? chunkData.buffer : new Uint32Array(chunkData.buffer);
+  await sendWorkerRequest('SAVE_CHUNK', { chunkKey, slotPrefix: getSlotPrefix(), buffer: uint32Array });
 };
 
-const MAX_IDB_CONCURRENCY = 10;
-let idbActiveCount = 0;
-const idbQueue = [];
-
-const processIdbQueue = async () => {
-  if (idbActiveCount >= MAX_IDB_CONCURRENCY || idbQueue.length === 0) return;
-  idbActiveCount++;
-  const task = idbQueue.shift();
-  try {
-    const key = `${getSlotPrefix()}_chunk_v14_${task.chunkKey}`;
-
-    // Check WAL first to prevent reading stale DB data before a flush
-    if (walCache.has(key)) {
-      const walData = walCache.get(key);
-      if (walData.rleBuffer) {
-        task.resolve({
-          buffer: decompressRLE(walData.rleBuffer).buffer,
-          isMigrated: true,
-        });
-      } else {
-        task.resolve({ buffer: walData.buffer.slice(0), isMigrated: true });
-      }
-    } else {
-      const res = await get(key);
-      if (res) {
-        if (res.rleBuffer) {
-          task.resolve({
-            buffer: decompressRLE(res.rleBuffer).buffer,
-            isMigrated: true,
-          });
-        } else {
-          task.resolve(migrateLegacyChunk(res));
-        }
-      } else {
-        task.resolve(null);
-      }
-    }
-  } catch (err) {
-    console.error('Failed to load chunk from IndexedDB', err);
-    task.resolve(null);
-  } finally {
-    idbActiveCount--;
-    processIdbQueue();
-  }
-};
-
-export const loadChunkFromDB = (chunkKey) => {
-  return new Promise((resolve) => {
-    idbQueue.push({ chunkKey, resolve });
-    processIdbQueue();
-  });
+export const loadChunkFromDB = async (chunkKey) => {
+  return await sendWorkerRequest('LOAD_CHUNK', { chunkKey, slotPrefix: getSlotPrefix() });
 };
 
 export const cancelLoadFromDB = (chunkKey) => {
-  const idx = idbQueue.findIndex((t) => t.chunkKey === chunkKey);
-  if (idx !== -1) {
-    idbQueue.splice(idx, 1);
-  }
+  // Not strictly needed with async worker unless we add cancellation logic
 };
 
 export const deleteChunkFromDB = async (chunkKey) => {
-  const key = `${getSlotPrefix()}_chunk_v14_${chunkKey}`;
-  if (walCache.has(key)) walCache.delete(key);
-  await del(key);
+  await sendWorkerRequest('DELETE_CHUNK', { chunkKey, slotPrefix: getSlotPrefix() });
 };
 
 export const clearDB = async () => {
@@ -311,7 +146,7 @@ export const exportSlotBlob = async (slotId) => {
     if (data && data.rleBuffer) {
       exportData.chunks[k] = data.rleBuffer;
     } else if (data && data.buffer) {
-      exportData.chunks[k] = compressRLE(data.buffer);
+      exportData.chunks[k] = await compressRLE(data.buffer);
     } else if (data) {
       // This captures player_state, achievements, etc.
       exportData.otherData[k] = data;
@@ -381,6 +216,5 @@ if (import.meta.hot) {
     if (window.__DB_VISIBILITY_LISTENER__) {
       document.removeEventListener('visibilitychange', window.__DB_VISIBILITY_LISTENER__);
     }
-    if (walTimer) clearTimeout(walTimer);
   });
 }
