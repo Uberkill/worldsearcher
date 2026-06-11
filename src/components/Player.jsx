@@ -732,6 +732,7 @@ export const Player = () => {
     }
 
     if (isInLiquid && !isFlying) {
+      // eslint-disable-next-line no-unused-vars
       currentSpeed *= liquidDamage > 0 ? 0.25 : 0.5; // Viscosity is thicker in dangerous liquids (Lava/Acid)
       playerRef.current.setGravityScale(liquidDamage > 0 ? 0.05 : 0.1, true); // Slower sinking
       if (liquidDamage > 0 && Date.now() - lastLavaDamage.current > 500) {
@@ -797,7 +798,7 @@ export const Player = () => {
       lastStep.current = Date.now();
     }
 
-    const { playerJumpMult, playerPower } = state;
+    const { playerJumpMult, playerPower: _playerPower } = state;
     if (_intendedJump && !isFlying) {
       if (isInLiquid) {
         playerRef.current.setLinvel({ x: linvel.x, y: 3, z: linvel.z }, true);

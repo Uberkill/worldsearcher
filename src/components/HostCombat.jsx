@@ -1,5 +1,4 @@
 import { useRef, useState, useEffect } from 'react';
-import { useFrame } from '@react-three/fiber';
 import { useRapier, RigidBody, BallCollider, useBeforePhysicsStep } from '@react-three/rapier';
 import * as THREE from 'three';
 import { useStore } from '../stores/useStore';
@@ -20,6 +19,7 @@ export function HostCombat() {
   const maxProjectiles = 100;
 
   const accumulator = useRef(0);
+   
   const lastTickTime = useRef(performance.now());
 
   useBeforePhysicsStep(() => {

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import { useChunkStore } from '../stores/chunkSlice';
 import { useStore } from '../stores/useStore';
@@ -37,6 +37,7 @@ const buildGeometryNatively = (meshArrays, chunkKey, shadowsEnabled) => {
   }
 
   const disposeQueue = [];
+  const instMeshQueue = [];
 
   for (const [name, data] of Object.entries(meshArrays)) {
     if (name === '__meta' || name === '__flora' || name === '__physics' || name === '_physics') continue;
@@ -105,23 +106,34 @@ const buildGeometryNatively = (meshArrays, chunkKey, shadowsEnabled) => {
     
     group.add(instMesh);
     disposeQueue.push(geom);
+    instMeshQueue.push(instMesh);
   }
 
   group.userData.disposeGeometries = () => {
+    disposeQueue.forEach(g => g.dispose());
+    instMeshQueue.forEach(m => m.dispose());
+
     const buffersToRecycle = [];
-    disposeQueue.forEach(g => {
-      ['position', 'normal', 'color', 'uv', 'packedData'].forEach(attr => {
-         if (g.attributes[attr] && g.attributes[attr].array && g.attributes[attr].array.buffer) {
-             if (g.attributes[attr].array.buffer.byteLength > 0) {
-                 buffersToRecycle.push(g.attributes[attr].array.buffer);
-             }
-         }
-      });
-      if (g.index && g.index.array && g.index.array.buffer) {
-         if (g.index.array.buffer.byteLength > 0) buffersToRecycle.push(g.index.array.buffer);
+    for (const [name, data] of Object.entries(meshArrays)) {
+      if (name === '__meta' || name === '__physics' || name === '_physics') continue;
+      
+      if (name === '__flora') {
+         if (data.packed && data.packed.buffer.byteLength > 0) buffersToRecycle.push(data.packed.buffer);
+         if (data.matrices && data.matrices.buffer.byteLength > 0) buffersToRecycle.push(data.matrices.buffer);
+         continue;
       }
-      g.dispose();
-    });
+      
+      if (!Array.isArray(data)) continue;
+      
+      for (const subChunk of data) {
+         if (subChunk.pos && subChunk.pos.buffer.byteLength > 0) buffersToRecycle.push(subChunk.pos.buffer);
+         if (subChunk.norm && subChunk.norm.buffer.byteLength > 0) buffersToRecycle.push(subChunk.norm.buffer);
+         if (subChunk.color && subChunk.color.buffer.byteLength > 0) buffersToRecycle.push(subChunk.color.buffer);
+         if (subChunk.uv && subChunk.uv.buffer.byteLength > 0) buffersToRecycle.push(subChunk.uv.buffer);
+         if (subChunk.idx && subChunk.idx.buffer.byteLength > 0) buffersToRecycle.push(subChunk.idx.buffer);
+      }
+    }
+    
     if (buffersToRecycle.length > 0) {
         useStore.getState().queueBuffersForRecycling(buffersToRecycle);
     }
@@ -131,9 +143,13 @@ const buildGeometryNatively = (meshArrays, chunkKey, shadowsEnabled) => {
 };
 
 export const ChunkRenderer = () => {
-  const { scene } = useThree();
+  useThree();
   const activeMeshes = useRef(new Map());
   const rootRef = useRef();
+  
+  // Zero-allocation cache for overflow chunks
+  const overflowSetRef = useRef(new Set());
+  const lastOverflowRef = useRef(null);
 
   useFrame(() => {
     const store = useChunkStore.getState();
@@ -142,9 +158,18 @@ export const ChunkRenderer = () => {
 
     const overflow = store.overflowChunks;
 
+    // Update the Set only when the overflow array reference changes
+    if (overflow !== lastOverflowRef.current) {
+      overflowSetRef.current.clear();
+      for (let i = 0; i < overflow.length; i++) {
+        overflowSetRef.current.add(overflow[i]);
+      }
+      lastOverflowRef.current = overflow;
+    }
+
     // 1. Unmount chunks no longer in overflowChunks
     for (const [key, group] of activeMeshes.current.entries()) {
-      if (!overflow.includes(key) || useStoreState.clearVisualMeshArrays > (group.userData.clearVersion || 0)) {
+      if (!overflowSetRef.current.has(key) || useStoreState.clearVisualMeshArrays > (group.userData.clearVersion || 0)) {
         if (rootRef.current) rootRef.current.remove(group);
         if (group.userData.disposeGeometries) group.userData.disposeGeometries();
         activeMeshes.current.delete(key);
@@ -178,6 +203,9 @@ export const ChunkRenderer = () => {
         if (rootRef.current) rootRef.current.add(newGroup);
         activeMeshes.current.set(key, newGroup);
       }
+    }
+    if (window.__DEBUG_STATS__) {
+      window.__DEBUG_STATS__.totalVisualMeshes = activeMeshes.current.size;
     }
   });
 

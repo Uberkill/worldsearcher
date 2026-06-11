@@ -22,6 +22,15 @@ const NEIGHBORS = [
   { nx: 0, ny: 0, nz: -1 },
 ];
 
+const NEIGHBOR_OFFSETS = [
+  256,  // Top: ny = 1
+  -256, // Bottom: ny = -1
+  1,    // Right: nx = 1
+  -1,   // Left: nx = -1
+  16,   // Front: nz = 1
+  -16,  // Back: nz = -1
+];
+
 // Pre-allocated static buffers (60k faces max per sub-chunk, drastically reduces memory!)
 const MAX_FACES = 60000;
 const sPosBuffer = new Float32Array(MAX_FACES * 12);
@@ -486,9 +495,19 @@ export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBuffe
     return buffer[getIndex(x, y, z)];
   };
 
-  const isSolid = (x, y, z, dx, dy, dz) => {
-    const v = getBlock(x + dx, y + dy, z + dz);
-    const id = getTextureId(v);
+  const isSolid = (lx, ly, lz, idx, dx, dy, dz) => {
+    const nx = lx + dx;
+    const ny = ly + dy;
+    const nz = lz + dz;
+    if (nx >= 0 && nx < 16 && nz >= 0 && nz < 16 && ny >= CHUNK_Y_MIN && ny <= CHUNK_Y_MAX) {
+      const v = buffer[idx + dy * 256 + dz * 16 + dx];
+      const id = v & 0xff;
+      if (id === 0) return 0;
+      const d = BlockById[id];
+      return d && !d.isTransparent ? 1 : 0;
+    }
+    const v = getGlobalBlockVal(cx, cz, buffer, neighborBuffers, cx * 16 + nx, ny, cz * 16 + nz);
+    const id = v & 0xff;
     if (id === 0) return 0;
     const d = BlockById[id];
     return d && !d.isTransparent ? 1 : 0;
@@ -532,10 +551,10 @@ export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBuffe
     return (sum / count) / 15.0;
   };
 
-  const calcAO = (x, y, z, dx1, dy1, dz1, dx2, dy2, dz2, dx3, dy3, dz3) => {
-    const s1 = isSolid(x, y, z, dx1, dy1, dz1);
-    const s2 = isSolid(x, y, z, dx2, dy2, dz2);
-    const c = isSolid(x, y, z, dx3, dy3, dz3);
+  const calcAO = (lx, ly, lz, idx, dx1, dy1, dz1, dx2, dy2, dz2, dx3, dy3, dz3) => {
+    const s1 = isSolid(lx, ly, lz, idx, dx1, dy1, dz1);
+    const s2 = isSolid(lx, ly, lz, idx, dx2, dy2, dz2);
+    const c = isSolid(lx, ly, lz, idx, dx3, dy3, dz3);
     if (s1 === 1 && s2 === 1) return 0;
     return 3 - (s1 + s2 + c);
   };
@@ -549,7 +568,8 @@ export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBuffe
     for (let z = 0; z < CHUNK_SIZE_Z; z++) {
       resetLastFaces();
       for (let x = 0; x < CHUNK_SIZE_X; x++) {
-        const val = buffer[getIndex(x, y, z)];
+        const idx = getIndex(x, y, z);
+        const val = buffer[idx];
         const blockId = getTextureId(val); // This actually returns the Block ID, not Texture ID!
         if (blockId === 0) continue; // Air
 
@@ -562,19 +582,10 @@ export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBuffe
         const blockDef = BlockById[blockId];
 
         if (blockDef?.isFlora) {
-          // InstancedMesh Flora extraction
-          const globalLight = getGlobalBlockLight(
-            cx,
-            cz,
-            buffer,
-            neighborBuffers,
-            null,
-            cx * CHUNK_SIZE_X + x,
-            y,
-            cz * CHUNK_SIZE_Z + z
-          );
-          const nSun = getSunlight(globalLight);
-          const nBlk = getBlockLight(globalLight);
+          // InstancedMesh Flora extraction: own block light
+          const globalLight = val;
+          const nSun = (globalLight >> 26) & 0xf;
+          const nBlk = (globalLight >> 22) & 0xf;
 
           const wx = cx * CHUNK_SIZE_X + x;
           const wy = y;
@@ -649,17 +660,20 @@ export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBuffe
             let faceTexId = blockId;
             if (FaceMappings[blockId]) faceTexId = FaceMappings[blockId].top;
 
-            // Lighting for top face
-            let globalLight = getGlobalBlockLight(
-              cx, cz, buffer, neighborBuffers, null, cx * CHUNK_SIZE_X + x, y + 1, cz * CHUNK_SIZE_Z + z
-            );
-            const faceSun = getSunlight(globalLight);
-            const faceBlk = getBlockLight(globalLight);
+            // Lighting for top face: local-first lookup
+            let globalLight;
+            if (y + 1 <= CHUNK_Y_MAX) {
+              globalLight = buffer[idx + 256];
+            } else {
+              globalLight = 15 << 26;
+            }
+            const faceSun = (globalLight >> 26) & 0xf;
+            const faceBlk = (globalLight >> 22) & 0xf;
 
-            const ao0 = calcAO(x, y, z, -1, 1, 0, 0, 1, 1, -1, 1, 1);
-            const ao1 = calcAO(x, y, z, 1, 1, 0, 0, 1, 1, 1, 1, 1);
-            const ao2 = calcAO(x, y, z, 1, 1, 0, 0, 1, -1, 1, 1, -1);
-            const ao3 = calcAO(x, y, z, -1, 1, 0, 0, 1, -1, -1, 1, -1);
+            const ao0 = calcAO(x, y, z, idx, -1, 1, 0, 0, 1, 1, -1, 1, 1);
+            const ao1 = calcAO(x, y, z, idx, 1, 1, 0, 0, 1, 1, 1, 1, 1);
+            const ao2 = calcAO(x, y, z, idx, 1, 1, 0, 0, 1, -1, 1, 1, -1);
+            const ao3 = calcAO(x, y, z, idx, -1, 1, 0, 0, 1, -1, -1, 1, -1);
 
             const isAnimated = blockId === 18 || blockId === 19;
 
@@ -680,10 +694,19 @@ export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBuffe
         }
 
 
-        for (let n of NEIGHBORS) {
+        for (let i = 0; i < 6; i++) {
+          const n = NEIGHBORS[i];
           if (isLiquid && n.ny === 1) continue; // We already handled the sloped top face!
 
-          const nVal = getBlock(x + n.nx, y + n.ny, z + n.nz);
+          const nlx = x + n.nx;
+          const nly = y + n.ny;
+          const nlz = z + n.nz;
+          let nVal;
+          if (nlx >= 0 && nlx < 16 && nlz >= 0 && nlz < 16 && nly >= CHUNK_Y_MIN && nly <= CHUNK_Y_MAX) {
+            nVal = buffer[idx + NEIGHBOR_OFFSETS[i]];
+          } else {
+            nVal = getGlobalBlockVal(cx, cz, buffer, neighborBuffers, cx * 16 + nlx, nly, cz * 16 + nlz);
+          }
           const nBlockId = getTextureId(nVal); // getTextureId returns Block ID
 
           let drawFace = false;
@@ -706,38 +729,34 @@ export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBuffe
             }
 
             // Get lighting for the block IN FRONT of the face
-            const gx = cx * CHUNK_SIZE_X + x + n.nx;
-            const gy = y + n.ny;
-            const gz = cz * CHUNK_SIZE_Z + z + n.nz;
-            let globalLight = getGlobalBlockLight(
-              cx,
-              cz,
-              buffer,
-              neighborBuffers,
-              null,
-              gx,
-              gy,
-              gz
-            );
-
-            let faceSun = getSunlight(globalLight);
-            let faceBlk = getBlockLight(globalLight);
-
-            // If neighbor is fully opaque, we use OUR light so it's not pitch black (failsafe)
-            const nDef = BlockById[nBlockId];
-            if (nBlockId !== 0 && nDef && !nDef.isTransparent) {
-              const selfLight = getGlobalBlockLight(
+            const gx = cx * CHUNK_SIZE_X + nlx;
+            const gy = nly;
+            const gz = cz * CHUNK_SIZE_Z + nlz;
+            let globalLight;
+            if (nlx >= 0 && nlx < 16 && nlz >= 0 && nlz < 16 && nly >= CHUNK_Y_MIN && nly <= CHUNK_Y_MAX) {
+              globalLight = buffer[idx + NEIGHBOR_OFFSETS[i]];
+            } else {
+              globalLight = getGlobalBlockLight(
                 cx,
                 cz,
                 buffer,
                 neighborBuffers,
                 null,
-                cx * CHUNK_SIZE_X + x,
-                y,
-                cz * CHUNK_SIZE_Z + z
+                gx,
+                gy,
+                gz
               );
-              faceSun = getSunlight(selfLight);
-              faceBlk = getBlockLight(selfLight);
+            }
+
+            let faceSun = (globalLight >> 26) & 0xf;
+            let faceBlk = (globalLight >> 22) & 0xf;
+
+            // If neighbor is fully opaque, we use OUR light so it's not pitch black (failsafe)
+            const nDef = BlockById[nBlockId];
+            if (nBlockId !== 0 && nDef && !nDef.isTransparent) {
+              const selfLight = buffer[idx];
+              faceSun = (selfLight >> 26) & 0xf;
+              faceBlk = (selfLight >> 22) & 0xf;
             }
 
             const isAnimated = blockId === 18 || blockId === 19; // Water (18) and Lava (19)
@@ -748,35 +767,35 @@ export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBuffe
               ao2 = 3,
               ao3 = 3;
             if (n.ny === 1) {
-              ao0 = calcAO(x, y, z, -1, 1, 0, 0, 1, 1, -1, 1, 1);
-              ao1 = calcAO(x, y, z, 1, 1, 0, 0, 1, 1, 1, 1, 1);
-              ao2 = calcAO(x, y, z, 1, 1, 0, 0, 1, -1, 1, 1, -1);
-              ao3 = calcAO(x, y, z, -1, 1, 0, 0, 1, -1, -1, 1, -1);
+              ao0 = calcAO(x, y, z, idx, -1, 1, 0, 0, 1, 1, -1, 1, 1);
+              ao1 = calcAO(x, y, z, idx, 1, 1, 0, 0, 1, 1, 1, 1, 1);
+              ao2 = calcAO(x, y, z, idx, 1, 1, 0, 0, 1, -1, 1, 1, -1);
+              ao3 = calcAO(x, y, z, idx, -1, 1, 0, 0, 1, -1, -1, 1, -1);
             } else if (n.ny === -1) {
-              ao0 = calcAO(x, y, z, -1, -1, 0, 0, -1, -1, -1, -1, -1);
-              ao1 = calcAO(x, y, z, 1, -1, 0, 0, -1, -1, 1, -1, -1);
-              ao2 = calcAO(x, y, z, 1, -1, 0, 0, -1, 1, 1, -1, 1);
-              ao3 = calcAO(x, y, z, -1, -1, 0, 0, -1, 1, -1, -1, 1);
+              ao0 = calcAO(x, y, z, idx, -1, -1, 0, 0, -1, -1, -1, -1, -1);
+              ao1 = calcAO(x, y, z, idx, 1, -1, 0, 0, -1, -1, 1, -1, -1);
+              ao2 = calcAO(x, y, z, idx, 1, -1, 0, 0, -1, 1, 1, -1, 1);
+              ao3 = calcAO(x, y, z, idx, -1, -1, 0, 0, -1, 1, -1, -1, 1);
             } else if (n.nx === 1) {
-              ao0 = calcAO(x, y, z, 1, 0, 1, 1, -1, 0, 1, -1, 1);
-              ao1 = calcAO(x, y, z, 1, 0, -1, 1, -1, 0, 1, -1, -1);
-              ao2 = calcAO(x, y, z, 1, 0, -1, 1, 1, 0, 1, 1, -1);
-              ao3 = calcAO(x, y, z, 1, 0, 1, 1, 1, 0, 1, 1, 1);
+              ao0 = calcAO(x, y, z, idx, 1, 0, 1, 1, -1, 0, 1, -1, 1);
+              ao1 = calcAO(x, y, z, idx, 1, 0, -1, 1, -1, 0, 1, -1, -1);
+              ao2 = calcAO(x, y, z, idx, 1, 0, -1, 1, 1, 0, 1, 1, -1);
+              ao3 = calcAO(x, y, z, idx, 1, 0, 1, 1, 1, 0, 1, 1, 1);
             } else if (n.nx === -1) {
-              ao0 = calcAO(x, y, z, -1, 0, -1, -1, -1, 0, -1, -1, -1);
-              ao1 = calcAO(x, y, z, -1, 0, 1, -1, -1, 0, -1, -1, 1);
-              ao2 = calcAO(x, y, z, -1, 0, 1, -1, 1, 0, -1, 1, 1);
-              ao3 = calcAO(x, y, z, -1, 0, -1, -1, 1, 0, -1, 1, -1);
+              ao0 = calcAO(x, y, z, idx, -1, 0, -1, -1, -1, 0, -1, -1, -1);
+              ao1 = calcAO(x, y, z, idx, -1, 0, 1, -1, -1, 0, -1, -1, 1);
+              ao2 = calcAO(x, y, z, idx, -1, 0, 1, -1, 1, 0, -1, 1, 1);
+              ao3 = calcAO(x, y, z, idx, -1, 0, -1, -1, 1, 0, -1, 1, -1);
             } else if (n.nz === 1) {
-              ao0 = calcAO(x, y, z, -1, 0, 1, 0, -1, 1, -1, -1, 1);
-              ao1 = calcAO(x, y, z, 1, 0, 1, 0, -1, 1, 1, -1, 1);
-              ao2 = calcAO(x, y, z, 1, 0, 1, 0, 1, 1, 1, 1, 1);
-              ao3 = calcAO(x, y, z, -1, 0, 1, 0, 1, 1, -1, 1, 1);
+              ao0 = calcAO(x, y, z, idx, -1, 0, 1, 0, -1, 1, -1, -1, 1);
+              ao1 = calcAO(x, y, z, idx, 1, 0, 1, 0, -1, 1, 1, -1, 1);
+              ao2 = calcAO(x, y, z, idx, 1, 0, 1, 0, 1, 1, 1, 1, 1);
+              ao3 = calcAO(x, y, z, idx, -1, 0, 1, 0, 1, 1, -1, 1, 1);
             } else if (n.nz === -1) {
-              ao0 = calcAO(x, y, z, 1, 0, -1, 0, -1, -1, 1, -1, -1);
-              ao1 = calcAO(x, y, z, -1, 0, -1, 0, -1, -1, -1, -1, -1);
-              ao2 = calcAO(x, y, z, -1, 0, -1, 0, 1, -1, -1, 1, -1);
-              ao3 = calcAO(x, y, z, 1, 0, -1, 0, 1, -1, 1, 1, -1);
+              ao0 = calcAO(x, y, z, idx, 1, 0, -1, 0, -1, -1, 1, -1, -1);
+              ao1 = calcAO(x, y, z, idx, -1, 0, -1, 0, -1, -1, -1, -1, -1);
+              ao2 = calcAO(x, y, z, idx, -1, 0, -1, 0, 1, -1, -1, 1, -1);
+              ao3 = calcAO(x, y, z, idx, 1, 0, -1, 0, 1, -1, 1, 1, -1);
             }
 
             pushFace(

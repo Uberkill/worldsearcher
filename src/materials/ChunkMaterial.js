@@ -29,6 +29,7 @@ export const createChunkMaterial = (textureAtlas, isTransparent = false) => {
       varying float vAo;
       varying float vTexId;
       varying float vIsAnimated;
+      varying vec3 vWorldPos;
       `
     );
     shader.vertexShader = shader.vertexShader.replace(
@@ -42,6 +43,7 @@ export const createChunkMaterial = (textureAtlas, isTransparent = false) => {
       vSun = mod(lightAO, 16.0);
       vBlk = mod(floor(lightAO / 16.0), 16.0);
       vAo = mod(floor(lightAO / 256.0), 4.0);
+      vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
       `
     );
 
@@ -51,11 +53,14 @@ export const createChunkMaterial = (textureAtlas, isTransparent = false) => {
       uniform float uAtlasGridSize;
       uniform float uTime;
       uniform float uDebugLighting;
+      uniform vec3 uDynamicLightPos;
+      uniform float uDynamicLightIntensity;
       varying float vSun;
       varying float vBlk;
       varying float vAo;
       varying float vTexId;
       varying float vIsAnimated;
+      varying vec3 vWorldPos;
 
     ` + shader.fragmentShader;
 
@@ -103,9 +108,27 @@ export const createChunkMaterial = (textureAtlas, isTransparent = false) => {
       float rawSky = max(0.0, vSun / 15.0);
       float rawTorch = vBlk / 15.0;
       
+      // Feature 1: Animated Torch Flickering
+      float flicker = 1.0;
+      if (rawTorch > 0.0) {
+          // Add chaotic pseudo-random offsets based on world position so torches don't sync up
+          float offset1 = vWorldPos.x * 12.9898 + vWorldPos.y * 78.233 + vWorldPos.z * 37.719;
+          float offset2 = vWorldPos.x * 4.1414 + vWorldPos.z * 9.2311;
+          flicker += sin(uTime * 15.0 + offset1) * 0.05;
+          flicker += cos(uTime * 22.0 + offset2) * 0.03;
+      }
+      
       float skyLight = pow(rawSky, 2.0); 
-      float torchLight = pow(rawTorch, 2.2);
+      float torchLight = pow(rawTorch, 2.2) * flicker;
       float aoFactor = 0.5 + (vAo / 3.0) * 0.5;
+      
+      // Feature 2: Dynamic Hand-Held Lighting
+      float dist = length(vWorldPos - uDynamicLightPos);
+      float dynLight = max(0.0, 1.0 - (dist / 14.0)) * uDynamicLightIntensity;
+      float dynLightCurve = pow(dynLight, 2.2);
+      
+      // Combine static torch light with dynamic torch light
+      float totalTorchLight = clamp(torchLight + dynLightCurve, 0.0, 1.0);
       
       // Fake Face Normal Shading for Torchlight (Restores 3D Depth in Caves)
       float faceShade = 1.0;
@@ -113,7 +136,7 @@ export const createChunkMaterial = (textureAtlas, isTransparent = false) => {
       else if (abs(normal.z) > 0.5) faceShade = 0.6;
       else if (normal.y < -0.5) faceShade = 0.5;
       
-      vec3 torchColor = vec3(1.2, 0.9, 0.5) * torchLight * faceShade;
+      vec3 torchColor = vec3(1.2, 0.9, 0.5) * totalTorchLight * faceShade;
       
       // Modulate Direct Global Light (Sun)
       reflectedLight.directDiffuse *= skyLight;
@@ -147,6 +170,8 @@ export const createChunkMaterial = (textureAtlas, isTransparent = false) => {
     shader.uniforms.uAtlasGridSize = { value: ATLAS_GRID_SIZE };
     shader.uniforms.uTime = { value: 0 };
     shader.uniforms.uDebugLighting = { value: 0 };
+    shader.uniforms.uDynamicLightPos = { value: new THREE.Vector3() };
+    shader.uniforms.uDynamicLightIntensity = { value: 0 };
 
     // We attach the shader to the material so we can access it later (e.g. for animations)
     material.userData.shader = shader;

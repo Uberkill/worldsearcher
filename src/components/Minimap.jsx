@@ -1,5 +1,4 @@
 import { useRef, useEffect } from 'react';
-import { useStore } from '../stores/useStore';
 import { useChunkStore } from '../stores/chunkSlice';
 import {
   BlockById,

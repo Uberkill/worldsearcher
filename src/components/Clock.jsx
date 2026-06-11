@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useStore } from '../stores/useStore';
 import { useEnvironmentStore } from '../stores/environmentSlice';
 
 export const Clock = () => {

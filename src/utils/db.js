@@ -1,6 +1,5 @@
 import { get, set, del, keys } from 'idb-keyval';
-import { BlockIds } from '../registry/BlockRegistry';
-import { setBlock, getIndex, CHUNK_VOLUME } from './chunkData';
+import './chunkData';
 import { playerPosition, playerRotation } from '../globals';
 
 let currentSlotId = sessionStorage.getItem('saveSlotId') || 'default';
@@ -18,6 +17,9 @@ const getSlotPrefix = () => {
 const worker = new Worker(new URL('../workers/dbWorker.js', import.meta.url), { type: 'module' });
 let messageIdCounter = 0;
 const pendingRequests = new Map();
+if (typeof window !== 'undefined') {
+  window.__DB_PENDING_REQUESTS__ = pendingRequests;
+}
 
 worker.onmessage = (e) => {
   const { id, result, error } = e.data;
@@ -82,15 +84,37 @@ if (typeof window !== 'undefined') {
 }
 
 export const saveChunkToDB = async (chunkKey, chunkData) => {
+  const start = performance.now();
   const uint32Array = chunkData.buffer instanceof Uint32Array ? chunkData.buffer : new Uint32Array(chunkData.buffer);
-  await sendWorkerRequest('SAVE_CHUNK', { chunkKey, slotPrefix: getSlotPrefix(), buffer: uint32Array });
+  const result = await sendWorkerRequest('SAVE_CHUNK', { chunkKey, slotPrefix: getSlotPrefix(), buffer: uint32Array });
+  const latency = performance.now() - start;
+
+  if (window.__DEBUG_STATS__) {
+    const stats = window.__DEBUG_STATS__;
+    stats.dbSaveLatency = stats.dbSaveLatency || 0;
+    stats.dbSaveCount = stats.dbSaveCount || 0;
+    stats.dbSaveLatency = (stats.dbSaveLatency * stats.dbSaveCount + latency) / (stats.dbSaveCount + 1);
+    stats.dbSaveCount++;
+  }
+  return result;
 };
 
 export const loadChunkFromDB = async (chunkKey) => {
-  return await sendWorkerRequest('LOAD_CHUNK', { chunkKey, slotPrefix: getSlotPrefix() });
+  const start = performance.now();
+  const result = await sendWorkerRequest('LOAD_CHUNK', { chunkKey, slotPrefix: getSlotPrefix() });
+  const latency = performance.now() - start;
+
+  if (window.__DEBUG_STATS__) {
+    const stats = window.__DEBUG_STATS__;
+    stats.dbLoadLatency = stats.dbLoadLatency || 0;
+    stats.dbLoadCount = stats.dbLoadCount || 0;
+    stats.dbLoadLatency = (stats.dbLoadLatency * stats.dbLoadCount + latency) / (stats.dbLoadCount + 1);
+    stats.dbLoadCount++;
+  }
+  return result;
 };
 
-export const cancelLoadFromDB = (chunkKey) => {
+export const cancelLoadFromDB = (_chunkKey) => {
   // Not strictly needed with async worker unless we add cancellation logic
 };
 

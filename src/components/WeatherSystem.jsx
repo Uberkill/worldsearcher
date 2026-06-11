@@ -1,28 +1,21 @@
 import { useRef, useMemo, useState, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useEnvironmentStore } from '../stores/environmentSlice';
-import * as THREE from 'three';
+import { useChunkStore } from '../stores/chunkSlice';
 import { useStore } from '../stores/useStore';
+import * as THREE from 'three';
 
-
-const depthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
-const boxDims = new THREE.Vector3(128, 60, 128); // Size of the weather box (Expanded from 40x30x40)
-const dropCount = 15000; // Total instances active on the GPU (Reduced to save performance)
+const boxDims = new THREE.Vector3(128, 60, 128); // Size of the weather box
+const dropCount = 15000; // Total instances active on the GPU
 
 const vertexShader = `
-#include <packing>
-
 uniform float uTime;
 uniform vec3 uCameraWorldPos;
 uniform vec3 uCameraVelocity;
 uniform vec3 uBoxDimensions;
-uniform sampler2D tDepth;
-uniform vec4 uHeightmapBounds; // vec4(minX, minZ, width, depth)
+uniform sampler2D tDepth; // Now a cyclical 512x512 DataTexture
 uniform float uFallSpeed;
 uniform float uRainIntensity; // To fade in/out
-uniform float uDepthCamY;
-uniform float uDepthNear;
-uniform float uDepthFar;
 
 varying vec2 vUv;
 varying float vAlpha;
@@ -54,24 +47,19 @@ void main() {
     
     vec4 modelPosition = vec4(worldPos + localVertexPos, 1.0);
 
-    // 7. Localized Voxel Heightmap Occlusion
-    // Translate world X/Z to 0.0 - 1.0 UV texture space coordinates
-    vec2 heightmapUV = (worldPos.xz - uHeightmapBounds.xy) / uHeightmapBounds.zw;
+    // 7. Localized Voxel Heightmap Occlusion (Zero Render Pass)
+    // Map absolute world X/Z to the 512x512 cyclical texture coordinates
+    vec2 heightmapUV = mod(worldPos.xz, 512.0) / 512.0;
 
-    // Read high-precision 32-bit depth from RGBA texture
-    vec4 depthColor = texture2D(tDepth, heightmapUV);
-    float depthVal = unpackRGBAToDepth(depthColor);
-    
-    // If depth is exactly 1.0, nothing was hit (background).
-    // Convert 0.0 - 1.0 orthographic depth back to World Y
-    float roofY = depthVal >= 0.999 ? -999.0 : (uDepthCamY - uDepthNear - depthVal * (uDepthFar - uDepthNear));
+    // Read the raw Y height from the Float DataTexture
+    float roofY = texture2D(tDepth, heightmapUV).r;
 
     // Default visibility multiplier based on global rain fade
     float visibility = uRainIntensity;
 
     // CRITICAL: If the particle's animated position falls below the structural roof line, 
     // collapse the geometry immediately to a single point. This kills fragment processing.
-    if (worldPos.y < roofY) {
+    if (worldPos.y <= roofY) {
         modelPosition = vec4(0.0, 0.0, 0.0, 1.0);
         visibility = 0.0;
     }
@@ -104,37 +92,58 @@ export function WeatherSystem() {
   const fadeIntensity = useRef(0);
   const lastCameraPos = useRef(new THREE.Vector3());
   const cameraVelocity = useRef(new THREE.Vector3());
+  const chunkVersionCache = useRef({});
 
-  const [renderTarget, setRenderTarget] = useState(null);
+  const clearVisualMeshArrays = useStore(state => state.clearVisualMeshArrays);
 
-  // Dispose render target on unmount to prevent memory leaks
+  // Cyclical 512x512 DataTexture for O(1) WebGL heightmap lookups
+  const [heightmapTex] = useState(() => {
+    const arr = new Float32Array(512 * 512);
+    arr.fill(-999);
+    const tex = new THREE.DataTexture(arr, 512, 512, THREE.RedFormat, THREE.FloatType);
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.needsUpdate = true;
+    return tex;
+  });
+
+  // Zero-Cost Heightmap Sync: Uploads WebWorker 2D arrays directly into the GPU texture
   useEffect(() => {
-    const rt = new THREE.WebGLRenderTarget(256, 256, {
-      format: THREE.RedFormat,
-      type: THREE.FloatType,
-      minFilter: THREE.NearestFilter,
-      magFilter: THREE.NearestFilter,
-      generateMipmaps: false,
-    });
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setRenderTarget(rt);
-    return () => {
-      rt.dispose();
-    };
-  }, []);
+    const chunks = useChunkStore.getState().chunks;
+    const arr = heightmapTex.image.data;
+    let needsUpload = false;
 
-  const depthCam = useMemo(() => {
-    return new THREE.OrthographicCamera(
-      -64,
-      64,
-      64,
-      -64,
-      1,
-      365
-    );
-  }, []);
+    for (const key in chunks) {
+      const chunk = chunks[key];
+      if (!chunk || !chunk.meshArrays || !chunk.meshArrays.__meta || !chunk.meshArrays.__meta.heightmap) continue;
 
-  const bounds = useMemo(() => new THREE.Vector4(0, 0, 128, 128), []);
+      // Only process chunks that have been newly loaded or explicitly rebuilt (block placed/broken)
+      if (chunkVersionCache.current[key] === chunk.rebuildId) continue;
+      chunkVersionCache.current[key] = chunk.rebuildId;
+
+      const cx = chunk.cx;
+      const cz = chunk.cz;
+      const hMap = chunk.meshArrays.__meta.heightmap; // 16x16 Uint8Array
+
+      for (let lx = 0; lx < 16; lx++) {
+        for (let lz = 0; lz < 16; lz++) {
+          const gx = (cx * 16 + lx) % 512;
+          const gz = (cz * 16 + lz) % 512;
+          const wx = gx < 0 ? gx + 512 : gx;
+          const wz = gz < 0 ? gz + 512 : gz;
+
+          arr[wz * 512 + wx] = hMap[lz * 16 + lx];
+        }
+      }
+      needsUpload = true;
+    }
+
+    if (needsUpload) {
+      heightmapTex.needsUpdate = true;
+    }
+  }, [clearVisualMeshArrays, heightmapTex]);
 
   // Create a static set of randomized distribution points inside the box volume at boot
   const transformMatrix = useMemo(() => {
@@ -176,47 +185,8 @@ export function WeatherSystem() {
       delta * 0.5
     );
 
-    // Only render weather particles when raining and everything is initialized
-    if (!isRaining || !renderTarget || fadeIntensity.current < 0.01) return;
-
-    // Update Depth Camera position
-    // Snap to integer to prevent aliasing/shimmering in the depth map
-    const snapX = Math.floor(camera.position.x);
-    const snapZ = Math.floor(camera.position.z);
-
-    depthCam.position.set(snapX, 300, snapZ);
-    // Fix Gimbal lock/NaN: Cannot look straight down when up is (0,1,0)
-    depthCam.up.set(0, 0, -1);
-    depthCam.lookAt(snapX, 0, snapZ);
-    depthCam.updateMatrixWorld();
-
-    bounds.set(snapX - 64, snapZ - 64, 128, 128);
-
-
-
-    // Hardware-Accelerated Occlusion Render Pass
-    const gl = state.gl;
-    const oldTarget = gl.getRenderTarget();
-    const oldClearColor = gl.getClearColor(new THREE.Color());
-    const oldClearAlpha = gl.getClearAlpha();
-
-    gl.setRenderTarget(renderTarget);
-    // Clear to white (depth 1.0)
-    gl.setClearColor(0xffffff, 1);
-    gl.clear();
-    
-    if (meshRef.current) meshRef.current.visible = false;
-    const oldOverride = state.scene.overrideMaterial;
-    state.scene.overrideMaterial = depthMaterial;
-    gl.render(state.scene, depthCam);
-    state.scene.overrideMaterial = oldOverride;
-    if (meshRef.current) meshRef.current.visible = true;
-
-    // Restore WebGL State
-    gl.setRenderTarget(oldTarget);
-    gl.setClearColor(oldClearColor, oldClearAlpha);
-
-    if (!materialRef.current) return;
+    // Only update uniforms when rain is visible
+    if (!isRaining || fadeIntensity.current < 0.01 || !materialRef.current) return;
 
     // Calculate Camera Velocity for Shearing
     // FIX: Prevent divide by zero which creates NaNs and crashes the WebGL shader!
@@ -230,17 +200,11 @@ export function WeatherSystem() {
 
     // Bundle uniform updates atomically
     const maxLoopTime = boxDims.y / 35.0; // boxDims.y / uFallSpeed
-    materialRef.current.uniforms.uTime.value =
-      clock.getElapsedTime() % maxLoopTime;
+    materialRef.current.uniforms.uTime.value = clock.getElapsedTime() % maxLoopTime;
     materialRef.current.uniforms.uCameraWorldPos.value.copy(camera.position);
-    materialRef.current.uniforms.uCameraVelocity.value.copy(
-      cameraVelocity.current
-    );
+    materialRef.current.uniforms.uCameraVelocity.value.copy(cameraVelocity.current);
     materialRef.current.uniforms.uRainIntensity.value = fadeIntensity.current;
-    materialRef.current.uniforms.uHeightmapBounds.value.copy(bounds);
   });
-
-  if (!renderTarget) return null;
 
   return (
     <instancedMesh
@@ -260,11 +224,7 @@ export function WeatherSystem() {
           uCameraWorldPos: { value: new THREE.Vector3() },
           uCameraVelocity: { value: new THREE.Vector3() },
           uBoxDimensions: { value: boxDims },
-          tDepth: { value: renderTarget.texture },
-          uHeightmapBounds: { value: bounds }, // [minX, minZ, width, depth]
-          uDepthCamY: { value: 300.0 },
-          uDepthNear: { value: 1.0 },
-          uDepthFar: { value: 365.0 },
+          tDepth: { value: heightmapTex },
           uFallSpeed: { value: 35.0 },
           uRainIntensity: { value: 0.0 },
         }}
@@ -275,3 +235,4 @@ export function WeatherSystem() {
     </instancedMesh>
   );
 }
+

@@ -1,12 +1,10 @@
 import React, { useRef } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { Billboard, Text } from '@react-three/drei';
 import { RigidBody, CapsuleCollider } from '@react-three/rapier';
 import * as THREE from 'three';
-import { useStore } from '../stores/useStore';
 import { networkActions } from '../stores/networkActions';
 import { useSyncStore } from '../stores/syncSlice';
-import { playerPosition } from '../globals';
 
 const _euler = new THREE.Euler();
 
@@ -262,7 +260,7 @@ const PlayerAvatar = ({ id }) => {
 };
 
 export const MultiplayerManager = () => {
-  const { connectionStatus, players, playerId } = networkActions();
+  const { connectionStatus, players } = networkActions();
 
   React.useEffect(() => {
     if (connectionStatus !== 'connected') return;

@@ -16,7 +16,10 @@ class GameAudioSystem {
     this.masterGain = null;
     this.sfxGain = null;
     this.musicGain = null;
-    this.compressor = null;
+    
+    this.masterLimiter = null;
+    this.musicCompressor = null;
+    this.sfxCompressor = null;
 
     this.initialized = false;
 
@@ -58,21 +61,39 @@ class GameAudioSystem {
     this.sfxGain = this.context.createGain();
     this.musicGain = this.context.createGain();
 
-    this.compressor = this.context.createDynamicsCompressor();
-    this.compressor.threshold.setValueAtTime(-24, this.context.currentTime);
-    this.compressor.knee.setValueAtTime(10, this.context.currentTime);
-    this.compressor.ratio.setValueAtTime(8, this.context.currentTime);
-    this.compressor.attack.setValueAtTime(0.01, this.context.currentTime);
-    this.compressor.release.setValueAtTime(0.25, this.context.currentTime);
+    // -- Music Compressor (Gentle leveling) --
+    this.musicCompressor = this.context.createDynamicsCompressor();
+    this.musicCompressor.threshold.setValueAtTime(-24, this.context.currentTime);
+    this.musicCompressor.knee.setValueAtTime(10, this.context.currentTime);
+    this.musicCompressor.ratio.setValueAtTime(4, this.context.currentTime);
+    this.musicCompressor.attack.setValueAtTime(0.01, this.context.currentTime);
+    this.musicCompressor.release.setValueAtTime(0.25, this.context.currentTime);
 
-    // Routing: Music -> Compressor -> Master
-    this.musicGain.connect(this.compressor);
-    this.compressor.connect(this.masterGain);
+    // -- SFX Limiter (Brick-wall to catch overlapping explosions) --
+    this.sfxCompressor = this.context.createDynamicsCompressor();
+    this.sfxCompressor.threshold.setValueAtTime(-3, this.context.currentTime);
+    this.sfxCompressor.knee.setValueAtTime(0, this.context.currentTime);
+    this.sfxCompressor.ratio.setValueAtTime(20, this.context.currentTime);
+    this.sfxCompressor.attack.setValueAtTime(0.003, this.context.currentTime);
+    this.sfxCompressor.release.setValueAtTime(0.1, this.context.currentTime);
 
-    // Routing: SFX -> Master AND sidechain trigger (if Web Audio API supported, else just Master)
-    this.sfxGain.connect(this.masterGain);
-    // Note: True sidechaining in WebAudio requires a dummy node, but we'll simulate ducking on heavy hits via JS for wider browser support.
+    // -- Master Limiter (Protective) --
+    this.masterLimiter = this.context.createDynamicsCompressor();
+    this.masterLimiter.threshold.setValueAtTime(-0.5, this.context.currentTime);
+    this.masterLimiter.knee.setValueAtTime(0, this.context.currentTime);
+    this.masterLimiter.ratio.setValueAtTime(20, this.context.currentTime);
+    this.masterLimiter.attack.setValueAtTime(0.001, this.context.currentTime);
+    this.masterLimiter.release.setValueAtTime(0.05, this.context.currentTime);
 
+    // Routing: Music -> MusicCompressor -> MasterLimiter -> MasterGain
+    this.musicGain.connect(this.musicCompressor);
+    this.musicCompressor.connect(this.masterLimiter);
+
+    // Routing: SFX -> SFXCompressor -> MasterLimiter -> MasterGain
+    this.sfxGain.connect(this.sfxCompressor);
+    this.sfxCompressor.connect(this.masterLimiter);
+
+    this.masterLimiter.connect(this.masterGain);
     this.masterGain.connect(this.context.destination);
 
     // Override Three.js AudioListener's internal destination to route through our SFX Bus
@@ -135,7 +156,8 @@ class GameAudioSystem {
         // Create a generic THREE.Audio for global (non-spatial) playback of this SFX
         const globalSound = new THREE.Audio(this.listener);
         globalSound.setBuffer(buffer);
-        globalSound.setVolume(name.startsWith('ui_') ? 1.0 : 0.6); // Slightly quieter for non-UI global sounds
+        // Calibrate headroom: UI at 1.0, non-UI sounds down to 0.4 (-8dBFS) to leave room for spatial explosions
+        globalSound.setVolume(name.startsWith('ui_') ? 1.0 : 0.4);
         this.uiSounds.set(name, globalSound);
       } catch (err) {
         console.warn(`Failed to load audio: ${name}`, err);
@@ -250,7 +272,13 @@ class GameAudioSystem {
 
   canPlayVoice(name) {
     const current = this.voiceCounts.get(name) || 0;
-    if (current >= this.MAX_VOICES_PER_SOUND) return false;
+    
+    // Dynamic Voice Limits
+    let limit = this.MAX_VOICES_PER_SOUND;
+    if (name === 'explosion' || name === 'damage') limit = 2; // Keep heavy hits from stacking up
+    else if (name.startsWith('footstep')) limit = 6; // Allow multiple concurrent footsteps from spiders/pigs
+    
+    if (current >= limit) return false;
     this.voiceCounts.set(name, current + 1);
     return true;
   }

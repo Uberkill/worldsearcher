@@ -41,3 +41,7 @@ export const useChunkStore = create((set, get) => ({
     set({ activePhysicsChunks: physicsChunks });
   }
 }));
+
+if (typeof window !== 'undefined') {
+  window.useChunkStore = useChunkStore;
+}

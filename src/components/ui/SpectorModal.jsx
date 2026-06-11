@@ -21,12 +21,11 @@ export const SpectorModal = () => {
     c.name?.startsWith('draw')
   ).length;
 
-  const downloadEngineDump = async () => {
-    const state = window.__USE_STORE__?.getState() || {};
+  const getEngineDumpInfo = async () => {
+    const state = useStore.getState();
     const stats = window.__DEBUG_STATS__ || {};
     const workerStats = window.__workerTelemetry || {};
 
-    // Attempt to grab Network Store safely
     let netState = {};
     if (window.networkActions) {
       const rawNet = window.networkActions.getState();
@@ -41,7 +40,6 @@ export const SpectorModal = () => {
       };
     }
 
-    // Attempt to grab Storage
     let storageStr = 'Unavailable';
     if (navigator.storage && navigator.storage.estimate) {
       try {
@@ -50,62 +48,121 @@ export const SpectorModal = () => {
       } catch (_e) {}
     }
 
+    const chunkState = useChunkStore.getState();
+
+    return {
+      performance: {
+        fps: stats.fps,
+        tps: ServerTickMetrics.tps,
+        mspt: ServerTickMetrics.mspt,
+        cpuTime: stats.cpuTime,
+        gpuTime: stats.gpuTime || null,
+      },
+      renderer: {
+        drawCalls: stats.drawCalls,
+        triangles: stats.triangles,
+        vertices: stats.vertices,
+        textureBinds: stats.textureBinds,
+        vboMemoryMB: (stats.vboMemoryBytes / 1024 / 1024).toFixed(2),
+        geometries: stats.geometries,
+      },
+      scene: {
+        chunksTotal: Object.keys(chunkState.chunks || {}).length,
+        chunksRendered: stats.chunksRendered,
+        entitiesTotal: stats.totalEntities,
+        entitiesRendered: stats.entitiesRendered,
+      },
+      chunkPipeline: {
+        desiredChunksCount: stats.desiredChunksCount || 0,
+        netRequests: stats.netRequests || 0,
+        workerQueue: workerStats.queueLength || 0,
+        activePhysicsChunks: chunkState.activePhysicsChunks?.length || 0,
+        pendingMeshMounts: chunkState.pendingMeshMounts?.length || 0,
+        pendingUnloads: stats.pendingUnloads || 0,
+        processingDeltas: stats.processingDeltas || 0,
+        failedChunks: stats.failedChunks || 0,
+        failedChunkKeys: stats.failedChunkKeys || [],
+      },
+      workers: {
+        poolSize: workerStats.poolSize,
+        activeJobs: workerStats.activeJobs,
+        resets: workerStats.resets,
+      },
+      player: {
+        pos: [playerPosition.x, playerPosition.y, playerPosition.z],
+        health: state.playerHealth,
+        renderDistance: state.renderDistance,
+        shadowQuality: state.shadowQuality,
+        debugLighting: state.debugLighting,
+      },
+      network: netState,
+      storage: storageStr,
+      errors: stats.errorLog || [],
+    };
+  };
+
+  const compileEngineDumpText = (dump) => {
     let content = '=== WORLD ENGINE DUMP ===\n';
     content += `Timestamp: ${new Date().toISOString()}\n\n`;
 
     content += '--- 1. CPU / GPU PERFORMANCE ---\n';
-    content += `FPS (Visuals): ${stats.fps}\n`;
-    content += `TPS (Logic): ${ServerTickMetrics.tps.toFixed(1)} / 20\n`;
-    content += `MSPT: ${ServerTickMetrics.mspt.toFixed(2)} ms (Max 50ms)\n`;
-    content += `CPU Time: ${stats.cpuTime?.toFixed(2)} ms\n`;
-    content += `GPU Time: ${stats.gpuTime ? stats.gpuTime.toFixed(2) + ' ms' : 'N/A'}\n\n`;
+    content += `FPS (Visuals): ${dump.performance.fps}\n`;
+    content += `TPS (Logic): ${dump.performance.tps.toFixed(1)} / 20\n`;
+    content += `MSPT: ${dump.performance.mspt.toFixed(2)} ms (Max 50ms)\n`;
+    content += `CPU Time: ${dump.performance.cpuTime?.toFixed(2)} ms\n`;
+    content += `GPU Time: ${dump.performance.gpuTime ? dump.performance.gpuTime.toFixed(2) + ' ms' : 'N/A'}\n\n`;
 
     content += '--- 2. WEBGL RENDERER ---\n';
-    content += `Draw Calls: ${stats.drawCalls}\n`;
-    content += `Triangles: ${stats.triangles}\n`;
-    content += `Vertices: ${stats.vertices}\n`;
-    content += `Texture Binds: ${stats.textureBinds}\n`;
-    content += `VBO Memory: ${(stats.vboMemoryBytes / 1024 / 1024).toFixed(2)} MB\n`;
-    content += `Active Geometries: ${stats.geometries}\n\n`;
+    content += `Draw Calls: ${dump.renderer.drawCalls}\n`;
+    content += `Triangles: ${dump.renderer.triangles}\n`;
+    content += `Vertices: ${dump.renderer.vertices}\n`;
+    content += `Texture Binds: ${dump.renderer.textureBinds}\n`;
+    content += `VBO Memory: ${dump.renderer.vboMemoryMB} MB\n`;
+    content += `Active Geometries: ${dump.renderer.geometries}\n\n`;
 
     content += '--- 3. SCENE & ENTITIES ---\n';
-    const chunkState = useChunkStore.getState();
-    content += `Chunks Total: ${Object.keys(chunkState.chunks || {}).length}\n`;
-    content += `Chunks Rendered: ${stats.chunksRendered}\n`;
-    content += `Entities Total: ${stats.totalEntities}\n`;
-    content += `Entities Rendered: ${stats.entitiesRendered}\n\n`;
+    content += `Chunks Total: ${dump.scene.chunksTotal}\n`;
+    content += `Chunks Rendered: ${dump.scene.chunksRendered}\n`;
+    content += `Entities Total: ${dump.scene.entitiesTotal}\n`;
+    content += `Entities Rendered: ${dump.scene.entitiesRendered}\n\n`;
 
     content += '--- 4. CHUNK PIPELINE ---\n';
-    content += `Target Chunks: ${stats.desiredChunksCount || 0}\n`;
-    content += `Network Wait: ${stats.netRequests || 0}\n`;
-    content += `Worker Queue: ${workerStats.queueLength || 0}\n`;
-    content += `Active Physics Chunks: ${chunkState.activePhysicsChunks?.length || 0}\n`;
-    content += `Mount Queue: ${chunkState.pendingMeshMounts?.length || 0}\n`;
-    content += `Pending Unloads: ${stats.pendingUnloads || 0}\n`;
-    content += `Async DB Deltas: ${stats.processingDeltas || 0}\n`;
-    content += `Failed Chunks: ${stats.failedChunks || 0} ${stats.failedChunks > 0 ? JSON.stringify(stats.failedChunkKeys) : ''}\n\n`;
+    content += `Target Chunks: ${dump.chunkPipeline.desiredChunksCount}\n`;
+    content += `Network Wait: ${dump.chunkPipeline.netRequests}\n`;
+    content += `Worker Queue: ${dump.chunkPipeline.workerQueue}\n`;
+    content += `Active Physics Chunks: ${dump.chunkPipeline.activePhysicsChunks}\n`;
+    content += `Mount Queue: ${dump.chunkPipeline.pendingMeshMounts}\n`;
+    content += `Pending Unloads: ${dump.chunkPipeline.pendingUnloads}\n`;
+    content += `Async DB Deltas: ${dump.chunkPipeline.processingDeltas}\n`;
+    content += `Failed Chunks: ${dump.chunkPipeline.failedChunks} ${dump.chunkPipeline.failedChunks > 0 ? JSON.stringify(dump.chunkPipeline.failedChunkKeys) : ''}\n\n`;
 
     content += '--- 5. WORKER THREAD POOL ---\n';
-    content += `Pool Size: ${workerStats.poolSize}\n`;
-    content += `Active Jobs: ${workerStats.activeJobs}\n`;
-    content += `Watchdog Resets: ${workerStats.resets}\n\n`;
+    content += `Pool Size: ${dump.workers.poolSize}\n`;
+    content += `Active Jobs: ${dump.workers.activeJobs}\n`;
+    content += `Watchdog Resets: ${dump.workers.resets}\n\n`;
 
     content += '--- 6. PLAYER STATE ---\n';
-    content += `Position: [${playerPosition.x.toFixed(2)}, ${playerPosition.y.toFixed(2)}, ${playerPosition.z.toFixed(2)}]\n`;
-    content += `Health: ${state.playerHealth}\n`;
-    content += `Render Distance: ${state.renderDistance}\n`;
-    content += `Shadow Quality: ${state.shadowQuality}\n`;
-    content += `Debug Lighting: ${state.debugLighting ? 'ON' : 'OFF'}\n\n`;
+    content += `Position: [${dump.player.pos[0].toFixed(2)}, ${dump.player.pos[1].toFixed(2)}, ${dump.player.pos[2].toFixed(2)}]\n`;
+    content += `Health: ${dump.player.health}\n`;
+    content += `Render Distance: ${dump.player.renderDistance}\n`;
+    content += `Shadow Quality: ${dump.player.shadowQuality}\n`;
+    content += `Debug Lighting: ${dump.player.debugLighting ? 'ON' : 'OFF'}\n\n`;
 
     content += '--- 7. NETWORK ---\n';
-    content += JSON.stringify(netState, null, 2) + '\n\n';
+    content += JSON.stringify(dump.network, null, 2) + '\n\n';
 
     content += '--- 8. LOCAL STORAGE ---\n';
-    content += `IndexedDB Quota: ${storageStr}\n\n`;
+    content += `IndexedDB Quota: ${dump.storage}\n\n`;
 
     content += '--- 9. ERROR LOG ---\n';
-    content += JSON.stringify(stats.errorLog || [], null, 2) + '\n';
+    content += JSON.stringify(dump.errors, null, 2) + '\n';
 
+    return content;
+  };
+
+  const downloadEngineDump = async () => {
+    const dump = await getEngineDumpInfo();
+    const content = compileEngineDumpText(dump);
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -157,18 +214,25 @@ export const SpectorModal = () => {
     );
   }
 
-  const downloadFile = (format) => {
+  const downloadFile = async (format) => {
+    const dump = await getEngineDumpInfo();
     let content = '';
     let filename = `spector_capture_${Date.now()}`;
     let type;
 
     if (format === 'json') {
       // JSON stringification handles cyclical structures poorly if any exist, but Spector returns safe JSON
-      content = JSON.stringify(spectorData, null, 2);
+      const exportData = {
+        ...spectorData,
+        engineDump: dump,
+      };
+      content = JSON.stringify(exportData, null, 2);
       filename += '.json';
       type = 'application/json';
     } else {
-      content = '=== SPECTOR.JS RENDER TRACE ===\n\n';
+      content = compileEngineDumpText(dump);
+      content += '\n==================================================\n';
+      content += '=== SPECTOR.JS RENDER TRACE ===\n\n';
       content += `Total Commands: ${totalCommands}\n`;
       content += `Draw Calls: ${drawCalls}\n\n`;
 

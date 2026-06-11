@@ -1,45 +1,72 @@
-import { get, set, del, keys } from 'idb-keyval';
+import { get, del, setMany } from 'idb-keyval';
 import { BlockIds } from '../registry/BlockRegistry';
 
-const CHUNK_VOLUME = 16 * 256 * 16;
+const CHUNK_VOLUME = 16 * 288 * 16; // 73728 elements (Y from -32 to 255)
 
 const getIndex = (lx, ly, lz) => {
-  return lx * 256 * 16 + ly * 16 + lz;
+  const yOffset = ly - (-32);
+  return yOffset * 256 + lz * 16 + lx;
 };
 
 const setBlock = (buffer, index, textureId, health = 100, isHidden = 0, level = 0) => {
   const t = typeof textureId === 'string' ? BlockIds[textureId] : textureId;
-  buffer[index] = (t & 0xffff) | ((health & 0xff) << 16) | ((isHidden & 0x1) << 24) | ((level & 0x7f) << 25);
+  const h = (health === Infinity || health >= 9999) ? 511 : Math.min(Math.max(health, 0), 510);
+  buffer[index] =
+    (t & 0xff) |
+    ((h & 0x1ff) << 8) |
+    ((level & 0xf) << 17) |
+    ((isHidden ? 1 : 0) << 21);
 };
+
+const RLE_TEMP_BUFFER = new Uint32Array(CHUNK_VOLUME * 2);
 
 const compressRLE = (bufferInput) => {
   const uint32Array = bufferInput instanceof Uint32Array ? bufferInput : new Uint32Array(bufferInput);
-  const rle = [];
+  let rleIdx = 0;
   let currentVal = uint32Array[0];
   let count = 1;
   for (let i = 1; i < uint32Array.length; i++) {
     if (uint32Array[i] === currentVal) {
       count++;
     } else {
-      rle.push(count, currentVal);
+      RLE_TEMP_BUFFER[rleIdx++] = count;
+      RLE_TEMP_BUFFER[rleIdx++] = currentVal;
       currentVal = uint32Array[i];
       count = 1;
     }
   }
-  rle.push(count, currentVal);
-  return new Uint32Array(rle);
+  RLE_TEMP_BUFFER[rleIdx++] = count;
+  RLE_TEMP_BUFFER[rleIdx++] = currentVal;
+  return new Uint32Array(RLE_TEMP_BUFFER.subarray(0, rleIdx));
 };
 
 const decompressRLE = (rleArray) => {
-  const rleUint32 = rleArray instanceof Uint32Array ? rleArray : new Uint32Array(rleArray.buffer || rleArray);
+  let rleUint32;
+  if (rleArray instanceof Uint32Array) {
+    rleUint32 = rleArray;
+  } else if (rleArray && rleArray.buffer instanceof ArrayBuffer) {
+    const buf = rleArray.buffer;
+    const byteOffset = rleArray.byteOffset || 0;
+    const byteLength = rleArray.byteLength || buf.byteLength;
+    if (byteOffset % 4 === 0) {
+      rleUint32 = new Uint32Array(buf, byteOffset, byteLength / 4);
+    } else {
+      const slicedBuf = buf.slice(byteOffset, byteOffset + byteLength);
+      rleUint32 = new Uint32Array(slicedBuf);
+    }
+  } else if (rleArray instanceof ArrayBuffer) {
+    rleUint32 = new Uint32Array(rleArray);
+  } else {
+    rleUint32 = new Uint32Array(rleArray);
+  }
   const arr = new Uint32Array(CHUNK_VOLUME);
   let arrIdx = 0;
   for (let i = 0; i < rleUint32.length; i += 2) {
     const count = rleUint32[i];
     const val = rleUint32[i + 1];
-    for (let c = 0; c < count; c++) {
-      if (arrIdx < CHUNK_VOLUME) arr[arrIdx++] = val;
-    }
+    const end = Math.min(arrIdx + count, CHUNK_VOLUME);
+    arr.fill(val, arrIdx, end);
+    arrIdx = end;
   }
   return arr;
 };
@@ -48,8 +75,18 @@ const migrateLegacyChunk = (legacyData) => {
   const buffer = new Uint32Array(CHUNK_VOLUME);
 
   if (legacyData.buffer) {
-    if (legacyData.buffer.byteLength < 327680) return null;
-    return legacyData;
+    const buf = legacyData.buffer;
+    const len = buf.byteLength || buf.buffer?.byteLength;
+    if (len === 294912) {
+      return legacyData;
+    }
+    if (len === 262144) {
+      const uint32Array = buf.buffer ? new Uint32Array(buf.buffer) : new Uint32Array(buf);
+      const newBuf = new Uint32Array(73728);
+      newBuf.set(uint32Array, 8192); // Pad Y from 0 to 255 by shifting 32 * 256 blocks
+      return { buffer: newBuf, isMigrated: true };
+    }
+    return null;
   }
 
   if (legacyData.blocks) {
@@ -102,17 +139,12 @@ const flushWAL = async () => {
   flushPromise = (async () => {
     const entries = Array.from(walCache.entries());
     try {
-      const BATCH_SIZE = 5;
-      for (let i = 0; i < entries.length; i += BATCH_SIZE) {
-        const batch = entries.slice(i, i + BATCH_SIZE);
-        await Promise.all(batch.map(async ([key, data]) => {
-          await set(key, data);
-          if (walCache.get(key) === data) {
-            walCache.delete(key);
-          }
-        }));
-        await new Promise(r => setTimeout(r, 5));
-      }
+      await setMany(entries);
+      entries.forEach(([key, data]) => {
+        if (walCache.get(key) === data) {
+          walCache.delete(key);
+        }
+      });
     } catch (err) {
       console.error('Worker failed to flush WAL', err);
     } finally {
@@ -153,7 +185,7 @@ self.onmessage = async (e) => {
           const arr = decompressRLE(walData.rleBuffer);
           self.postMessage({ id, result: { buffer: arr, isMigrated: true } }, [arr.buffer]);
         } else {
-          const arr = new Uint32Array(walData.buffer);
+          const arr = new Uint32Array(walData.buffer.slice(0));
           self.postMessage({ id, result: { buffer: arr, isMigrated: true } }, [arr.buffer]);
         }
       } else {
@@ -165,9 +197,15 @@ self.onmessage = async (e) => {
           } else {
             const migrated = migrateLegacyChunk(res);
             if (migrated && migrated.buffer) {
-               self.postMessage({ id, result: migrated }, [migrated.buffer.buffer]);
+              const transfer = migrated.buffer instanceof ArrayBuffer
+                ? migrated.buffer
+                : migrated.buffer.buffer;
+              if (migrated.buffer instanceof ArrayBuffer) {
+                migrated.buffer = new Uint32Array(migrated.buffer);
+              }
+              self.postMessage({ id, result: migrated }, [transfer]);
             } else {
-               self.postMessage({ id, result: migrated });
+              self.postMessage({ id, result: migrated });
             }
           }
         } else {

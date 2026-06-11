@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Billboard, Text } from '@react-three/drei';
-import { networkActions } from '../stores/networkActions';
 import { useSyncStore } from '../stores/syncSlice';
 
 export const Waypoints = () => {

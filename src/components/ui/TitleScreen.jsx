@@ -292,7 +292,7 @@ export default function TitleScreen({ onStartNew, onContinue }) {
       const success = await uploadSave(blob);
       setSyncMessage(success ? 'Upload successful!' : 'Upload failed.');
       setTimeout(() => setSyncMessage(null), 3000);
-    } catch (err) {
+    } catch (_err) {
       setSyncMessage('Upload error.');
     }
   };
@@ -311,7 +311,7 @@ export default function TitleScreen({ onStartNew, onContinue }) {
         setSyncMessage('Download failed.');
         setTimeout(() => setSyncMessage(null), 3000);
       }
-    } catch (err) {
+    } catch (_err) {
       setSyncMessage('Download error.');
     }
   };

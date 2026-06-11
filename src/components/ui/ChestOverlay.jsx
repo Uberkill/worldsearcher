@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { useStore } from '../../stores/useStore';
 import { useInventoryStore } from '../../stores/inventorySlice';
 import { InventorySlot } from './InventorySlot';
 import { BaseOverlay } from './BaseOverlay';

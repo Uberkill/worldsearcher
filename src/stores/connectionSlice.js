@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export const useConnectionStore = create((set) => ({
+export const useConnectionStore = create((_set) => ({
   peer: null,
   connections: [], 
   unreliableConnections: [], 
@@ -8,6 +8,7 @@ export const useConnectionStore = create((set) => ({
   roomCode: null,
   playerName: '',
   connectionStatus: 'disconnected',
+  players: {},
   playerId: localStorage.getItem('ws_playerId') || (() => {
      const newId = Math.random().toString(36).substring(2, 9);
      localStorage.setItem('ws_playerId', newId);

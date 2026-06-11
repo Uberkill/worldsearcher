@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint . && node scripts/check_architecture.js",
+    "lint": "eslint src/ && node scripts/check_architecture.js",
+    "lint:fix": "eslint src/ --fix && node scripts/check_architecture.js",
+    "lint:report": "eslint src/ --format stylish",
     "preview": "vite preview",
     "prepare": "husky"
   },

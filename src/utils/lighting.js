@@ -57,8 +57,16 @@ const isTransparent = (
   gy,
   gz
 ) => {
-  if (gy > CHUNK_Y_MAX) return true;
-  if (gy < CHUNK_Y_MIN) return true;
+  if (gy > CHUNK_Y_MAX || gy < CHUNK_Y_MIN) return true;
+
+  const lx = gx - cx * 16;
+  const lz = gz - cz * 16;
+  if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
+    const tex = buffer[getIndex(lx, gy, lz)] & 0xff;
+    if (tex === 0) return true;
+    return BlockById[tex]?.isTransparent || false;
+  }
+
   const tex = getGlobalBlockTex(
     cx,
     cz,
@@ -78,16 +86,11 @@ const getLight = (cx, cz, buffer, neighborBuffers, gx, gy, gz, isSunlight) => {
   if (gy > CHUNK_Y_MAX) return isSunlight ? 15 : 0;
   if (gy < CHUNK_Y_MIN) return 0;
 
-  if (
-    gx >= cx * 16 &&
-    gx < cx * 16 + 16 &&
-    gz >= cz * 16 &&
-    gz < cz * 16 + 16
-  ) {
-    const lx = ((gx % 16) + 16) % 16;
-    const lz = ((gz % 16) + 16) % 16;
+  const lx = gx - cx * 16;
+  const lz = gz - cz * 16;
+  if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
     const val = buffer[getIndex(lx, gy, lz)];
-    return isSunlight ? getSunlight(val) : getBlockLight(val);
+    return isSunlight ? (val >> 26) & 0xf : (val >> 22) & 0xf;
   }
 
   if (neighborBuffers) {
@@ -95,10 +98,10 @@ const getLight = (cx, cz, buffer, neighborBuffers, gx, gy, gz, isSunlight) => {
     const ncz = Math.floor(gz / 16);
     for (let i = 0; i < neighborBuffers.length; i++) {
       if (neighborBuffers[i].cx === ncx && neighborBuffers[i].cz === ncz) {
-        const lx = ((gx % 16) + 16) % 16;
-        const lz = ((gz % 16) + 16) % 16;
-        const val = neighborBuffers[i].buffer[getIndex(lx, gy, lz)];
-        return isSunlight ? getSunlight(val) : getBlockLight(val);
+        const nlx = gx - ncx * 16;
+        const nlz = gz - ncz * 16;
+        const val = neighborBuffers[i].buffer[getIndex(nlx, gy, nlz)];
+        return isSunlight ? (val >> 26) & 0xf : (val >> 22) & 0xf;
       }
     }
   }
@@ -118,17 +121,15 @@ const setLightVal = (
 ) => {
   if (gy > CHUNK_Y_MAX || gy < CHUNK_Y_MIN) return false;
 
-  if (
-    gx >= cx * 16 &&
-    gx < cx * 16 + 16 &&
-    gz >= cz * 16 &&
-    gz < cz * 16 + 16
-  ) {
-    const lx = ((gx % 16) + 16) % 16;
-    const lz = ((gz % 16) + 16) % 16;
+  const lx = gx - cx * 16;
+  const lz = gz - cz * 16;
+  if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) {
     const idx = getIndex(lx, gy, lz);
-    if (isSunlight) setSunlight(buffer, idx, val);
-    else setBlockLight(buffer, idx, val);
+    if (isSunlight) {
+      buffer[idx] = (buffer[idx] & ~(0xf << 26)) | ((val & 0xf) << 26);
+    } else {
+      buffer[idx] = (buffer[idx] & ~(0xf << 22)) | ((val & 0xf) << 22);
+    }
     return true;
   }
 
@@ -137,11 +138,15 @@ const setLightVal = (
     const ncz = Math.floor(gz / 16);
     for (let i = 0; i < neighborBuffers.length; i++) {
       if (neighborBuffers[i].cx === ncx && neighborBuffers[i].cz === ncz) {
-        const lx = ((gx % 16) + 16) % 16;
-        const lz = ((gz % 16) + 16) % 16;
-        const idx = getIndex(lx, gy, lz);
-        if (isSunlight) setSunlight(neighborBuffers[i].buffer, idx, val);
-        else setBlockLight(neighborBuffers[i].buffer, idx, val);
+        const nlx = gx - ncx * 16;
+        const nlz = gz - ncz * 16;
+        const idx = getIndex(nlx, gy, nlz);
+        const nBuf = neighborBuffers[i].buffer;
+        if (isSunlight) {
+          nBuf[idx] = (nBuf[idx] & ~(0xf << 26)) | ((val & 0xf) << 26);
+        } else {
+          nBuf[idx] = (nBuf[idx] & ~(0xf << 22)) | ((val & 0xf) << 22);
+        }
         return true;
       }
     }
@@ -670,602 +675,3 @@ export const removeLight = (
   return lightOverflow;
 };
 
-// ── Vertex Ambient Occlusion & Lighting ──────────────────────────────────────
-const isSolidBlock = (
-  buffer,
-  neighborBuffers,
-  neighborObj,
-  cx,
-  cz,
-  x,
-  y,
-  z
-) => {
-  const tex = getGlobalBlockTex(
-    cx,
-    cz,
-    buffer,
-    neighborBuffers,
-    neighborObj,
-    x,
-    y,
-    z
-  );
-  if (tex === 0) return false;
-  if (typeof tex === 'string') return true;
-  return !BlockById[tex]?.isTransparent;
-};
-
-const getVertexLightAO = (
-  buffer,
-  neighborBuffers,
-  neighborObj,
-  cx,
-  cz,
-  centerSun,
-  centerBlock,
-  s1x,
-  s1y,
-  s1z,
-  s2x,
-  s2y,
-  s2z,
-  cx_c,
-  cy_c,
-  cz_c
-) => {
-  const s1 = isSolidBlock(
-    buffer,
-    neighborBuffers,
-    neighborObj,
-    cx,
-    cz,
-    s1x,
-    s1y,
-    s1z
-  )
-    ? 1
-    : 0;
-  const s2 = isSolidBlock(
-    buffer,
-    neighborBuffers,
-    neighborObj,
-    cx,
-    cz,
-    s2x,
-    s2y,
-    s2z
-  )
-    ? 1
-    : 0;
-  const c = isSolidBlock(
-    buffer,
-    neighborBuffers,
-    neighborObj,
-    cx,
-    cz,
-    cx_c,
-    cy_c,
-    cz_c
-  )
-    ? 1
-    : 0;
-
-  const s1Sun = getLight(cx, cz, buffer, neighborBuffers, s1x, s1y, s1z, true);
-  const s2Sun = getLight(cx, cz, buffer, neighborBuffers, s2x, s2y, s2z, true);
-  const cSun = getLight(
-    cx,
-    cz,
-    buffer,
-    neighborBuffers,
-    cx_c,
-    cy_c,
-    cz_c,
-    true
-  );
-
-  const s1Blk = getLight(cx, cz, buffer, neighborBuffers, s1x, s1y, s1z, false);
-  const s2Blk = getLight(cx, cz, buffer, neighborBuffers, s2x, s2y, s2z, false);
-  const cBlk = getLight(
-    cx,
-    cz,
-    buffer,
-    neighborBuffers,
-    cx_c,
-    cy_c,
-    cz_c,
-    false
-  );
-
-  const ao = s1 && s2 ? 0 : 3 - (s1 + s2 + c);
-
-  let maxSun = centerSun;
-  let maxBlk = centerBlock;
-
-  if (!s1) {
-    maxSun = Math.max(maxSun, s1Sun);
-    maxBlk = Math.max(maxBlk, s1Blk);
-  }
-  if (!s2) {
-    maxSun = Math.max(maxSun, s2Sun);
-    maxBlk = Math.max(maxBlk, s2Blk);
-  }
-  if (!(s1 && s2) && !c) {
-    maxSun = Math.max(maxSun, cSun);
-    maxBlk = Math.max(maxBlk, cBlk);
-  }
-
-  // Pack into 10 bits: Sun (4) | Blk (4) | AO (2)
-  return (maxSun & 0xf) | ((maxBlk & 0xf) << 4) | ((ao & 0x3) << 8);
-};
-
-export const calculateFaceLighting = (
-  buffer,
-  neighborBuffers,
-  neighborObj,
-  cx,
-  cz,
-  bx,
-  by,
-  bz,
-  dir
-) => {
-  const ax = bx + dir[0];
-  const ay = by + dir[1];
-  const az = bz + dir[2];
-
-  const cSun = getLight(cx, cz, buffer, neighborBuffers, ax, ay, az, true);
-  const cBlk = getLight(cx, cz, buffer, neighborBuffers, ax, ay, az, false);
-
-  let v0, v1, v2, v3;
-
-  if (dir[1] === 1) {
-    // +Y
-    v0 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax - 1,
-      ay,
-      az,
-      ax,
-      ay,
-      az - 1,
-      ax - 1,
-      ay,
-      az - 1
-    );
-    v1 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax - 1,
-      ay,
-      az,
-      ax,
-      ay,
-      az + 1,
-      ax - 1,
-      ay,
-      az + 1
-    );
-    v2 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax + 1,
-      ay,
-      az,
-      ax,
-      ay,
-      az + 1,
-      ax + 1,
-      ay,
-      az + 1
-    );
-    v3 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax + 1,
-      ay,
-      az,
-      ax,
-      ay,
-      az - 1,
-      ax + 1,
-      ay,
-      az - 1
-    );
-  } else if (dir[1] === -1) {
-    // -Y
-    v0 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax - 1,
-      ay,
-      az,
-      ax,
-      ay,
-      az - 1,
-      ax - 1,
-      ay,
-      az - 1
-    );
-    v1 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax + 1,
-      ay,
-      az,
-      ax,
-      ay,
-      az - 1,
-      ax + 1,
-      ay,
-      az - 1
-    );
-    v2 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax + 1,
-      ay,
-      az,
-      ax,
-      ay,
-      az + 1,
-      ax + 1,
-      ay,
-      az + 1
-    );
-    v3 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax - 1,
-      ay,
-      az,
-      ax,
-      ay,
-      az + 1,
-      ax - 1,
-      ay,
-      az + 1
-    );
-  } else if (dir[0] === 1) {
-    // +X
-    v0 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax,
-      ay - 1,
-      az,
-      ax,
-      ay,
-      az - 1,
-      ax,
-      ay - 1,
-      az - 1
-    );
-    v1 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax,
-      ay + 1,
-      az,
-      ax,
-      ay,
-      az - 1,
-      ax,
-      ay + 1,
-      az - 1
-    );
-    v2 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax,
-      ay + 1,
-      az,
-      ax,
-      ay,
-      az + 1,
-      ax,
-      ay + 1,
-      az + 1
-    );
-    v3 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax,
-      ay - 1,
-      az,
-      ax,
-      ay,
-      az + 1,
-      ax,
-      ay - 1,
-      az + 1
-    );
-  } else if (dir[0] === -1) {
-    // -X
-    v0 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax,
-      ay - 1,
-      az,
-      ax,
-      ay,
-      az - 1,
-      ax,
-      ay - 1,
-      az - 1
-    );
-    v1 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax,
-      ay - 1,
-      az,
-      ax,
-      ay,
-      az + 1,
-      ax,
-      ay - 1,
-      az + 1
-    );
-    v2 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax,
-      ay + 1,
-      az,
-      ax,
-      ay,
-      az + 1,
-      ax,
-      ay + 1,
-      az + 1
-    );
-    v3 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax,
-      ay + 1,
-      az,
-      ax,
-      ay,
-      az - 1,
-      ax,
-      ay + 1,
-      az - 1
-    );
-  } else if (dir[2] === 1) {
-    // +Z
-    v0 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax + 1,
-      ay,
-      az,
-      ax,
-      ay - 1,
-      az,
-      ax + 1,
-      ay - 1,
-      az
-    );
-    v1 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax + 1,
-      ay,
-      az,
-      ax,
-      ay + 1,
-      az,
-      ax + 1,
-      ay + 1,
-      az
-    );
-    v2 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax - 1,
-      ay,
-      az,
-      ax,
-      ay + 1,
-      az,
-      ax - 1,
-      ay + 1,
-      az
-    );
-    v3 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax - 1,
-      ay,
-      az,
-      ax,
-      ay - 1,
-      az,
-      ax - 1,
-      ay - 1,
-      az
-    );
-  } else if (dir[2] === -1) {
-    // -Z
-    v0 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax - 1,
-      ay,
-      az,
-      ax,
-      ay - 1,
-      az,
-      ax - 1,
-      ay - 1,
-      az
-    );
-    v1 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax - 1,
-      ay,
-      az,
-      ax,
-      ay + 1,
-      az,
-      ax - 1,
-      ay + 1,
-      az
-    );
-    v2 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax + 1,
-      ay,
-      az,
-      ax,
-      ay + 1,
-      az,
-      ax + 1,
-      ay + 1,
-      az
-    );
-    v3 = getVertexLightAO(
-      buffer,
-      neighborBuffers,
-      neighborObj,
-      cx,
-      cz,
-      cSun,
-      cBlk,
-      ax + 1,
-      ay,
-      az,
-      ax,
-      ay - 1,
-      az,
-      ax + 1,
-      ay - 1,
-      az
-    );
-  }
-
-  // Pack four 10-bit values into a single 40-bit number (safe up to 53 bits in JS floats)
-  // v0 is lowest 10 bits, v3 is highest 10 bits
-  return v0 + v1 * 1024 + v2 * 1048576 + v3 * 1073741824;
-};

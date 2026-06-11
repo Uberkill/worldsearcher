@@ -17,10 +17,10 @@ import { ChunkPhysics } from './ChunkPhysics';
 import { ChunkRenderer } from './ChunkRenderer';
 import { materialCache, initMaterials } from '../utils/ChunkMaterialCache';
 import * as THREE from 'three';
+import { playerPosition } from '../globals';
 
 initMaterials();
 
-const projScreenMatrix = new THREE.Matrix4();
 
 export const Cubes = memo(() => {
   const activePhysicsChunks = useChunkStore(
@@ -46,6 +46,8 @@ export const Cubes = memo(() => {
 
     // Update material time uniforms for animated blocks (water, lava)
     const isDebugLighting = store.debugLighting;
+    const isHoldingLight = store.texture === 'torch' || store.texture === 'flashlight';
+    
     for (const mat of materialCache.values()) {
       if (mat && mat.userData.shader) {
         mat.userData.shader.uniforms.uTime = mat.userData.shader.uniforms
@@ -56,6 +58,16 @@ export const Cubes = memo(() => {
           mat.userData.shader.uniforms.uDebugLighting.value = isDebugLighting
             ? 1
             : 0;
+        }
+        
+        // Update Dynamic Hand-Held Lighting
+        if (mat.userData.shader.uniforms.uDynamicLightPos) {
+           if (isHoldingLight) {
+              mat.userData.shader.uniforms.uDynamicLightPos.value.copy(playerPosition);
+              mat.userData.shader.uniforms.uDynamicLightIntensity.value = 1.0;
+           } else {
+              mat.userData.shader.uniforms.uDynamicLightIntensity.value = 0.0;
+           }
         }
       }
     }

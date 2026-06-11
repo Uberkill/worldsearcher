@@ -2,7 +2,6 @@ import { BlockKeyById } from '../registry/BlockRegistry';
 import { useChunkStore } from '../stores/chunkSlice';
 import {
   getIndex,
-  setFluidLevel,
   getTextureId,
   getLevel,
   CHUNK_Y_MIN,

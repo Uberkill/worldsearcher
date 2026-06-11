@@ -1,5 +1,4 @@
 import { useMemo, useRef, useEffect } from 'react';
-import { useStore } from '../stores/useStore';
 import { useFlareStore } from '../stores/flareSlice';
 import { useShallow } from 'zustand/react/shallow';
 import * as THREE from 'three';

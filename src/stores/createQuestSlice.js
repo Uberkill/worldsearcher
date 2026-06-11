@@ -100,7 +100,7 @@ export const createQuestSlice = (set, get) => ({
         ns.connections?.forEach(conn => {
           try {
             conn.send({ type: 'MAIN_QUEST_PROGRESS', syncLevel: nextQuest.syncLevel, progress: get().mainQuestProgress });
-          } catch (e) { /* ignore */ }
+          } catch (_e) { /* ignore */ }
         });
       }
     }
@@ -163,20 +163,20 @@ export const createQuestSlice = (set, get) => ({
         if (isComplete) {
           get().giveMainQuestRewards(activeMainQuest.id);
           ns.connections?.forEach(conn => {
-            try { conn.send({ type: 'MAIN_QUEST_COMPLETED', questId: activeMainQuest.id }); } catch (e) { /* ignore */ }
+            try { conn.send({ type: 'MAIN_QUEST_COMPLETED', questId: activeMainQuest.id }); } catch (_e) { /* ignore */ }
           });
         }
         ns.connections?.forEach(conn => {
           try {
             conn.send({ type: 'MAIN_QUEST_PROGRESS', syncLevel: state.syncLevel, progress: newMainProgress });
-          } catch (e) { /* ignore */ }
+          } catch (_e) { /* ignore */ }
         });
       } else {
         // If Guest, send intent to host so host can validate/echo
         if (ns && ns.connections && ns.connections[0]) {
           try {
             ns.connections[0].send({ type: 'MAIN_QUEST_INTENT', update: { type, target, amount } });
-          } catch (e) { /* ignore */ }
+          } catch (_e) { /* ignore */ }
         }
       }
     }

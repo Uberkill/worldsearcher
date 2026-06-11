@@ -192,24 +192,7 @@ export const generateChunkPass1 = (cx, cz, worldSeed) => {
         // 3D noise if we are within 20 blocks of the max surface height.
         if (isSolid && y < maxSurfaceHeight && y > maxSurfaceHeight - 20) {
           const depthFactor = Math.min(1.0, (maxSurfaceHeight - y) / 20.0);
-
-          let amplitude = 1.0;
-          let frequency = 0.03;
-          let noiseValue = 0.0;
-          let maxAmplitude = 0.0;
-
-          for (let i = 0; i < OCTAVES; i++) {
-            noiseValue +=
-              caveNoise3D(
-                x * frequency,
-                y * Math.max(0.5, frequency * 2),
-                z * frequency
-              ) * amplitude;
-            maxAmplitude += amplitude;
-            amplitude *= PERSISTENCE;
-            frequency *= LACUNARITY;
-          }
-          noiseValue /= maxAmplitude;
+          const noiseValue = caveNoise3D(x * 0.03, y * 0.06, z * 0.03);
 
           // Carve out an overhang/cave
           if (Math.abs(noiseValue) < 0.12 * depthFactor) {

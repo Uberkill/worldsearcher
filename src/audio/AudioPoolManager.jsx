@@ -75,10 +75,10 @@ export const AudioPoolManager = ({ poolSize = 15 }) => {
         // We create the PositionalAudio imperatively to attach it to the dummy Object3D
         if (!voice.audio) {
           voice.audio = new THREE.PositionalAudio(gameAudio.listener);
-          voice.audio.setRefDistance(distanceParams.refDistance || 5);
+          voice.audio.setRefDistance(distanceParams.refDistance || 2.0);
           voice.audio.setMaxDistance(maxDist);
-          voice.audio.setDistanceModel('linear');
-          voice.audio.setRolloffFactor(1);
+          voice.audio.setDistanceModel('exponential');
+          voice.audio.setRolloffFactor(distanceParams.rolloffFactor || 1.5);
           voice.obj.add(voice.audio);
           
           voice.audio.voiceRef = voice;

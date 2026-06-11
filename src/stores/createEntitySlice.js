@@ -24,7 +24,6 @@ export const createEntitySlice = (set, get) => {
     pathfinderWorker.onmessage = (e) => {
       if (e.data.type === 'PATH_RESULT') {
         const { id, sequenceID, pathBuffer, length } = e.data;
-        const oldPaths = get().resolvedPaths;
         // Optional: We can recycle the old pathBuffer here if we want, but since they are small, GC handles it well.
         set(prev => ({
           resolvedPaths: { ...prev.resolvedPaths, [id]: { sequenceID, pathBuffer, length } }

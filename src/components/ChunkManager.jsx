@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useStore } from '../stores/useStore';
 import { useChunkStore } from '../stores/chunkSlice';
-import { useEnvironmentStore } from '../stores/environmentSlice';
+
 import { networkActions } from '../stores/networkActions';
 import { playerPosition } from '../globals';
 
@@ -18,7 +18,7 @@ const buildOffsets = (dist) => {
   return offsets;
 };
 
-// ── Time-Sliced Boundary Sweep Generator ──
+// ── Boundary Sweep Generator ──
 function* chunkSweep(
   currentCx,
   currentCz,
@@ -30,7 +30,6 @@ function* chunkSweep(
 ) {
   const desiredChunks = new Set();
   const toLoad = [];
-  let ops = 0;
 
   // Step 1: Identify desired chunks and un-cancel them (Render Distance + 1 for boundary padding!)
   const padR = renderDistance + 1;
@@ -52,12 +51,6 @@ function* chunkSweep(
       if (!knownChunks.has(chunkKey) && !failedChunks.has(chunkKey)) {
         toLoad.push({ cx, cz, dist: Math.abs(x) + Math.abs(z), chunkKey });
       }
-
-      ops++;
-      if (ops >= 30) {
-        ops = 0;
-        yield { type: 'YIELD' };
-      }
     }
   }
 
@@ -65,27 +58,14 @@ function* chunkSweep(
   toLoad.sort((a, b) => a.dist - b.dist);
 
   // Step 2: Issue Load Requests
-  ops = 0;
   for (const item of toLoad) {
     yield { type: 'LOAD', ...item };
-    ops++;
-    if (ops >= 40) {
-      // Limit to 40 load requests per frame
-      ops = 0;
-      yield { type: 'YIELD' };
-    }
   }
 
   // Step 3: Schedule DEFERRED unloads
-  ops = 0;
   for (const key of chunksToCheck) {
     if (!desiredChunks.has(key) && !pendingUnloads.has(key)) {
       yield { type: 'UNLOAD', chunkKey: key };
-    }
-    ops++;
-    if (ops >= 30) {
-      ops = 0;
-      yield { type: 'YIELD' };
     }
   }
 
@@ -203,7 +183,7 @@ export const ChunkManager = () => {
       booted.current = false;
       console.log(`[ChunkManager] UNMOUNTING! Cleanup running.`);
       // Cancel any pending unload timeouts on unmount and explicitly unload them
-      for (const [chunkKey, id] of unloads.entries()) {
+      for (const [_chunkKey, id] of unloads.entries()) {
         clearTimeout(id);
       }
       unloads.clear();
@@ -398,11 +378,10 @@ export const ChunkManager = () => {
 
 
 
-    // Only trigger sweep if we cross a chunk boundary and aren't already sweeping
+    // Only trigger sweep if we cross a chunk boundary
     if (
-      (currentCx !== lastPlayerCx.current ||
-        currentCz !== lastPlayerCz.current) &&
-      !sweepGen.current
+      currentCx !== lastPlayerCx.current ||
+      currentCz !== lastPlayerCz.current
     ) {
       lastPlayerCx.current = currentCx;
       lastPlayerCz.current = currentCz;
@@ -425,10 +404,11 @@ export const ChunkManager = () => {
     }
 
     // Advance the generator by processing chunks per frame.
-    // Budget lowered to 2 to prevent flooding IndexedDB with queries per second, which freezes the browser.
     if (sweepGen.current) {
-      let steps = 0;
-      while (steps < 2) {
+      let loadSteps = 0;
+      let totalSteps = 0;
+      const MAX_LOADS_PER_FRAME = 6;
+      while (totalSteps < 50) {
         const { value, done } = sweepGen.current.next();
         if (done) {
           if (window.__DEBUG_STATS__) {
@@ -443,9 +423,10 @@ export const ChunkManager = () => {
           sweepGen.current = null;
           break;
         }
-        if (value.type === 'YIELD') {
-          break; // End frame early
-        } else if (value.type === 'RELOAD') {
+
+        totalSteps++;
+
+        if (value.type === 'RELOAD') {
           const { chunkKey, cx, cz } = value;
           loadChunkAsync(cx, cz)
             .then((success) => {
@@ -482,7 +463,7 @@ export const ChunkManager = () => {
               } else {
                 knownChunks.current.delete(chunkKey);
                 failedChunks.current.add(chunkKey);
-              setTimeout(() => failedChunks.current.delete(chunkKey), 5000);
+                setTimeout(() => failedChunks.current.delete(chunkKey), 5000);
               }
             })
             .catch((_err) => {
@@ -490,6 +471,11 @@ export const ChunkManager = () => {
               failedChunks.current.add(chunkKey);
               setTimeout(() => failedChunks.current.delete(chunkKey), 5000);
             });
+
+          loadSteps++;
+          if (loadSteps >= MAX_LOADS_PER_FRAME) {
+            break;
+          }
         } else if (value.type === 'UNLOAD') {
           const key = value.chunkKey;
           useStore.getState().cancelLoadChunk(key);
@@ -515,7 +501,6 @@ export const ChunkManager = () => {
           }, delay);
           pendingUnloads.current.set(key, id);
         }
-        steps++;
       }
     }
 

@@ -7,7 +7,7 @@ const MAX_SEARCH_DEPTH = 15; // Max distance a block can be from the ground befo
 export const checkStructuralIntegrity = (get, sx, sy, sz) => {
   if (sy <= CHUNK_Y_MIN) return null; // Can't fall if already at bedrock
 
-  const state = get();
+  // state not needed here
 
   // Helper to read voxel efficiently
   const getBlockTex = (gx, gy, gz) => {

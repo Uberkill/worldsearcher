@@ -3,14 +3,14 @@ import { useEnvironmentStore } from './environmentSlice';
 import { useFlareStore } from './flareSlice';
 import { useChunkStore } from './chunkSlice';
 import { useInventoryStore } from './inventorySlice';
-import { v4 as uuidV4 } from 'uuid';
+
 import { saveChunkToDB, loadChunkFromDB, clearDB, cancelLoadFromDB, flushWAL } from '../utils/db';
 import { BlockRegistry, BlockById, BlockKeyById, BlockIds } from '../registry/BlockRegistry';
-import { setBlock, getIndex, getTextureId, CHUNK_Y_MIN, CHUNK_Y_MAX, getIsHidden, CHUNK_VOLUME, getHealth } from '../utils/chunkData';
+import { setBlock, getIndex, getTextureId, CHUNK_Y_MIN, CHUNK_Y_MAX, getIsHidden, getHealth } from '../utils/chunkData';
 import { chunkWorkerPool } from '../utils/workerPool';
 import { getSeed } from '../worldSeed';
 import { tickFluids, wakeFluidsAround } from '../utils/fluidSystem';
-import { checkStructuralIntegrity } from '../utils/structuralPhysics';
+
 import { EventBus } from '../utils/EventBus';
 
 
@@ -58,14 +58,14 @@ const bufferRecycleQueue = [];
 let bufferRecycleTimer = null;
 const flushBufferRecycleQueue = () => {
   if (bufferRecycleQueue.length > 0) {
-    const validBuffers = [];
+    const validBuffers = new Set();
     for (let i = 0; i < bufferRecycleQueue.length; i++) {
       if (bufferRecycleQueue[i] && bufferRecycleQueue[i].byteLength > 0) {
-        validBuffers.push(bufferRecycleQueue[i]);
+        validBuffers.add(bufferRecycleQueue[i]);
       }
     }
-    if (validBuffers.length > 0) {
-      chunkWorkerPool.recycleBuffers(validBuffers);
+    if (validBuffers.size > 0) {
+      chunkWorkerPool.recycleBuffers(Array.from(validBuffers));
     }
     bufferRecycleQueue.length = 0;
   }
@@ -119,7 +119,7 @@ export const worldActions = (rawSet, rawGet) => {
         bufferRecycleTimer = setTimeout(() => {
           flushBufferRecycleQueue();
           bufferRecycleTimer = null;
-        }, 2000);
+        }, 50);
       }
     },
     mountNextMesh: (batchSize = 1) => {
@@ -1030,7 +1030,7 @@ export const worldActions = (rawSet, rawGet) => {
       const cz = Math.floor(z / 16);
       const ly = Math.floor(y);
       if (ly < CHUNK_Y_MIN || ly > CHUNK_Y_MAX) return;
-      const state = get();
+      // // const state = get();
       const chunkData = useChunkStore.getState().chunks[chunkKey];
       if (!chunkData || !chunkData.buffer) return;
       const lx = (x % 16 + 16) % 16;
@@ -1454,11 +1454,41 @@ export const worldActions = (rawSet, rawGet) => {
     },
     loadChunkPass2Async: async (cx, cz) => {
       const chunkKey = `${cx},${cz}`;
+      const chunkDataExists = useChunkStore.getState().chunks[chunkKey];
+
+      // If the chunk already exists and has mesh arrays, we don't need pass1Data.
+      // This happens when a pending unload is cancelled (the player steps back into the chunk).
+      if (chunkDataExists && chunkDataExists.meshArrays) {
+        const meshArrays = chunkDataExists.meshArrays;
+        delete chunkDataExists.meshArrays;
+        
+        const prev = getCombinedState(rawGet);
+        const __patch = {
+          chunks: {
+            ...prev.chunks,
+            [chunkKey]: chunkDataExists
+          },
+          pendingMeshMounts: [...prev.pendingMeshMounts, {
+            chunkKey,
+            meshArrays,
+            rebuildId: chunkDataExists.rebuildId || 0
+          }]
+        };
+        const cPatch = {};
+        if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
+        if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
+        useChunkStore.setState(cPatch);
+
+        inFlightChunks.delete(chunkKey);
+        return true;
+      }
+
       const pass1Data = pass1Cache.get(chunkKey);
       // Return NO_DATA (not CANCELLED) when the cache was evicted.
       // The gate treats CANCELLED as "retry", which creates an infinite loop
       // when pass1Cache was already cleared. NO_DATA triggers a full re-load.
       if (!pass1Data) return 'NO_DATA';
+
       if (inFlightChunks.has(chunkKey)) {
         cancelledChunks.delete(chunkKey);
         return;
@@ -1490,6 +1520,13 @@ export const worldActions = (rawSet, rawGet) => {
           }
           chunkData = pass1Data.chunkData;
           const rebuildResult = await chunkWorkerPool.rebuild(chunkData.buffer, neighborBuffers, cx, cz, chunkSeed);
+          if (rebuildResult?.error) {
+            inFlightChunks.delete(chunkKey);
+            if (rebuildResult.error !== 'CANCELLED') {
+              pass1Cache.delete(chunkKey);
+            }
+            return 'CANCELLED';
+          }
           chunkData.meshArrays = rebuildResult.meshArrays;
           if (rebuildResult.buffer) {
             chunkData.buffer = new Uint32Array(rebuildResult.buffer);
@@ -1499,9 +1536,9 @@ export const worldActions = (rawSet, rawGet) => {
           chunkData = await chunkWorkerPool.generatePass2(cx, cz, pass1Data.buffer, pass1Data.getSurfaceHeightMap, chunkSeed);
           if (chunkData?.error) {
             inFlightChunks.delete(chunkKey);
-            // Do NOT delete from pass1Cache here — we need the gate to see 'NO_DATA'
-            // so it evicts the chunk and lets the sweep re-queue a fresh load.
-            // Deleting here and returning 'CANCELLED' was causing permanent void holes.
+            if (chunkData.error === 'CANCELLED') {
+              return 'CANCELLED';
+            }
             pass1Cache.delete(chunkKey);
             return 'NO_DATA';
           }
@@ -1509,11 +1546,11 @@ export const worldActions = (rawSet, rawGet) => {
           // CRITICAL FIX: The worker transferred an ArrayBuffer back. We MUST wrap it in a Uint32Array!
           chunkData.buffer = new Uint32Array(chunkData.buffer);
         }
-        pass1Cache.delete(chunkKey);
         if (cancelledChunks.has(chunkKey)) {
           inFlightChunks.delete(chunkKey);
           return 'CANCELLED';
         }
+        pass1Cache.delete(chunkKey);
 
         // ── Handle Decorator Overflow ──
         const overflowPayload = chunkData.overflow || [];
@@ -1754,12 +1791,12 @@ export const worldActions = (rawSet, rawGet) => {
       }
     },
     cancelLoadChunk: chunkKey => {
-      if (pass1Cache.has(chunkKey)) pass1Cache.delete(chunkKey);
       if (inFlightChunks.has(chunkKey)) {
         cancelledChunks.add(chunkKey);
         const [cxStr, czStr] = chunkKey.split(',');
         cancelLoadFromDB(chunkKey); // Immediately rip it out of the database queue!
         chunkWorkerPool.cancelGenerate(+cxStr, +czStr);
+        chunkWorkerPool.cancelRebuild(+cxStr, +czStr);
       }
     },
     unloadChunk: async chunkKey => {
@@ -1768,12 +1805,10 @@ export const worldActions = (rawSet, rawGet) => {
         cancelledChunks.add(chunkKey);
         return;
       }
-      // Fix: Data Loss Bug (Sprint-Away)
-      // If the chunk is dirty, save it to the WAL before destroying its RAM buffer!
+      const [cxStr, czStr] = chunkKey.split(',');
+      chunkWorkerPool.cancelRebuild(+cxStr, +czStr);
       const chunkData = useChunkStore.getState().chunks[chunkKey];
-      if (chunkData && chunkData.isModified) {
-        saveChunkToDB(chunkKey, chunkData);
-      }
+
 
       // Remove from dirty-set rebuild system so no ghost worker fires after unload
       dirtyChunkSet.delete(chunkKey);
@@ -1855,7 +1890,7 @@ export const worldActions = (rawSet, rawGet) => {
       const cz = Math.floor(z / 16);
       const ly = Math.floor(y); // Use floor: DDA returns integer block coords; Math.round(y-0.5) is wrong for negative Y
       if (ly < CHUNK_Y_MIN || ly > CHUNK_Y_MAX) return false;
-      const state = get();
+      // // const state = get();
       const chunkData = useChunkStore.getState().chunks[chunkKey];
       if (!chunkData || !chunkData.buffer) return false;
       const lx = (x % 16 + 16) % 16;
@@ -1968,7 +2003,7 @@ export const worldActions = (rawSet, rawGet) => {
       return true;
     },
     bakeCube: (key, pos) => {
-      const state = get();
+      // // const state = get();
       const debrisBlock = useInventoryStore.getState().debris.find(d => d.key === key);
       if (!debrisBlock) return;
       const [x, y, z] = pos;
@@ -2084,7 +2119,7 @@ export const worldActions = (rawSet, rawGet) => {
       const cz = Math.floor(z / 16);
       const ly = Math.floor(y); // Use floor: DDA returns integer block coords; Math.round(y-0.5) is wrong for negative Y
       if (ly < CHUNK_Y_MIN || ly > CHUNK_Y_MAX) return;
-      const state = get();
+      // // const state = get();
       const chunkData = useChunkStore.getState().chunks[chunkKey];
       if (!chunkData || !chunkData.buffer) return;
       const lx = (x % 16 + 16) % 16;
@@ -2282,7 +2317,7 @@ export const worldActions = (rawSet, rawGet) => {
       });
     },
     removeCubesBulk: (blocks, causedByGravity = false, initiatedByPlayerId = null) => {
-      const state = get();
+      // // const state = get();
       const rebuilds = new Set();
       const chunkDeltas = {};
       const networkActions = getNetworkStore();
@@ -2481,7 +2516,7 @@ export const worldActions = (rawSet, rawGet) => {
             if (texName === 'bedrock') continue;
             if (BlockById[currentId]?.isFluid) continue;
 
-            const blockConfig = BlockById[currentId] || { health: 100 };
+            // // const blockConfig = BlockById[currentId] || { health: 100 };
             let health = getHealth(val);
             if (health === Infinity) continue;
 
@@ -2595,7 +2630,7 @@ export const worldActions = (rawSet, rawGet) => {
       })();
 
       // Defer mesh rebuilds
-      const state = get();
+      // // const state = get();
       // We don't have rebuilds set here, so we'll just request rebuilds on next frame for pending chunks if needed.
       // Actually, we can just let AutoSaveManager/Network sync handle it, or we can manually request.
       // The beast attack is just an effect. We will add manual rebuild requests in SwarmManager.
@@ -2604,7 +2639,7 @@ export const worldActions = (rawSet, rawGet) => {
       const chunkKey = getChunkKey(x, z);
       const ly = Math.floor(y); // Use floor: DDA returns integer block coords; Math.round(y-0.5) is wrong for negative Y
       if (ly < CHUNK_Y_MIN || ly > CHUNK_Y_MAX) return;
-      const state = get();
+      // // const state = get();
       const chunkData = useChunkStore.getState().chunks[chunkKey];
       if (!chunkData) return;
       const lx = (x % 16 + 16) % 16;

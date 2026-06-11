@@ -4,7 +4,6 @@ import { useRef, useMemo, useEffect } from 'react';
 import { useStore } from '../stores/useStore';
 import { useChunkStore } from '../stores/chunkSlice';
 import { useEnvironmentStore } from '../stores/environmentSlice';
-import { useShallow } from 'zustand/react/shallow';
 import { networkActions } from '../stores/networkActions';
 import * as THREE from 'three';
 
@@ -145,6 +144,7 @@ export const DynamicSky = () => {
   const starsRef = useRef();
   const hemiRef = useRef();
   const lastPosRef = useRef(new THREE.Vector3());
+  const lastSunRef = useRef(null);
   const shadowTimerRef = useRef(0);
   const syncTimerRef = useRef(0);
   const uiThrottleTimer = useRef(0);
@@ -221,6 +221,12 @@ export const DynamicSky = () => {
   const finalNightColor = useMemo(() => new THREE.Color(), []);
   const finalDawnColor = useMemo(() => new THREE.Color(), []);
 
+  // Pre-allocated colors to prevent GC stutters in useFrame
+  const _tempColor1 = useMemo(() => new THREE.Color(), []);
+  const _tempColor2 = useMemo(() => new THREE.Color(), []);
+  const _sunColor = useMemo(() => new THREE.Color(0xffffff), []);
+  const _moonColor = useMemo(() => new THREE.Color(0x99bbff), []);
+
   const stormFactorRef = useRef(0);
   const lightningFlash = useRef(0);
 
@@ -231,7 +237,6 @@ export const DynamicSky = () => {
     // CRITICAL PATCH: Cap delta at 100ms for background tab throttling
     const delta = Math.min(rawDelta, 0.1);
 
-    const store = useStore.getState();
     const netState = networkActions.getState();
     const isGuest =
       netState.connectionStatus === 'connected' && !netState.isHost;
@@ -374,11 +379,10 @@ export const DynamicSky = () => {
       else if (isSunset) hemiBaseColor = sunY > 0 ? 0xcbd5e1 : 0x1e293b;
 
       const stormyHemi = 0x334155;
-      const finalHemiColor = new THREE.Color(hemiBaseColor).lerp(
-        new THREE.Color(stormyHemi),
-        stormFactorRef.current
-      );
-      hemiRef.current.color.copy(finalHemiColor);
+      _tempColor1.setHex(hemiBaseColor);
+      _tempColor2.setHex(stormyHemi);
+      _tempColor1.lerp(_tempColor2, stormFactorRef.current);
+      hemiRef.current.color.copy(_tempColor1);
     }
 
     const px = state.camera.position.x;
@@ -403,15 +407,19 @@ export const DynamicSky = () => {
 
     shadowTimerRef.current += delta;
 
-    // Update shadows if moved > 32 blocks horizontally, max once every 2 seconds
+    // Angle-Based Shadow Updates
+    // We only update if the sun has moved > 0.5 degrees or if the player moved > 32 blocks.
+    if (!lastSunRef.current) lastSunRef.current = new THREE.Vector2(sunX, sunY);
+    const sunMovedSq = Math.pow(lastSunRef.current.x - sunX, 2) + Math.pow(lastSunRef.current.y - sunY, 2);
+
     if (!shadowBusy && distMovedSq > 1024 && shadowTimerRef.current > 2.0) {
       shadowNeedsUpdate = true;
       lastPosRef.current.copy(currentPos);
       shadowTimerRef.current = 0;
-    } else if (!shadowBusy && shadowTimerRef.current > 5.0) {
-      // 5fps Throttle to shadows for smooth time-of-day shadow updates
-      shadowTimerRef.current = 0;
+    } else if (!shadowBusy && sunMovedSq > 0.000075) {
+      // 0.5 degrees = ~0.0087 radians. Squared = ~0.000075.
       shadowNeedsUpdate = true;
+      lastSunRef.current.set(sunX, sunY);
     }
 
     if (shadowNeedsUpdate) {
@@ -435,7 +443,7 @@ export const DynamicSky = () => {
         );
         celestialLightRef.current.color.lerpColors(
           celestialLightRef.current.color,
-          new THREE.Color(0xffffff),
+          _sunColor,
           delta * 5.0
         );
       } else {
@@ -447,7 +455,7 @@ export const DynamicSky = () => {
         );
         celestialLightRef.current.color.lerpColors(
           celestialLightRef.current.color,
-          new THREE.Color(0x99bbff),
+          _moonColor,
           delta * 5.0
         );
       }

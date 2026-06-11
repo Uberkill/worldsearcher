@@ -674,7 +674,7 @@ export const SwarmManager = ({ type, max }) => {
 
             // Recalculate Path if needed
             if (!usingPath || now - p.lastPathRequest[i] > 2000) {
-              if (now - p.lastPathRequest[i] > 500) { // Throttle requests
+              if (now - p.lastPathRequest[i] > 2000) { // Throttle requests (Fixed: Was 500ms, causing lag)
                 p.lastPathRequest[i] = now;
                 const seqID = Date.now();
                 state.requestPath(entityId, seqID, [pos.x, pos.y, pos.z], [playerPosition.x, playerPosition.y, playerPosition.z]);

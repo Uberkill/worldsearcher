@@ -22,7 +22,8 @@ import {
   generateChunkPass1,
   generateChunkPass2,
 } from '../utils/chunkGenerator.js';
-import { CHUNK_VOLUME } from '../utils/chunkData.js';
+import { CHUNK_VOLUME, getIndex } from '../utils/chunkData.js';
+import { BlockById } from '../registry/BlockRegistry.js';
 import { buildGreedyArrays } from '../utils/greedyMesh.js';
 import {
   generateSunlight,
@@ -30,6 +31,24 @@ import {
 } from '../utils/lighting.js';
 
 const recycledBufferPool = [];
+
+const computeHeightmap = (buffer) => {
+  const heightmap = new Float32Array(256);
+  for (let lx = 0; lx < 16; lx++) {
+    for (let lz = 0; lz < 16; lz++) {
+      let highest = -999;
+      for (let y = 255; y >= -32; y--) {
+        const tex = buffer[getIndex(lx, y, lz)] & 0x7F;
+        if (tex !== 0 && !BlockById[tex]?.isTransparent) {
+          highest = y;
+          break;
+        }
+      }
+      heightmap[lz * 16 + lx] = highest;
+    }
+  }
+  return heightmap;
+};
 
 const extractTransfers = (meshArrays) => {
   const uniqueTransfers = new Set();
@@ -40,6 +59,9 @@ const extractTransfers = (meshArrays) => {
     }
     if (meshArrays.__flora?.packed?.buffer?.byteLength > 0) {
       uniqueTransfers.add(meshArrays.__flora.packed.buffer);
+    }
+    if (meshArrays.__meta?.heightmap?.buffer?.byteLength > 0) {
+      uniqueTransfers.add(meshArrays.__meta.heightmap.buffer);
     }
 
     for (const [key, arrays] of Object.entries(meshArrays)) {
@@ -108,6 +130,8 @@ self.onmessage = async ({ data }) => {
       );
 
       const meshArrays = buildGreedyArrays(newBuffer, cx, cz, neighborBuffers, recycledBufferPool);
+      if (!meshArrays.__meta) meshArrays.__meta = {};
+      meshArrays.__meta.heightmap = computeHeightmap(newBuffer);
 
       const { transferables } = extractTransfers(meshArrays);
       transferables.push(newBuffer.buffer); // Pass the final modified Uint32Array back!
@@ -151,6 +175,8 @@ self.onmessage = async ({ data }) => {
       const blockOverflow = generateBlockLight(buffer, cx, cz, neighborBuffers);
       const lightOverflow = [...sunOverflow, ...blockOverflow];
       const meshArrays = buildGreedyArrays(buffer, cx, cz, neighborBuffers, recycledBufferPool);
+      if (!meshArrays.__meta) meshArrays.__meta = {};
+      meshArrays.__meta.heightmap = computeHeightmap(buffer);
 
       const { transferables } = extractTransfers(meshArrays);
       transferables.push(buffer.buffer);

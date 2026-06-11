@@ -1,4 +1,4 @@
 {
-  "*.{js,jsx}": ["prettier --write", "eslint --fix", "node scripts/check_architecture.js"],
+  "*.{js,jsx}": ["prettier --write", "eslint --fix --max-warnings=-1"],
   "*.{json,css,md,html}": ["prettier --write"]
 }

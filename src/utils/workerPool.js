@@ -115,6 +115,16 @@ class WorkerManager {
     }
   }
 
+  cancelRebuild(cx, cz) {
+    this._queue = this._queue.filter((t) => {
+      if (t.type === 'rebuild' && t.cx === cx && t.cz === cz) {
+        t.resolve({ error: 'CANCELLED' });
+        return false;
+      }
+      return true;
+    });
+  }
+
   rebuild(packedBuffer, neighborBuffers, cx, cz, seed, removedLights) {
     return new Promise((resolve) => {
       const workerObj = this._idle.pop();

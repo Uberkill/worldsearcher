@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { useStore } from '../stores/useStore';
 import { useChunkStore } from '../stores/chunkSlice';
-import { useEnvironmentStore } from '../stores/environmentSlice';
 import { useInventoryStore } from '../stores/inventorySlice';
+
 import * as THREE from 'three';
 import { playerPosition, playerRotation, ServerTickMetrics } from '../globals';
 import { getIndex } from '../utils/chunkData';
@@ -187,7 +187,6 @@ export const DebugOverlay = () => {
 
       // Update basic DOM stats
       stats.totalChunks = Object.keys(useChunkStore.getState().chunks || {}).length;
-      let totalGeos = 0;
       let floraChunks = 0;
       for (const key in useChunkStore.getState().chunks) {
         if (useChunkStore.getState().chunks[key]?.meshArrays?.__flora?.length > 0) {
@@ -228,33 +227,22 @@ export const DebugOverlay = () => {
       write('dbg-chunks-tot', stats.totalChunks);
       write('dbg-chunks-rnd', stats.chunksRendered, '#55ffff');
       write('dbg-flora', floraChunks, floraChunks > 0 ? '#10b981' : '#555555');
-      write(
-        'dbg-flora-attempt',
-        window.__CHUNK_FLORA_RENDER_ATTEMPT__ ? 'YES' : 'NO',
-        '#ffaa00'
-      );
-      write(
-        'dbg-flora-coord',
-        window.__FIRST_FLORA_COORD__ || 'None',
-        '#ffaa00'
-      );
-
-      // Debug: Scan the first loaded chunk's buffer for block ID 15
-      let bufferGrassCount = 0;
-      const firstChunkKey = Object.keys(useChunkStore.getState().chunks)[0];
-      if (firstChunkKey) {
-        const buf = useChunkStore.getState().chunks[firstChunkKey].buffer;
-        if (buf) {
-          for (let i = 0; i < buf.length; i++) {
-            if ((buf[i] & 0xff) === 15) bufferGrassCount++;
-          }
-        }
-      }
-      write(
-        'dbg-ents-tot',
-        stats.totalEntities + ' | Grass in Buffer: ' + bufferGrassCount
-      );
+      write('dbg-ents-tot', stats.totalEntities);
       write('dbg-ents-rnd', stats.entitiesRendered, '#ff55ff');
+
+      // AI & Entity metrics
+      const activePaths = Object.keys(state.resolvedPaths || {}).length;
+      const activeBullets = state.bullets?.length || 0;
+      const activeItems = useInventoryStore.getState().droppedItems?.length || 0;
+      const activeTombstones = useInventoryStore.getState().tombstones?.length || 0;
+      write('dbg-ai-paths', activePaths, activePaths > 100 ? '#ffaa00' : '#ffffff');
+      write('dbg-bullets', activeBullets, activeBullets > 50 ? '#ffaa00' : '#ffffff');
+      write('dbg-dropped-items', activeItems, activeItems > 200 ? '#ff5555' : '#ffffff');
+      write('dbg-tombstones', activeTombstones);
+
+      // DB metrics
+      const dbPending = window.__DB_PENDING_REQUESTS__ ? window.__DB_PENDING_REQUESTS__.size : 0;
+      write('dbg-db-pending', dbPending, dbPending > 10 ? '#ff5555' : '#ffffff');
 
       // Telemetry
       const px = playerPosition.x;
@@ -518,6 +506,36 @@ export const DebugOverlay = () => {
       );
       write('dbg-pipe-failed', failed, failed > 0 ? '#ef4444' : '#22c55e');
 
+      // DB Read/Write Latency
+      const dbReadLat = stats.dbLoadLatency ? `${stats.dbLoadLatency.toFixed(1)} ms` : 'N/A';
+      const dbWriteLat = stats.dbSaveLatency ? `${stats.dbSaveLatency.toFixed(1)} ms` : 'N/A';
+      write('dbg-db-read-lat', dbReadLat, stats.dbLoadLatency > 50 ? '#fbbf24' : '#ffffff');
+      write('dbg-db-write-lat', dbWriteLat, stats.dbSaveLatency > 50 ? '#fbbf24' : '#ffffff');
+
+      // Mounted Visual Meshes
+      const visualMeshes = stats.totalVisualMeshes || 0;
+      write('dbg-visual-meshes', visualMeshes);
+
+      // Pipeline status checks
+      let pipeStatus = 'OK';
+      let pipeColor = '#22c55e'; // green
+      if (failed > 0) {
+        pipeStatus = 'CRASHED';
+        pipeColor = '#ef4444'; // red
+      } else if (loaded > 0 && visualMeshes === 0) {
+        if (inFlight > 0 || workerQueue > 0 || mountQueue > 0) {
+          pipeStatus = 'LOADING...';
+          pipeColor = '#22d3ee'; // cyan
+        } else {
+          pipeStatus = 'BLOCKED (NO MESHES)';
+          pipeColor = '#ef4444'; // red
+        }
+      } else if (workerQueue > 30) {
+        pipeStatus = 'QUEUE BACKLOG';
+        pipeColor = '#fbbf24'; // yellow
+      }
+      write('dbg-pipe-status', pipeStatus, pipeColor);
+
       // Failed chunks list
       const failedEl = document.getElementById('dbg-pipe-failed-list');
       if (failedEl) {
@@ -619,54 +637,12 @@ export const DebugOverlay = () => {
             <StatRow label="Chunks Total" valueId="dbg-chunks-tot" />
             <StatRow label="Chunks Rendered" valueId="dbg-chunks-rnd" />
             <StatRow label="Flora Chunks" valueId="dbg-flora" />
-            <StatRow label="Chunk Render Attempt" valueId="dbg-flora-attempt" />
-            <StatRow label="First Flora Coord" valueId="dbg-flora-coord" />
             <StatRow label="Entities Total" valueId="dbg-ents-tot" />
             <StatRow label="Entities Rendered" valueId="dbg-ents-rnd" />
-          </div>
-
-          {/* CHUNK PIPELINE */}
-          <div>
-            <div className="text-cyan-300 text-sm font-bold mb-3 border-b border-white/10 pb-1">
-              CHUNK PIPELINE
-            </div>
-            {/* Live Progress Bar */}
-            <div className="w-full mb-3">
-              <div className="w-full h-[6px] bg-white/10 rounded-full overflow-hidden">
-                <div
-                  id="dbg-pipe-bar-fill"
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{
-                    width: '0%',
-                    background: '#22d3ee',
-                    boxShadow: '0 0 12px #22d3ee',
-                  }}
-                />
-              </div>
-              <div className="text-right mt-1">
-                <span
-                  id="dbg-pipe-bar-label"
-                  className="text-xs font-bold"
-                  style={{ color: '#22d3ee' }}
-                >
-                  0%
-                </span>
-              </div>
-            </div>
-            <StatRow label="Target" valueId="dbg-pipe-target" />
-            <StatRow label="Net Wait (WebRTC)" valueId="dbg-pipe-net" />
-            <StatRow label="Queued (Worker)" valueId="dbg-pipe-queue" />
-            <StatRow label="In-Flight (Gen)" valueId="dbg-pipe-flight" />
-            <StatRow label="Mount Queue" valueId="dbg-pipe-mount" />
-            <StatRow label="Batched (WebGL)" valueId="dbg-pipe-batched" />
-            <StatRow label="Visual Chunks" valueId="dbg-pipe-visual" />
-            <StatRow label="Pending Unloads" valueId="dbg-pipe-unload" />
-            <StatRow label="Async DB Deltas" valueId="dbg-pipe-deltas" />
-            <StatRow label="Failed" valueId="dbg-pipe-failed" />
-            <div
-              id="dbg-pipe-failed-list"
-              className="mt-1 text-xs font-mono break-all"
-            ></div>
+            <StatRow label="AI Paths Cached" valueId="dbg-ai-paths" />
+            <StatRow label="Bullets Active" valueId="dbg-bullets" />
+            <StatRow label="Dropped Items" valueId="dbg-dropped-items" />
+            <StatRow label="Tombstones" valueId="dbg-tombstones" />
           </div>
         </div>
 
@@ -702,7 +678,65 @@ export const DebugOverlay = () => {
 
       {/* RIGHT PANEL */}
       <div className="bg-black/80 p-8 rounded-lg border border-white/10 min-w-[400px] shadow-2xl h-full flex flex-col pointer-events-auto">
-        <div className="space-y-8 flex-grow overflow-y-auto pr-4 custom-scrollbar">
+        <div className="flex justify-between items-center mb-6 pb-4 border-b border-white/20 shrink-0 pointer-events-none">
+          <h3 className="m-0 text-cyan-400 font-bold tracking-widest text-xl">
+            SYSTEM MONITOR
+          </h3>
+          <span className="text-sm text-white/40 ml-6">
+            Pipeline & Network
+          </span>
+        </div>
+
+        <div className="space-y-8 flex-grow overflow-y-auto pr-4 pointer-events-auto custom-scrollbar">
+          {/* CHUNK PIPELINE */}
+          <div>
+            <div className="text-cyan-300 text-sm font-bold mb-3 border-b border-white/10 pb-1">
+              CHUNK PIPELINE
+            </div>
+            {/* Live Progress Bar */}
+            <div className="w-full mb-3">
+              <div className="w-full h-[6px] bg-white/10 rounded-full overflow-hidden">
+                <div
+                  id="dbg-pipe-bar-fill"
+                  className="h-full rounded-full transition-all duration-300"
+                  style={{
+                    width: '0%',
+                    background: '#22d3ee',
+                    boxShadow: '0 0 12px #22d3ee',
+                  }}
+                />
+              </div>
+              <div className="text-right mt-1">
+                <span
+                  id="dbg-pipe-bar-label"
+                  className="text-xs font-bold"
+                  style={{ color: '#22d3ee' }}
+                >
+                  0%
+                </span>
+              </div>
+            </div>
+            <StatRow label="Target" valueId="dbg-pipe-target" />
+            <StatRow label="Net Wait (WebRTC)" valueId="dbg-pipe-net" />
+            <StatRow label="Queued (Worker)" valueId="dbg-pipe-queue" />
+            <StatRow label="In-Flight (Gen)" valueId="dbg-pipe-flight" />
+            <StatRow label="Mount Queue" valueId="dbg-pipe-mount" />
+            <StatRow label="Batched (WebGL)" valueId="dbg-pipe-batched" />
+            <StatRow label="Visual Chunks" valueId="dbg-pipe-visual" />
+            <StatRow label="Visual Meshes Mounted" valueId="dbg-visual-meshes" />
+            <StatRow label="Pending Unloads" valueId="dbg-pipe-unload" />
+            <StatRow label="Async DB Deltas" valueId="dbg-pipe-deltas" />
+            <StatRow label="DB Ops Pending" valueId="dbg-db-pending" />
+            <StatRow label="DB Avg Read Latency" valueId="dbg-db-read-lat" />
+            <StatRow label="DB Avg Write Latency" valueId="dbg-db-write-lat" />
+            <StatRow label="Pipeline Status" valueId="dbg-pipe-status" />
+            <StatRow label="Failed" valueId="dbg-pipe-failed" />
+            <div
+              id="dbg-pipe-failed-list"
+              className="mt-1 text-xs font-mono break-all"
+            ></div>
+          </div>
+
           {/* NETWORK */}
           <div>
             <div className="text-cyan-300 text-sm font-bold mb-3 border-b border-white/10 pb-1">

@@ -8,9 +8,6 @@ import {
   Download,
   Upload,
   Volume2,
-  VolumeX,
-  Map,
-  Trophy,
   Zap,
   Sparkles,
   Star,
@@ -30,7 +27,6 @@ import { playerPosition, playerRotation } from '../../globals';
 import { InventoryOverlay } from './InventoryOverlay';
 import { CreativeInventory } from './CreativeInventory';
 import { SkillTreeOverlay } from './SkillTreeOverlay';
-import { SpectorModal } from './SpectorModal';
 import { useEnvironmentStore } from '../../stores/environmentSlice';
 import { QuestJournal } from './QuestJournal';
 import { DataBufferHUD } from './DataBufferHUD';
@@ -177,7 +173,7 @@ export default function InGameUI() {
   const pickupFeed = useStore((state) => state.pickupFeed);
   const removePickupFeedItem = useStore((state) => state.removePickupFeedItem);
   const worldTime = useEnvironmentStore((state) => state.worldTime);
-  const isRaining = useEnvironmentStore((state) => state.isRaining);
+  const _isRaining = useEnvironmentStore((state) => state.isRaining);
   const isNightTime = useEnvironmentStore((state) => state.isNightTime);
   const hotbarSize = 9; // Hardcoded in standard
   const hotbarItems = inventory.slice(0, hotbarSize);

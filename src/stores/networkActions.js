@@ -5,7 +5,6 @@ import { useChatStore } from './chatSlice';
 import { useSyncStore } from './syncSlice';
 import { useConnectionStore } from './connectionSlice';
 import { useEnvironmentStore } from './environmentSlice';
-import { useFlareStore } from './flareSlice';
 import { create } from 'zustand';
 import Peer from 'peerjs';
 import { getSeed, setWorldSeed } from '../worldSeed';
@@ -41,7 +40,7 @@ const stateProxy = new Proxy({}, {
     const base = baseGetState ? baseGetState() : {};
     return chatKeys.has(prop) || syncKeys.has(prop) || connectionKeys.has(prop) || (prop in base);
   },
-  ownKeys(target) {
+  ownKeys(_target) {
     const base = baseGetState ? baseGetState() : {};
     return [
       ...chatKeys,
@@ -251,7 +250,7 @@ export const networkActions = create((rawSet, rawGet) => {
     else if (cmd === '/time') {
       if (!isOp) return sendFeedback('You do not have permission to use this command.');
       if (args[1] === 'set') {
-        let t = 8.0;
+        let t;
         if (args[2] === 'day') t = 8.0;
         else if (args[2] === 'night') t = 20.0;
         else t = parseFloat(args[2]);
@@ -364,7 +363,7 @@ export const networkActions = create((rawSet, rawGet) => {
   },
   
     // Waypoint System
-    addWaypoint: (x, y, z, color, ownerId) => set(state => {
+    addWaypoint: (x, y, z, color, ownerId) => set(_state => {
        const newWp = { id: ownerId, x, y, z, color, timestamp: Date.now() };
        const filtered = useSyncStore.getState().waypoints.filter(w => w.id !== ownerId);
        return { waypoints: [...filtered, newWp] };
