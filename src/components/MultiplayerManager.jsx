@@ -3,20 +3,21 @@ import { useFrame } from '@react-three/fiber';
 import { Billboard, Text } from '@react-three/drei';
 import { RigidBody, CapsuleCollider } from '@react-three/rapier';
 import * as THREE from 'three';
-import { networkActions } from '../stores/networkActions';
+import { useConnectionStore } from '../stores/connectionSlice';
 import { useSyncStore } from '../stores/syncSlice';
-
+import { networkActions } from '../stores/networkActions';
+import { useShallow } from 'zustand/react/shallow';
 const _euler = new THREE.Euler();
 
 // Shared geometries and materials for multiplayer avatars (O(1) memory)
-const BODY_GEO = new THREE.BoxGeometry(0.6, 0.7, 0.4);
-const HEAD_GEO = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-const LIMB_GEO = new THREE.BoxGeometry(0.2, 0.7, 0.2);
-const VISOR_GEO = new THREE.BoxGeometry(0.4, 0.15, 0.05);
+export const BODY_GEO = new THREE.BoxGeometry(0.6, 0.7, 0.4);
+export const HEAD_GEO = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+export const LIMB_GEO = new THREE.BoxGeometry(0.2, 0.7, 0.2);
+export const VISOR_GEO = new THREE.BoxGeometry(0.4, 0.15, 0.05);
 
-const BODY_MAT = new THREE.MeshStandardMaterial({ color: '#445566' });
-const HEAD_MAT = new THREE.MeshStandardMaterial({ color: '#ffccaa' });
-const VISOR_MAT = new THREE.MeshBasicMaterial({ color: '#00ffff' });
+export const BODY_MAT = new THREE.MeshStandardMaterial({ color: '#445566' });
+export const HEAD_MAT = new THREE.MeshStandardMaterial({ color: '#ffccaa' });
+export const VISOR_MAT = new THREE.MeshBasicMaterial({ color: '#00ffff' });
 
 const PlayerAvatar = ({ id }) => {
   const meshRef = useRef();
@@ -260,7 +261,8 @@ const PlayerAvatar = ({ id }) => {
 };
 
 export const MultiplayerManager = () => {
-  const { connectionStatus, players } = networkActions();
+  const connectionStatus = useConnectionStore(state => state.connectionStatus);
+  const playerIds = useSyncStore(useShallow(state => Object.keys(state.players || {})));
 
   React.useEffect(() => {
     if (connectionStatus !== 'connected') return;
@@ -285,7 +287,7 @@ export const MultiplayerManager = () => {
 
   return (
     <group>
-      {Object.keys(players).map((id) => (
+      {playerIds.map((id) => (
         <PlayerAvatar key={id} id={id} />
       ))}
     </group>

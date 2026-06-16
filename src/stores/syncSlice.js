@@ -6,4 +6,5 @@ export const useSyncStore = create((_set) => ({
   enemySyncBuffers: {},
   queuedDeltas: {}, // { [chunkKey]: [deltas] }
   waypoints: [], // { id, x, y, z, color, timestamp }
+  worldEpoch: 0,
 }));

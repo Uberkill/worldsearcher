@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import { useChunkStore } from '../stores/chunkSlice';
 import { useStore } from '../stores/useStore';
@@ -32,7 +32,7 @@ const buildGeometryNatively = (meshArrays, chunkKey, shadowsEnabled) => {
     const { min, max } = meta.boundingBox;
     group.userData.boundingBox = new THREE.Box3(
       new THREE.Vector3(min[0], min[1], min[2]),
-      new THREE.Vector3(max[0] + 1, max[1] + 1, max[2] + 1)
+      new THREE.Vector3(max[0], max[1], max[2])
     );
   }
 
@@ -113,10 +113,28 @@ const buildGeometryNatively = (meshArrays, chunkKey, shadowsEnabled) => {
     disposeQueue.forEach(g => g.dispose());
     instMeshQueue.forEach(m => m.dispose());
 
+    const currentChunkData = useChunkStore.getState().chunks[chunkKey];
     const buffersToRecycle = [];
     for (const [name, data] of Object.entries(meshArrays)) {
-      if (name === '__meta' || name === '__physics' || name === '_physics') continue;
+      if (name === '__meta') {
+        if (data.heightmap && data.heightmap.buffer.byteLength > 0) {
+          const isReused = currentChunkData?.meshArrays?.[name] === data;
+          if (!isReused) buffersToRecycle.push(data.heightmap.buffer);
+        }
+        continue;
+      }
       
+      const isReused = currentChunkData?.meshArrays?.[name] === data;
+      if (isReused) continue;
+
+      if (name === '__physics' || name === '_physics') {
+         if (!Array.isArray(data)) continue;
+         for (const subChunk of data) {
+           if (subChunk.pos && subChunk.pos.buffer.byteLength > 0) buffersToRecycle.push(subChunk.pos.buffer);
+           if (subChunk.idx && subChunk.idx.buffer.byteLength > 0) buffersToRecycle.push(subChunk.idx.buffer);
+         }
+         continue;
+      }
       if (name === '__flora') {
          if (data.packed && data.packed.buffer.byteLength > 0) buffersToRecycle.push(data.packed.buffer);
          if (data.matrices && data.matrices.buffer.byteLength > 0) buffersToRecycle.push(data.matrices.buffer);
@@ -151,6 +169,16 @@ export const ChunkRenderer = () => {
   const overflowSetRef = useRef(new Set());
   const lastOverflowRef = useRef(null);
 
+  useEffect(() => {
+    return () => {
+      // VRAM Fix: Explicitly dispose geometries on component unmount
+      for (const [key, group] of activeMeshes.current.entries()) {
+        if (group.userData.disposeGeometries) group.userData.disposeGeometries();
+      }
+      activeMeshes.current.clear();
+    };
+  }, []);
+
   useFrame(() => {
     const store = useChunkStore.getState();
     const useStoreState = useStore.getState();
@@ -169,7 +197,7 @@ export const ChunkRenderer = () => {
 
     // 1. Unmount chunks no longer in overflowChunks
     for (const [key, group] of activeMeshes.current.entries()) {
-      if (!overflowSetRef.current.has(key) || useStoreState.clearVisualMeshArrays > (group.userData.clearVersion || 0)) {
+      if (!overflowSetRef.current.has(key)) {
         if (rootRef.current) rootRef.current.remove(group);
         if (group.userData.disposeGeometries) group.userData.disposeGeometries();
         activeMeshes.current.delete(key);
@@ -198,6 +226,7 @@ export const ChunkRenderer = () => {
 
         const newGroup = buildGeometryNatively(chunkData.meshArrays, key, shadowsEnabled);
         newGroup.userData.meshArrays = chunkData.meshArrays;
+        chunkData.meshArrays._isMounted = true;
         newGroup.userData.clearVersion = useStoreState.clearVisualMeshArrays;
         
         if (rootRef.current) rootRef.current.add(newGroup);
@@ -206,6 +235,16 @@ export const ChunkRenderer = () => {
     }
     if (window.__DEBUG_STATS__) {
       window.__DEBUG_STATS__.totalVisualMeshes = activeMeshes.current.size;
+    }
+
+    // Single Global Group Offset for "Two Boats" Transit Illusion
+    if (rootRef.current) {
+      const offset = useStoreState.globalChunkOffset;
+      if (offset) {
+        rootRef.current.position.set(offset[0], offset[1], offset[2]);
+      } else {
+        rootRef.current.position.set(0, 0, 0);
+      }
     }
   });
 

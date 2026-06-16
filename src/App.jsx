@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import TitleScreen from './components/ui/TitleScreen';
 import GameEngine from './GameEngine';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -21,6 +21,10 @@ export default function App() {
     initWorldSeed();
     setGameState('playing');
   };
+
+  useEffect(() => {
+    window.__START_GAME__ = handleStart;
+  }, []);
 
   return (
     <>

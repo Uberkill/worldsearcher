@@ -2,8 +2,6 @@ import { BlockById } from '../registry/BlockRegistry';
 import {
   getSunlight,
   getBlockLight,
-  setSunlight,
-  setBlockLight,
   getIndex,
   CHUNK_Y_MIN,
   CHUNK_Y_MAX,

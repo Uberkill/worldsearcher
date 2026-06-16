@@ -1,4 +1,4 @@
-import { getNetworkStore, getGameStore } from './storeLinker';
+import { getNetworkStore } from './storeLinker';
 import { get as getIDB, set as setIDB } from 'idb-keyval';
 import { useInventoryStore } from './inventorySlice';
 import { useConnectionStore } from './connectionSlice';
@@ -8,16 +8,14 @@ import {
   playerPosition,
   playerLastSafePosition,
   playerRotation,
-  addLaser,
-  spawnVisualProjectile,
-  destroyVisualProjectile,
 } from '../globals';
 import { v4 as uuidV4 } from 'uuid';
 import { getSeed } from '../worldSeed';
-import { gameAudio } from '../audio/GameAudio';
+import { EventBus } from '../utils/EventBus';
 import { matchRecipe } from '../registry/CraftingRegistry';
 import { useChunkStore } from './chunkSlice';
 import skillsData from '../registry/skills.json';
+import { useUIStore } from './useUIStore';
 
 export const createPlayerSlice = (set, get) => ({
   version: 1,
@@ -35,45 +33,105 @@ export const createPlayerSlice = (set, get) => ({
   isSkillTreeOpen: false,
   isQuestJournalOpen: false,
   activeChestId: null,
+  activeFurnaceId: null,
+
+  isBuildMode: false,
+  toggleBuildMode: () => set(state => ({ isBuildMode: !state.isBuildMode })),
+  
+  isShipyardUIOpen: false,
+  shipyardCorePos: null,
+  toggleShipyardUI: (pos = null) => {
+    useUIStore.getState().toggleModal('SHIPYARD', pos);
+  },
+
+  isAstrolabeOpen: false,
+  isHeartCoreOpen: false,
+  isWarpDriveUIOpen: false,
+  isLunarAnchorOpen: false,
+
+  toggleAstrolabe: () => { useUIStore.getState().toggleModal('ASTROLABE'); },
+  toggleHeartCore: () => { useUIStore.getState().toggleModal('HEART_CORE'); },
+  toggleWarpDrive: () => { useUIStore.getState().toggleModal('WARP_DRIVE'); },
+  toggleLunarAnchor: () => { useUIStore.getState().toggleModal('LUNAR_ANCHOR'); },
 
   isUIActive: () => {
     const state = get();
-    const ns = getNetworkStore();
-    return (
-      state.isMenuOpen ||
-      state.isInventoryOpen ||
-      state.isShopOpen ||
-      state.isCraftingTableOpen ||
-      state.isSkillTreeOpen ||
-      state.isQuestJournalOpen ||
-      state.activeChestId !== null ||
-      (useChatStore.getState().isTyping)
-    );
+    return state.isMenuOpen || useUIStore.getState().getAnyUIOpen() || useChatStore.getState().isTyping;
   },
 
-  openChest: (x, y, z) =>
-    set((state) => {
-      if (state.isDead) return {};
-      if (document.pointerLockElement) document.exitPointerLock();
-      return {
-        activeChestId: `${x},${y},${z}`,
-        isInventoryOpen: false,
-        isCraftingTableOpen: false,
-      };
-    }),
-  closeChest: () =>
-    set((state) => {
-      if (state.activeChestId && state.heldItem) {
-        state.executeLocalTransaction(
-          state.heldItem.sourceLoc,
-          null,
-          'DROP',
-          state.heldItem.count
-        );
-        return { activeChestId: null, heldItem: null };
+  openChest: (x, y, z, isShip = false) => {
+    const chestId = isShip ? `ship_${x}_${y}_${z}` : `${x},${y},${z}`;
+    useInventoryStore.setState((prev) => {
+      if (!prev.chests[chestId]) {
+        return {
+          chests: {
+            ...prev.chests,
+            [chestId]: new Array(27).fill(null)
+          }
+        };
       }
-      return { activeChestId: null };
-    }),
+      return {};
+    });
+    set({ activeChestId: chestId });
+    useUIStore.getState().toggleModal('CHEST');
+  },
+  
+  closeChest: () => {
+    const state = get();
+    if (state.activeChestId && state.heldItem) {
+      state.executeLocalTransaction(
+        state.heldItem.sourceLoc,
+        null,
+        'DROP',
+        state.heldItem.count
+      );
+      set({ heldItem: null });
+    }
+    set({ activeChestId: null });
+    useUIStore.getState().closeModal();
+  },
+
+  openFurnace: (x, y, z, isShip = false) => {
+    const furnaceId = isShip ? `ship_${x}_${y}_${z}` : `${x},${y},${z}`;
+    useInventoryStore.setState((prev) => {
+      const updates = {};
+      if (!prev.chests[furnaceId]) {
+        updates.chests = {
+          ...prev.chests,
+          [furnaceId]: new Array(3).fill(null) // 0: Input, 1: Fuel, 2: Output
+        };
+      }
+      if (!prev.machines[furnaceId]) {
+        updates.machines = {
+          ...prev.machines,
+          [furnaceId]: {
+            burnTimeLeft: 0,
+            currentFuelMax: 1,
+            cookProgress: 0,
+            currentCookMax: 1
+          }
+        };
+      }
+      return updates;
+    });
+    set({ activeFurnaceId: furnaceId });
+    useUIStore.getState().toggleModal('FURNACE');
+  },
+  
+  closeFurnace: () => {
+    const state = get();
+    if (state.activeFurnaceId && state.heldItem) {
+      state.executeLocalTransaction(
+        state.heldItem.sourceLoc,
+        null,
+        'DROP',
+        state.heldItem.count
+      );
+      set({ heldItem: null });
+    }
+    set({ activeFurnaceId: null });
+    useUIStore.getState().closeModal();
+  },
 
   pickupFeed: [],
   removePickupFeedItem: (id) =>
@@ -753,17 +811,17 @@ export const createPlayerSlice = (set, get) => ({
       return { isMenuOpen: !state.isMenuOpen };
     }),
 
-  toggleSkillTree: () =>
-    set((state) => {
-      if (state.isDead) return {};
-      return { isSkillTreeOpen: !state.isSkillTreeOpen };
-    }),
+  toggleSkillTree: () => {
+    const state = get();
+    if (state.isDead) return;
+    useUIStore.getState().toggleModal('SKILL_TREE');
+  },
 
-  toggleQuestJournal: () =>
-    set((state) => {
-      if (state.isDead) return {};
-      return { isQuestJournalOpen: !state.isQuestJournalOpen };
-    }),
+  toggleQuestJournal: () => {
+    const state = get();
+    if (state.isDead) return;
+    useUIStore.getState().toggleModal('QUEST_JOURNAL');
+  },
 
   isWorldReady: false,
   loadingProgress: 0,
@@ -781,7 +839,20 @@ export const createPlayerSlice = (set, get) => ({
       const worldData = await loadWorldEntities();
       
       if (worldData) {
-        set((prev) => ({ ...prev, ...worldData }));
+        const { chests, machines, droppedItems, tombstones, debris, fallingStructures, ...playerSliceData } = worldData;
+        set((prev) => ({ ...prev, ...playerSliceData }));
+        
+        const iPatch = {};
+        if (chests !== undefined) iPatch.chests = chests;
+        if (machines !== undefined) iPatch.machines = machines;
+        if (droppedItems !== undefined) iPatch.droppedItems = droppedItems;
+        if (tombstones !== undefined) iPatch.tombstones = tombstones;
+        if (debris !== undefined) iPatch.debris = debris;
+        if (fallingStructures !== undefined) iPatch.fallingStructures = fallingStructures;
+        
+        if (Object.keys(iPatch).length > 0) {
+           useInventoryStore.setState(iPatch);
+        }
       }
       
       if (data) {
@@ -949,34 +1020,35 @@ export const createPlayerSlice = (set, get) => ({
       return { activeHotbarIndex: idx, texture: item ? item.texture : null };
     }),
 
-  toggleInventory: () =>
-    set((state) => {
-      if (state.isDead) return {};
-      if (state.isInventoryOpen && state.heldItem) {
-        state.executeLocalTransaction(
-          state.heldItem.sourceLoc,
-          null,
-          'DROP',
-          state.heldItem.count
-        );
-        return { isInventoryOpen: false, heldItem: null };
-      }
-      return { isInventoryOpen: !state.isInventoryOpen };
-    }),
-  toggleCraftingTable: () =>
-    set((state) => {
-      if (state.isDead) return {};
-      if (state.isCraftingTableOpen && state.heldItem) {
-        state.executeLocalTransaction(
-          state.heldItem.sourceLoc,
-          null,
-          'DROP',
-          state.heldItem.count
-        );
-        return { isCraftingTableOpen: false, heldItem: null };
-      }
-      return { isCraftingTableOpen: !state.isCraftingTableOpen };
-    }),
+  toggleInventory: () => {
+    const state = get();
+    if (state.isDead) return;
+    if (useUIStore.getState().activeModal === 'INVENTORY' && state.heldItem) {
+      state.executeLocalTransaction(
+        state.heldItem.sourceLoc,
+        null,
+        'DROP',
+        state.heldItem.count
+      );
+      set({ heldItem: null });
+    }
+    useUIStore.getState().toggleModal('INVENTORY');
+  },
+  
+  toggleCraftingTable: () => {
+    const state = get();
+    if (state.isDead) return;
+    if (useUIStore.getState().activeModal === 'CRAFTING' && state.heldItem) {
+      state.executeLocalTransaction(
+        state.heldItem.sourceLoc,
+        null,
+        'DROP',
+        state.heldItem.count
+      );
+      set({ heldItem: null });
+    }
+    useUIStore.getState().toggleModal('CRAFTING');
+  },
 
   moveInventoryItem: (fromIdx, toIdx) =>
     set((prev) => {
@@ -1145,11 +1217,11 @@ export const createPlayerSlice = (set, get) => ({
       );
   },
 
-  toggleShop: () =>
-    set((state) => {
-      if (state.isDead) return {};
-      return { isShopOpen: !state.isShopOpen };
-    }),
+  toggleShop: () => {
+    const state = get();
+    if (state.isDead) return;
+    useUIStore.getState().toggleModal('SHOP');
+  },
 
   buyUpgrade: (type, cost, amount) =>
     set((prev) => {
@@ -1293,7 +1365,7 @@ export const createPlayerSlice = (set, get) => ({
           tableGrid: Array(9).fill(null),
         };
       }
-      gameAudio.playGlobal('damage');
+      EventBus.emit('audio', { sound: 'damage', source: 'local' });
       return { playerHealth: newHealth, lastDamageTime: Date.now() };
     }),
 
@@ -1350,17 +1422,17 @@ export const createPlayerSlice = (set, get) => ({
 
         // Edge Case 4: Suffocation Spawns (Force Clear above spawn)
         // Ensure y and y+1 are clear
-        if (state.executeLocalTransaction) {
-          state.executeLocalTransaction({ type: 'block', pos: [spawnX, spawnY, spawnZ] }, 0, 'SET');
-          state.executeLocalTransaction({ type: 'block', pos: [spawnX, spawnY + 1, spawnZ] }, 0, 'SET');
+        if (state.setVoxelRaw) {
+          state.setVoxelRaw(spawnX, spawnY, spawnZ, 0); // 0 = Air
+          state.setVoxelRaw(spawnX, spawnY + 1, spawnZ, 0); // 0 = Air
         }
       } else {
-        // Edge Case 1 Failsafe: Glass Platform at Y=260
-        spawnY = 262;
-        if (state.executeLocalTransaction) {
+        // Edge Case 1 Failsafe: Glass Platform at Y=250 (max Y chunk bound is 255)
+        spawnY = 252;
+        if (state.setVoxelRaw) {
           for (let x = -1; x <= 1; x++) {
             for (let z = -1; z <= 1; z++) {
-              state.executeLocalTransaction({ type: 'block', pos: [x, 260, z] }, 4, 'SET'); // 4 = Glass or Cobblestone
+              state.setVoxelRaw(x, 250, z, 3); // 3 = Glass
             }
           }
         }

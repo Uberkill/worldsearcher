@@ -28,13 +28,32 @@ import { buildGreedyArrays } from '../utils/greedyMesh.js';
 import {
   generateSunlight,
   generateBlockLight,
+  removeLight,
 } from '../utils/lighting.js';
+import { CHUNK_Y_MIN, CHUNK_Y_MAX } from '../utils/chunkData.js';
 
-const recycledBufferPool = [];
+const recycledBufferBuckets = {};
+for (let i = 8; i <= 24; i++) recycledBufferBuckets[1 << i] = [];
+  const getBucket = (size) => {
+    let pow = 1;
+    while (pow * 2 <= size) pow *= 2;
+    return pow;
+  };
+const MAX_POOL_SIZE = 1500;
 
-const computeHeightmap = (buffer) => {
-  const heightmap = new Float32Array(256);
-  for (let lx = 0; lx < 16; lx++) {
+  const computeHeightmap = (buffer) => {
+    let buf = null;
+    let pow = 1024; // 256 * 4 bytes
+    while (pow <= 16777216) {
+       if (recycledBufferBuckets[pow] && recycledBufferBuckets[pow].length > 0) {
+          buf = recycledBufferBuckets[pow].pop();
+          break;
+       }
+       pow <<= 1;
+    }
+    if (!buf) buf = new ArrayBuffer(1024);
+    const heightmap = new Float32Array(buf, 0, 256);
+    for (let lx = 0; lx < 16; lx++) {
     for (let lz = 0; lz < 16; lz++) {
       let highest = -999;
       for (let y = 255; y >= -32; y--) {
@@ -88,7 +107,20 @@ self.onmessage = async ({ data }) => {
   }
   
   if (data.type === 'RECYCLE') {
-    if (data.buffers) recycledBufferPool.push(...data.buffers);
+    if (data.buffers) {
+      let currentSize = 0;
+      for (const key in recycledBufferBuckets) currentSize += recycledBufferBuckets[key].length;
+      
+      for (let i = 0; i < data.buffers.length; i++) {
+        if (currentSize >= MAX_POOL_SIZE) break; 
+        const buf = data.buffers[i];
+        const bucketSize = getBucket(buf.byteLength);
+        if (recycledBufferBuckets[bucketSize]) {
+           recycledBufferBuckets[bucketSize].push(buf);
+           currentSize++;
+        }
+      }
+    }
     return;
   }
 
@@ -105,8 +137,8 @@ self.onmessage = async ({ data }) => {
     } else if (data.type === 'generatePass2') {
       const { cx, cz, buffer, getSurfaceHeightMap, seed } = data;
 
-      // We must reconstruct the Float32Array from the raw ArrayBuffer passed to the worker
-      const heightMap = new Float32Array(getSurfaceHeightMap);
+      // We must reconstruct the Int16Array from the raw ArrayBuffer passed to the worker
+      const heightMap = new Int16Array(getSurfaceHeightMap);
       const packedBuffer = new Uint32Array(buffer);
 
       const { buffer: newBuffer, overflow } = generateChunkPass2(
@@ -121,20 +153,33 @@ self.onmessage = async ({ data }) => {
       // In Pass 2, we don't have neighbor buffers yet... wait!
       // The worker needs neighbor buffers for lighting, just like rebuild mode.
       const neighborBuffers = data.neighborBuffers || [];
-      generateSunlight(newBuffer, cx, cz, neighborBuffers);
-      generateBlockLight(
+      const sunOverflow = generateSunlight(newBuffer, cx, cz, neighborBuffers);
+      const blockOverflow = generateBlockLight(
         newBuffer,
         cx,
         cz,
         neighborBuffers
       );
+      const lightOverflow = [...sunOverflow, ...blockOverflow];
 
-      const meshArrays = buildGreedyArrays(newBuffer, cx, cz, neighborBuffers, recycledBufferPool);
+      const meshArrays = buildGreedyArrays(newBuffer, cx, cz, neighborBuffers, recycledBufferBuckets);
       if (!meshArrays.__meta) meshArrays.__meta = {};
       meshArrays.__meta.heightmap = computeHeightmap(newBuffer);
 
       const { transferables } = extractTransfers(meshArrays);
-      transferables.push(newBuffer.buffer); // Pass the final modified Uint32Array back!
+      const transferSet = new Set(transferables);
+      transferSet.add(newBuffer.buffer); // Pass the final modified Uint32Array back!
+
+      const recycledBuffers = [];
+      if (data.neighborBuffers) {
+        for (const nb of data.neighborBuffers) {
+          if (nb.buffer) {
+             const ab = nb.buffer.buffer || nb.buffer;
+             recycledBuffers.push(ab);
+             transferSet.add(ab);
+          }
+        }
+      }
 
       self.postMessage(
         {
@@ -143,9 +188,11 @@ self.onmessage = async ({ data }) => {
           cz,
           buffer: newBuffer.buffer,
           overflow,
+          lightOverflow,
           meshArrays,
+          recycledBuffers
         },
-        transferables
+        Array.from(transferSet)
       );
     } else if (data.type === 'rebuild') {
       // FAILSAFE 1: Strict Runtime Payload Assertion
@@ -163,7 +210,16 @@ self.onmessage = async ({ data }) => {
       let cx = data.cx;
       let cz = data.cz;
 
-      // OPTION 1 FIX: Clear existing light in the buffer to prevent ghost lights
+      // FIX Ghost Lights: Use specifically passed removed lights (from block destruction)
+      const removedLightOverflow = [];
+      if (data.removedLights && data.removedLights.length > 0) {
+        for (const l of data.removedLights) {
+          const isSun = l.type === 'sun';
+          removedLightOverflow.push(...removeLight(buffer, cx, cz, neighborBuffers, l.x, l.y, l.z, l.val, isSun));
+        }
+      }
+
+      // Clear existing light in the buffer
       // Bits 22-25: Block Light, Bits 26-29: Sun Light.
       // Mask ~0x3FC00000 clears these bits so the chunk regenerates light purely from scratch.
       for (let i = 0; i < CHUNK_VOLUME; i++) {
@@ -173,16 +229,29 @@ self.onmessage = async ({ data }) => {
       // Generate light map seeded from BOTH internal blocks and neighbor buffers
       const sunOverflow = generateSunlight(buffer, cx, cz, neighborBuffers);
       const blockOverflow = generateBlockLight(buffer, cx, cz, neighborBuffers);
-      const lightOverflow = [...sunOverflow, ...blockOverflow];
-      const meshArrays = buildGreedyArrays(buffer, cx, cz, neighborBuffers, recycledBufferPool);
+      const lightOverflow = [...removedLightOverflow, ...sunOverflow, ...blockOverflow];
+      const meshArrays = buildGreedyArrays(buffer, cx, cz, neighborBuffers, recycledBufferBuckets);
       if (!meshArrays.__meta) meshArrays.__meta = {};
       meshArrays.__meta.heightmap = computeHeightmap(buffer);
 
       const { transferables } = extractTransfers(meshArrays);
-      transferables.push(buffer.buffer);
+      const transferSet = new Set(transferables);
+      transferSet.add(buffer.buffer);
+
+      const recycledBuffers = [];
+      if (data.neighborBuffers) {
+        for (const nb of data.neighborBuffers) {
+          if (nb.buffer) {
+             const ab = nb.buffer.buffer || nb.buffer;
+             recycledBuffers.push(ab);
+             transferSet.add(ab);
+          }
+        }
+      }
+
       self.postMessage(
-        { type: 'rebuild', cx, cz, meshArrays, lightOverflow, buffer: buffer.buffer },
-        transferables
+        { type: 'rebuild', cx, cz, meshArrays, lightOverflow, buffer: buffer.buffer, recycledBuffers },
+        Array.from(transferSet)
       );
     }
   } catch (_err) {

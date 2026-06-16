@@ -1,7 +1,7 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { RigidBody, CapsuleCollider, useRapier, useBeforePhysicsStep } from '@react-three/rapier';
-import { useRef, useEffect, useState } from 'react';
-import { Vector3 } from 'three';
+import { useRef, useEffect, useState, useMemo } from 'react';
+import { Vector3, Euler, Quaternion } from 'three';
 import { useKeyboard } from '../hooks/useKeyboard';
 import { useStore } from '../stores/useStore';
 import { useChunkStore } from '../stores/chunkSlice';
@@ -16,10 +16,77 @@ import {
   CHUNK_Y_MIN,
   CHUNK_Y_MAX,
 } from '../utils/chunkData';
-import { playerPosition, playerRotation, ServerTickMetrics } from '../globals';
-import { gameAudio } from '../audio/GameAudio';
+import { playerPosition, playerRotation, ServerTickMetrics, shipTransforms, playerLastSafePosition } from '../globals';
+import { EventBus } from '../utils/EventBus';
 import { GlobalRegistry } from '../registry/Registry';
 import { networkActions } from '../stores/networkActions';
+import { BODY_GEO, HEAD_GEO, LIMB_GEO, VISOR_GEO, BODY_MAT, HEAD_MAT, VISOR_MAT } from './MultiplayerManager';
+
+const LocalAvatar = ({ isSeated }) => {
+   const groupRef = useRef();
+   const headGroupRef = useRef();
+   const { camera } = useThree();
+   const seatOffsetEuler = useMemo(() => new Euler(), []);
+   const seatOffsetVec = useMemo(() => new Vector3(), []);
+
+   useFrame(() => {
+      if (!isSeated || !groupRef.current) return;
+      
+      const shipTransform = shipTransforms.get('default');
+      const state = useStore.getState();
+      
+      if (shipTransform) {
+         // Face front of the ship (-Z direction) by adding Math.PI to Y
+         groupRef.current.rotation.set(shipTransform.rotation.x, shipTransform.rotation.y + Math.PI, shipTransform.rotation.z, 'YXZ');
+         
+         const localOffset = state.seatOffset || [0, 0, -3];
+         seatOffsetEuler.fromArray([shipTransform.rotation.x, shipTransform.rotation.y, shipTransform.rotation.z]);
+         // Lower the root so the pelvis visually rests directly on the seat block top face (-0.2 below center)
+         seatOffsetVec.set(localOffset[0], localOffset[1] - 0.2, localOffset[2]).applyEuler(seatOffsetEuler);
+         
+         groupRef.current.position.set(
+             shipTransform.position.x + seatOffsetVec.x,
+             shipTransform.position.y + seatOffsetVec.y,
+             shipTransform.position.z + seatOffsetVec.z
+         );
+      }
+
+      if (headGroupRef.current) {
+          headGroupRef.current.rotation.x = camera.rotation.x;
+          let diffY = camera.rotation.y - groupRef.current.rotation.y;
+          // Constrain head rotation
+          if (diffY > Math.PI) diffY -= Math.PI * 2;
+          if (diffY < -Math.PI) diffY += Math.PI * 2;
+          if (diffY > 1.5) diffY = 1.5;
+          if (diffY < -1.5) diffY = -1.5;
+          headGroupRef.current.rotation.y = diffY;
+      }
+   });
+
+   if (!isSeated) return null;
+
+   return (
+        <group ref={groupRef}>
+          <group ref={headGroupRef} position={[0, 1.65, 0]}>
+            <mesh geometry={HEAD_GEO} material={HEAD_MAT} castShadow receiveShadow />
+            <mesh position={[0, 0.05, 0.26]} geometry={VISOR_GEO} material={VISOR_MAT} />
+          </group>
+          <mesh position={[0, 1.05, 0]} geometry={BODY_GEO} material={BODY_MAT} castShadow receiveShadow />
+          <group position={[0.4, 1.4, 0]} rotation={[0,0,-0.1]}>
+            <mesh position={[0, -0.35, 0]} geometry={LIMB_GEO} material={BODY_MAT} castShadow receiveShadow />
+          </group>
+          <group position={[-0.4, 1.4, 0]} rotation={[0,0,0.1]}>
+            <mesh position={[0, -0.35, 0]} geometry={LIMB_GEO} material={BODY_MAT} castShadow receiveShadow />
+          </group>
+          <group position={[0.2, 0.7, 0]} rotation={[-1.5,0,0]}>
+            <mesh position={[0, -0.35, 0]} geometry={LIMB_GEO} material={BODY_MAT} castShadow receiveShadow />
+          </group>
+          <group position={[-0.2, 0.7, 0]} rotation={[-1.5,0,0]}>
+            <mesh position={[0, -0.35, 0]} geometry={LIMB_GEO} material={BODY_MAT} castShadow receiveShadow />
+          </group>
+        </group>
+   );
+};
 
 /**
  * ============================================================================
@@ -47,10 +114,10 @@ const JUMP_FORCE = 7;
 
 const MAX_ALLOWED_VELOCITY = 60;
 const CollisionLayers = {
-  TERRAIN: 0x00010001, // Layer 0
-  PLAYER: 0x00020002, // Layer 1
-  PROJECTILES: 0x00040004, // Layer 2
-  ITEMS: 0x00080008, // Layer 3
+  TERRAIN: 0x0001FFFF, // Layer 0
+  PLAYER: 0x0002FFFF, // Layer 1
+  PROJECTILES: 0x0004FFFF, // Layer 2
+  ITEMS: 0x0008FFFF, // Layer 3
 };
 
 // FIX: Hoist reusable vectors to module level.
@@ -73,14 +140,18 @@ const _grappleFinalVel = new Vector3();
 const _rayOrigin = { x: 0, y: 0, z: 0 };
 const _rayDir = { x: 0, y: -1, z: 0 };
 const _rayUpDir = { x: 0, y: 1, z: 0 };
+const _seatEuler = new Euler();
+const _seatOffsetVec = new Vector3();
 
 export const Player = () => {
   const { camera } = useThree();
   const { moveBackward, moveForward, moveRight, moveLeft, jump, sprint } =
     useKeyboard();
   const [isFlying, setIsFlying] = useState(false);
+  const isSeated = useStore(state => state.isSeated);
   const playerRef = useRef();
   const meshRef = useRef();
+  const lastIntentRef = useRef(null);
   const processedDamageRef = useRef(new Set());
   const isTeleporting = useRef(false);
   const lastJump = useRef(0);
@@ -99,6 +170,7 @@ export const Player = () => {
   const wasGrounded = useRef(true);
   const fallSpeed = useRef(0);
   const frameCounter = useRef(0);
+  const wasSeated = useRef(false);
 
   // RPG Systems Simulation Refs (Tick-based)
   const tickCount = useRef(0);
@@ -106,10 +178,33 @@ export const Player = () => {
   const zeroPowerTicks = useRef(0);
   const sprintTicks = useRef(0);
 
-  // Toggle flying with F key
+  // Handle flying and dismounting
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.code === 'KeyF' && document.pointerLockElement) {
+      if (!document.pointerLockElement) return;
+      const state = useStore.getState();
+      
+      // Dismount logic
+      if (e.code === 'KeyF' && state.isSeated) {
+          if (state.isTransitMode) {
+              networkActions.getState().addChatMessage('> CANNOT DISMOUNT DURING WARP TRANSIT', 'system', 'System');
+              return;
+          }
+          // Request Release Helm if we had it
+          const netState = networkActions.getState();
+          if (state.shipHelmPlayerId === netState.playerId) {
+             const intent = { type: 'RELEASE_HELM', playerId: netState.playerId };
+             netState.broadcastEvent(intent);
+             if (netState.isHost) {
+                 netState.handleNetworkData(intent);
+             }
+          }
+          useStore.setState({ isSeated: false });
+          return;
+      }
+      
+      // Toggle flying with F key (only if not seated)
+      if (e.code === 'KeyF' && !state.isSeated) {
         setIsFlying((prev) => !prev);
       }
     };
@@ -129,6 +224,14 @@ export const Player = () => {
     r.dir.x = dir.x; r.dir.y = dir.y; r.dir.z = dir.z;
     return r;
   };
+
+  useEffect(() => {
+    const handleForceTeleport = (e) => {
+        window.__forceLocalTeleportPos = e.detail;
+    };
+    window.addEventListener('FORCE_LOCAL_TELEPORT', handleForceTeleport);
+    return () => window.removeEventListener('FORCE_LOCAL_TELEPORT', handleForceTeleport);
+  }, []);
 
   useEffect(() => {
     // Also save on window unload
@@ -155,6 +258,18 @@ export const Player = () => {
           );
           playerRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
           setHasSnappedToGround(false); // Snap them to ground when they respawn at 160
+        } else if (isDead && !prevIsDead) {
+          // DEATH SEQUENCE DESYNC FIX
+          const state = useStore.getState();
+          if (state.isSeated) {
+              const netState = networkActions.getState();
+              if (state.shipHelmPlayerId === netState.playerId) {
+                  const intent = { type: 'RELEASE_HELM', playerId: netState.playerId };
+                  netState.broadcastEvent(intent);
+                  if (netState.isHost) netState.handleNetworkData(intent);
+              }
+              useStore.setState({ isSeated: false });
+          }
         }
       }
     );
@@ -225,10 +340,11 @@ export const Player = () => {
         idleTicks.current = 0;
       }
 
-      // Dispatch Intent to Host if it's a combat tool
+      // Dispatch Intent to Host if it's a combat tool or repair tool
       if (combatStats) {
+        const type = texture === 'repair_tool' ? 'REPAIR_INTENT' : 'ATTACK_INTENT';
         const intent = {
-          type: 'ATTACK_INTENT',
+          type,
           weaponId: texture,
           dir: [dir.x, dir.y, dir.z],
           origin: [origin.x, origin.y, origin.z],
@@ -251,7 +367,7 @@ export const Player = () => {
 
         // Client Prediction (Visual Only Raycast)
         const startPos = origin.clone().addScaledVector(dir, 0.45);
-        const hit = world.castRay(new rapier.Ray({x: startPos.x, y: startPos.y, z: startPos.z}, {x: dir.x, y: dir.y, z: dir.z}), 200, false);
+        const hit = world.castRay(getCachedRay({x: startPos.x, y: startPos.y, z: startPos.z}, {x: dir.x, y: dir.y, z: dir.z}), 200, false);
         let endPos = startPos.clone().addScaledVector(dir, 200);
         if (hit) endPos = startPos.clone().addScaledVector(dir, (hit.toi ?? hit.timeOfImpact));
 
@@ -287,24 +403,19 @@ export const Player = () => {
         }
 
         const startPos = origin.clone().addScaledVector(dir, 0.45);
-        console.log('[GrappleDebug] Raycast Start:', startPos, 'Dir:', dir);
         
         // Raycast max 50 blocks
         const hit = world.castRay(
-           new rapier.Ray({x: startPos.x, y: startPos.y, z: startPos.z}, {x: dir.x, y: dir.y, z: dir.z}),
+           getCachedRay({x: startPos.x, y: startPos.y, z: startPos.z}, {x: dir.x, y: dir.y, z: dir.z}),
            50, false
         );
-
-        console.log('[GrappleDebug] Hit Result:', hit);
 
         if (hit) {
           const hitTime = (hit.toi ?? hit.timeOfImpact);
           const endPos = startPos.clone().addScaledVector(dir, hitTime);
-          console.log('[GrappleDebug] Hit Distance:', hitTime, 'EndPos:', endPos);
           if (Number.isFinite(endPos.x)) {
-            console.log('[GrappleDebug] Target SET!');
             state.setGrappleTarget([endPos.x, endPos.y, endPos.z]);
-            gameAudio.playGlobal('grapple_shoot');
+            EventBus.emit('audio', { sound: 'grapple_shoot', source: 'local' });
           }
         }
       } else if (texture === 'sword') {
@@ -319,27 +430,7 @@ export const Player = () => {
   const accumulator = useRef(0);
   const lastTickTime = useRef(performance.now());
 
-  useBeforePhysicsStep(() => {
-    if (!playerRef.current) return;
-    const now = performance.now();
-    const delta = now - lastTickTime.current;
-    lastTickTime.current = now;
-    
-    accumulator.current += delta;
-    const TICK_TIME = 1000 / ServerTickMetrics.tps;
-
-    let ticksThisFrame = 0;
-    while (accumulator.current >= TICK_TIME && ticksThisFrame < 10) {
-      let startMSPT = performance.now();
-      runFixedTick();
-      ServerTickMetrics.mspt = performance.now() - startMSPT;
-      accumulator.current -= TICK_TIME;
-      ticksThisFrame++;
-    }
-    if (ticksThisFrame >= 10) accumulator.current = 0;
-  });
-
-  const runFixedTick = () => {
+  function runFixedTick() {
     if (!playerRef.current) return;
     const state = useStore.getState();
     if (state.isDead) return;
@@ -409,11 +500,11 @@ export const Player = () => {
     ) {
       console.warn('[Physics Sanitizer] NaN/Infinity detected! Rescuing player...');
       isTeleporting.current = true;
-      const safeX = Number.isFinite(translation.x) ? translation.x : initialPos[0];
-      const safeZ = Number.isFinite(translation.z) ? translation.z : initialPos[2];
+      const stack = window.__playerSafeStack || [];
+      const safePos = stack.length > 0 ? stack.pop() : [0, 260, 0];
       
       // Plunge player into safe respawn sequence
-      playerRef.current.setTranslation({ x: safeX, y: 260, z: safeZ }, true);
+      playerRef.current.setTranslation({ x: safePos[0], y: safePos[1] + 1.0, z: safePos[2] }, true);
       playerRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
       playerRef.current.setGravityScale(0, true);
       setHasSnappedToGround(false);
@@ -424,6 +515,14 @@ export const Player = () => {
     // Update shared global for AI / ChunkManager
     playerPosition.set(translation.x, translation.y, translation.z);
     playerRotation.copy(camera.rotation);
+
+    const shipTransform = shipTransforms.get('default');
+    if (state.isSeated && shipTransform) {
+      // RIGIDBODY ABANDONMENT FIX: Capsule movement is now handled in useBeforePhysicsStep
+      // Skip normal walking/gravity logic!
+      playerRef.current.setGravityScale(0, true); // Ensure gravity is 0 even if transition to kinematic is delayed
+      return; 
+    }
 
     // Process Area Damage (Explosions)
     if (state.damageQueue.length > 0) {
@@ -477,7 +576,7 @@ export const Player = () => {
     if (!hasSnappedToGround) {
       // Freeze player until we find the ground via the safe spawn scanner
       playerRef.current.setTranslation(
-        { x: translation.x, y: 400, z: translation.z },
+        { x: translation.x, y: translation.y > 380 ? initialPos[1] : translation.y, z: translation.z },
         true
       );
       playerRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
@@ -529,29 +628,10 @@ export const Player = () => {
       return;
     }
 
-    // CRITICAL FIX: Ensure the physics engine has actually mounted the terrain before allowing gravity!
-    // When loading a save game, the player teleports to their saved position, but the WASM BVH takes a few frames to build.
-    if (!isFlying && !state.isDead && translation.y > -60) {
-      // Cast a massive ray down. If it hits nothing, the physics world is completely empty under us!
-      const hit = world.castRay(
-        getCachedRay(
-          { x: translation.x, y: translation.y + 1.0, z: translation.z },
-          _rayDir
-        ),
-        400.0,
-        false,
-        CollisionLayers.TERRAIN
-      );
-      if (!hit) {
-        // Freeze the player in mid-air until the Trimesh mounts!
-        playerRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
-        playerRef.current.setGravityScale(0, true);
-        return;
-      }
-    }
+    // Safety floor below bedrock (or physics NaN glitch) - catches player if they fall out of the world
 
     // Safety floor below bedrock (or physics NaN glitch) — catches player if they fall out of the world
-    if (translation.y < -70 && !Number.isNaN(translation.y)) {
+    if (translation.y < CHUNK_Y_MIN - 10 && !Number.isNaN(translation.y)) {
       // Void Death!
       if (state.isWorldReady && !state.isDead) {
         state.damagePlayer(1000); // Instant kill
@@ -637,6 +717,16 @@ export const Player = () => {
         state.setSubmergedLiquid(null);
       }
     }
+    
+    // Process local forced teleports (from warp mass teleports)
+    if (window.__forceLocalTeleportPos && playerRef.current) {
+        playerRef.current.setTranslation({
+           x: window.__forceLocalTeleportPos[0],
+           y: window.__forceLocalTeleportPos[1],
+           z: window.__forceLocalTeleportPos[2]
+        }, true);
+        window.__forceLocalTeleportPos = null;
+    }
 
     // Movement
     camera.getWorldDirection(_frontVector);
@@ -645,10 +735,8 @@ export const Player = () => {
 
     _sideVector.copy(_frontVector).cross(camera.up).normalize();
 
-    let currentSpeed = SPEED;
     if (sprint) {
       if (state.playerPower > 0 || isCreative) {
-        currentSpeed = SPEED * 1.6;
         if (!isCreative) {
           sprintTicks.current++;
           if (sprintTicks.current >= 30) { // Drain 1 power every 1.5s (30 ticks) of sprinting
@@ -658,17 +746,11 @@ export const Player = () => {
         }
       } else {
         // Exhausted
-        currentSpeed = SPEED * 0.7; // Crippled speed
         sprintTicks.current = 0;
       }
     } else {
       sprintTicks.current = 0;
-      if (!isCreative && state.playerPower <= 0) {
-        currentSpeed = SPEED * 0.7; // Crippled walking speed when empty
-      }
     }
-
-    if (isFlying) currentSpeed *= 3;
 
     // Grapple Physics Override (Hybrid Momentum-Retaining Pull)
     if (state.grappleTarget) {
@@ -693,7 +775,7 @@ export const Player = () => {
           const currentGrappleSpeed = 30 * Math.max(0.3, speedMultiplier);
 
           if (Date.now() - lastGrappleReelTime.current > 1000) {
-            gameAudio.playGlobal('grapple_reel');
+            EventBus.emit('audio', { sound: 'grapple_reel', source: 'local' });
             lastGrappleReelTime.current = Date.now();
           }
 
@@ -732,20 +814,21 @@ export const Player = () => {
     }
 
     if (isInLiquid && !isFlying) {
-      // eslint-disable-next-line no-unused-vars
-      currentSpeed *= liquidDamage > 0 ? 0.25 : 0.5; // Viscosity is thicker in dangerous liquids (Lava/Acid)
+      const liquidPenalty = liquidDamage > 0 ? 0.25 : 0.5; // Viscosity is thicker in dangerous liquids (Lava/Acid)
+      _intendedDirection.x *= liquidPenalty;
+      _intendedDirection.z *= liquidPenalty;
       playerRef.current.setGravityScale(liquidDamage > 0 ? 0.05 : 0.1, true); // Slower sinking
       if (liquidDamage > 0 && Date.now() - lastLavaDamage.current > 500) {
         state.damagePlayer(liquidDamage);
         lastLavaDamage.current = Date.now();
       }
     } else {
-      playerRef.current.setGravityScale(isFlying ? 0 : 1, true);
+      playerRef.current.setGravityScale(isFlying || isSeated ? 0 : 1, true);
     }
 
     linvel = playerRef.current.linvel();
 
-    if (isFlying) {
+    if (isFlying || isSeated) {
       playerRef.current.setLinvel(
         { x: _intendedDirection.x, y: _intendedSpeedY, z: _intendedDirection.z },
         true
@@ -773,19 +856,31 @@ export const Player = () => {
       const groundHit = world.castRay(
         getCachedRay(_rayOrigin, _rayDir),
         0.4,
-        false
+        false,
+        0x00010011
       );
       if (groundHit) {
         isGrounded = true;
+        playerLastSafePosition.set(translation.x, translation.y, translation.z);
         break;
       }
     }
 
     if (isGrounded && !wasGrounded.current && fallSpeed.current < -8) {
-      gameAudio.playGlobal('land');
+      EventBus.emit('audio', { sound: 'land', source: 'local' });
     }
     wasGrounded.current = isGrounded;
     if (!isGrounded) fallSpeed.current = linvel.y;
+
+    if (isGrounded && !isFlying && Number.isFinite(translation.x) && Number.isFinite(translation.y) && Number.isFinite(translation.z)) {
+      if (!window.__playerSafeStack) window.__playerSafeStack = [];
+      const stack = window.__playerSafeStack;
+      const last = stack[stack.length - 1];
+      if (!last || Math.pow(translation.x - last[0], 2) + Math.pow(translation.y - last[1], 2) + Math.pow(translation.z - last[2], 2) > 4) {
+          stack.push([translation.x, translation.y, translation.z]);
+          if (stack.length > 3) stack.shift();
+      }
+    }
 
     if (
       isGrounded &&
@@ -794,7 +889,7 @@ export const Player = () => {
       !isFlying &&
       !isInLiquid
     ) {
-      gameAudio.playGlobal('footstep');
+      EventBus.emit('audio', { sound: 'footstep', source: 'local' });
       lastStep.current = Date.now();
     }
 
@@ -808,7 +903,7 @@ export const Player = () => {
           true
         );
         lastJump.current = Date.now();
-        gameAudio.playGlobal('jump');
+        EventBus.emit('audio', { sound: 'jump', source: 'local' });
       }
     }
 
@@ -820,6 +915,54 @@ export const Player = () => {
       playerRef.current.setLinvel({ x: linvel.x, y: -35, z: linvel.z }, true);
     }
   };
+
+  useBeforePhysicsStep((world) => {
+    if (!playerRef.current) return;
+    
+    if (wasSeated.current && !isSeated) {
+        playerRef.current.setBodyType(0, true);
+        const currentTransform = shipTransforms.get('default');
+        if (currentTransform && currentTransform.actualVelocity) {
+            playerRef.current.setLinvel({
+                x: currentTransform.actualVelocity.x,
+                y: currentTransform.actualVelocity.y,
+                z: currentTransform.actualVelocity.z
+            }, true);
+        }
+    } else if (isSeated) {
+        if (!wasSeated.current) {
+            playerRef.current.setBodyType(2, true);
+        }
+        const shipTransform = shipTransforms.get('default');
+        if (shipTransform) {
+            const localOffset = useStore.getState().seatOffset || [0, 0, -3];
+            _seatEuler.fromArray([shipTransform.rotation.x, shipTransform.rotation.y, shipTransform.rotation.z]);
+            _seatOffsetVec.set(localOffset[0], localOffset[1] + 1.4, localOffset[2]).applyEuler(_seatEuler);
+            playerRef.current.setNextKinematicTranslation({
+                x: shipTransform.position.x + _seatOffsetVec.x,
+                y: shipTransform.position.y + _seatOffsetVec.y,
+                z: shipTransform.position.z + _seatOffsetVec.z
+            });
+        }
+    }
+    wasSeated.current = isSeated;
+    const now = performance.now();
+    const delta = now - lastTickTime.current;
+    lastTickTime.current = now;
+    
+    accumulator.current += delta;
+    const TICK_TIME = 1000 / ServerTickMetrics.tps;
+
+    let ticksThisFrame = 0;
+    while (accumulator.current >= TICK_TIME && ticksThisFrame < 10) {
+      let startMSPT = performance.now();
+      runFixedTick();
+      ServerTickMetrics.mspt = performance.now() - startMSPT;
+      accumulator.current -= TICK_TIME;
+      ticksThisFrame++;
+    }
+    if (ticksThisFrame >= 10) accumulator.current = 0;
+  });
 
   useFrame((state, delta) => {
     // Poll Keyboard & Steer Vectors at 144Hz
@@ -853,6 +996,46 @@ export const Player = () => {
     _intendedDirection.copy(_direction.normalize().multiplyScalar(currentSpeed));
     _intendedJump = jump;
     
+    if (storeState.isSeated) {
+      _intendedDirection.set(0, 0, 0); // No walking off the helm
+      _intendedJump = false;
+      
+      const newIntent = `${moveForward}|${moveBackward}|${moveLeft}|${moveRight}|${jump}|${sprint}`;
+      if (lastIntentRef.current !== newIntent) {
+        lastIntentRef.current = newIntent;
+        networkActions.getState().broadcastEvent({
+           type: 'SHIP_STEER_INTENT',
+           forward: moveForward,
+           backward: moveBackward,
+           left: moveLeft,
+           right: moveRight,
+           jump: jump,
+           sprint: sprint
+        });
+        // also send to self if host
+        if (networkActions.getState().isHost) {
+           networkActions.getState().handleNetworkData({
+              type: 'SHIP_STEER_INTENT',
+              forward: moveForward,
+              backward: moveBackward,
+              left: moveLeft,
+              right: moveRight,
+              jump: jump,
+              sprint: sprint
+           }, { metadata: { playerId: networkActions.getState().playerId } });
+        }
+      }
+    } else {
+      if (lastIntentRef.current !== null) {
+        lastIntentRef.current = null;
+        const stopIntent = { type: 'SHIP_STEER_INTENT', forward: false, backward: false, left: false, right: false, jump: false, sprint: false };
+        networkActions.getState().broadcastEvent(stopIntent);
+        if (networkActions.getState().isHost) {
+           networkActions.getState().handleNetworkData(stopIntent, { metadata: { playerId: networkActions.getState().playerId } });
+        }
+      }
+    }
+    
     if (isFlying) {
       if (jump) _intendedSpeedY = currentSpeed;
       else if (sprint) _intendedSpeedY = -currentSpeed;
@@ -862,38 +1045,76 @@ export const Player = () => {
     if (!meshRef.current) return;
     meshRef.current.getWorldPosition(_camPos);
     
+    if (storeState.isSeated) {
+        const shipTransform = shipTransforms.get('default');
+        if (shipTransform) {
+            const localOffset = storeState.seatOffset || [0, 0, -3];
+            if (shipTransform.actualQuaternion) {
+                _seatEuler.setFromQuaternion(new Quaternion(shipTransform.actualQuaternion.x, shipTransform.actualQuaternion.y, shipTransform.actualQuaternion.z, shipTransform.actualQuaternion.w));
+            } else {
+                _seatEuler.fromArray([shipTransform.rotation.x, shipTransform.rotation.y, shipTransform.rotation.z]);
+            }
+            _seatOffsetVec.set(localOffset[0], localOffset[1] + 1.4, localOffset[2]).applyEuler(_seatEuler);
+            
+            const posToUse = shipTransform.actualPosition || shipTransform.position;
+            _camPos.set(
+               posToUse.x + _seatOffsetVec.x,
+               posToUse.y + _seatOffsetVec.y,
+               posToUse.z + _seatOffsetVec.z
+            );
+        }
+    }
+
     // Mathematically interpolate the camera to chase the 60Hz physics body
     // This perfectly replaces the buggy `interpolate={true}` prop!
-    const targetY = _camPos.y + 0.6;
     const lerpFactor = Math.min(1.0, delta * 20.0);
+    let targetCamPos = _camPos.clone();
+    targetCamPos.y += 0.6;
     
-    camera.position.x += (_camPos.x - camera.position.x) * lerpFactor;
-    camera.position.y += (targetY - camera.position.y) * lerpFactor;
-    camera.position.z += (_camPos.z - camera.position.z) * lerpFactor;
+    if (storeState.isSeated) {
+        const cDir = new Vector3();
+        camera.getWorldDirection(cDir);
+        targetCamPos.addScaledVector(cDir, -15);
+        targetCamPos.y += 5;
+        // Basic clipping protection
+        if (targetCamPos.y < _camPos.y + 0.6) {
+            targetCamPos.y = _camPos.y + 0.6;
+        }
+    }
+    if (storeState.isSeated && Number.isFinite(targetCamPos.x)) {
+        camera.position.copy(targetCamPos);
+    } else if (Number.isFinite(targetCamPos.x) && Number.isFinite(targetCamPos.y) && Number.isFinite(targetCamPos.z) && Number.isFinite(lerpFactor)) {
+        camera.position.x += (targetCamPos.x - camera.position.x) * lerpFactor;
+        camera.position.y += (targetCamPos.y - camera.position.y) * lerpFactor;
+        camera.position.z += (targetCamPos.z - camera.position.z) * lerpFactor;
+    }
   });
 
   return (
-    <RigidBody
-      ref={playerRef}
-      colliders={false}
-      mass={1}
-      type="dynamic"
-      ccd={true}
-      position={initialPos}
-      lockRotations
-      friction={0}
-      gravityScale={isFlying ? 0 : 1}
-      collisionGroups={CollisionLayers.PLAYER}
-      userData={{ type: 'player', id: networkActions.getState().playerId }}
-    >
-      <CapsuleCollider
-        args={[0.4, 0.4]}
+    <group>
+      <RigidBody
+        ref={playerRef}
+        colliders={false}
+        mass={1}
+        type={isSeated ? "kinematicPosition" : "dynamic"}
+        ccd={true}
+        position={initialPos}
+        lockRotations
+        friction={0}
+        gravityScale={isSeated || isFlying ? 0 : 1}
         collisionGroups={CollisionLayers.PLAYER}
-      />
-      {/* Invisible player body — physics only */}
-      <mesh ref={meshRef} visible={false}>
-        <sphereGeometry args={[0.4]} />
-      </mesh>
-    </RigidBody>
+        userData={{ type: 'player', id: networkActions.getState().playerId }}
+      >
+        <CapsuleCollider
+          args={[0.4, 0.4]}
+          collisionGroups={CollisionLayers.PLAYER}
+        />
+        {/* Invisible player body — physics only */}
+        <mesh ref={meshRef} visible={false}>
+          <sphereGeometry args={[0.4]} />
+        </mesh>
+      </RigidBody>
+      <LocalAvatar isSeated={isSeated} />
+    </group>
   );
 };

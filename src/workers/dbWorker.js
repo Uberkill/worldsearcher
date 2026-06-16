@@ -1,4 +1,4 @@
-import { get, del, setMany } from 'idb-keyval';
+import { get, del, setMany, keys } from 'idb-keyval';
 import { BlockIds } from '../registry/BlockRegistry';
 
 const CHUNK_VOLUME = 16 * 288 * 16; // 73728 elements (Y from -32 to 255)
@@ -164,8 +164,8 @@ self.onmessage = async (e) => {
       const uncompressed = decompressRLE(payload.rleBuffer);
       self.postMessage({ id, result: uncompressed }, [uncompressed.buffer]);
     } else if (type === 'SAVE_CHUNK') {
-      const { chunkKey, slotPrefix, buffer } = payload;
-      const key = `${slotPrefix}_chunk_v14_${chunkKey}`;
+      const { chunkKey, slotPrefix, buffer, seed } = payload;
+      const key = `${slotPrefix}_chunk_v14_${seed}_${chunkKey}`;
       const rleBuffer = compressRLE(buffer);
       walCache.set(key, { rleBuffer });
 
@@ -177,8 +177,8 @@ self.onmessage = async (e) => {
       }
       self.postMessage({ id, result: true });
     } else if (type === 'LOAD_CHUNK') {
-      const { chunkKey, slotPrefix } = payload;
-      const key = `${slotPrefix}_chunk_v14_${chunkKey}`;
+      const { chunkKey, slotPrefix, seed } = payload;
+      const key = `${slotPrefix}_chunk_v14_${seed}_${chunkKey}`;
       if (walCache.has(key)) {
         const walData = walCache.get(key);
         if (walData.rleBuffer) {
@@ -213,10 +213,30 @@ self.onmessage = async (e) => {
         }
       }
     } else if (type === 'DELETE_CHUNK') {
-      const { chunkKey, slotPrefix } = payload;
-      const key = `${slotPrefix}_chunk_v14_${chunkKey}`;
+      const { chunkKey, slotPrefix, seed } = payload;
+      const key = `${slotPrefix}_chunk_v14_${seed}_${chunkKey}`;
       if (walCache.has(key)) walCache.delete(key);
       await del(key);
+      self.postMessage({ id, result: true });
+    } else if (type === 'CLEAR_DB') {
+      const { slotId, isSlotPrefix } = payload;
+      walCache.clear();
+      if (walTimer) {
+        clearTimeout(walTimer);
+        walTimer = null;
+      }
+      const allKeys = await keys();
+      for (const k of allKeys) {
+        if (isSlotPrefix) {
+          if (k.startsWith(`${slotId}_`) || k === `saveState_${slotId}`) {
+            await del(k);
+          }
+        } else {
+          if (k.startsWith(`${slotId}_`) || k === `saveState_slot${slotId}`) {
+            await del(k);
+          }
+        }
+      }
       self.postMessage({ id, result: true });
     } else if (type === 'FLUSH_WAL') {
       await flushWAL();

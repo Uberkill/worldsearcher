@@ -3,7 +3,7 @@ import { RigidBody, CuboidCollider } from '@react-three/rapier';
 import { useStore } from '../stores/useStore';
 import { MaterialCache } from '../utils/MaterialCache';
 import * as THREE from 'three';
-import { gameAudio } from '../audio/GameAudio';
+import { EventBus } from '../utils/EventBus';
 
 const getColor = (texture) => {
   switch (texture) {
@@ -163,7 +163,7 @@ export const FallingStructure = ({ structure }) => {
                     activeTexture === 'sword' ||
                     activeTexture === 'gun'
                   ) {
-                    gameAudio.playGlobal('break');
+                    EventBus.emit('audio', { sound: 'break', source: 'local' });
                     triggerShatter();
                   }
                 }}

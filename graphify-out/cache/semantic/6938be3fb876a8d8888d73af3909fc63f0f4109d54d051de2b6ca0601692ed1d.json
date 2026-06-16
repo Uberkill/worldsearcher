@@ -1,0 +1,1 @@
+{"nodes": [{"id": "components_cubes_cubes", "label": "Cubes", "file_type": "code", "source_file": "src/components/Cubes.jsx"}], "edges": [{"source": "components_cubes_cubes", "target": "components_chunkrenderer_chunkrenderer", "relation": "calls", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "src/components/Cubes.jsx"}], "hyperedges": []}

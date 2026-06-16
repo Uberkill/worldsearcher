@@ -10,8 +10,9 @@ import shopBlueprint from '../prefabs/shop.json';
 import ruinsBlueprint from '../prefabs/ruins.json';
 import crystalSpireBlueprint from '../prefabs/crystal_spire.json';
 import meteorBlueprint from '../prefabs/meteor.json';
+import shipBlueprint from '../prefabs/ship.json';
 import { getBiomeAt, getBiomeConfig } from './biomes';
-import { SEA_LEVEL, CHUNK_SIZE_X, CHUNK_SIZE_Z } from './chunkData';
+import { CHUNK_Y_MIN, CHUNK_SIZE_X, CHUNK_SIZE_Z } from './chunkData';
 
 const compilePrefab = (blueprint) => {
   const blocks = [];
@@ -48,16 +49,17 @@ const compilePrefab = (blueprint) => {
   return blocks;
 };
 
-export const ShopStructure = compilePrefab(shopBlueprint);
-export const TreeThickStructure = compilePrefab(treeThickBlueprint);
-export const TreeSkinnyStructure = compilePrefab(treeSkinnyBlueprint);
-export const TreeNormalStructure = compilePrefab(treeNormalBlueprint);
-export const TreeMushroomStructure = compilePrefab(treeMushroomBlueprint);
-export const TreeGlassStructure = compilePrefab(treeGlassBlueprint);
-export const TreeArchStructure = compilePrefab(treeArchBlueprint);
-export const RuinsStructure = compilePrefab(ruinsBlueprint);
-export const CrystalSpireStructure = compilePrefab(crystalSpireBlueprint);
-export const MeteorStructure = compilePrefab(meteorBlueprint);
+const ShopStructure = compilePrefab(shopBlueprint);
+const TreeThickStructure = compilePrefab(treeThickBlueprint);
+const TreeSkinnyStructure = compilePrefab(treeSkinnyBlueprint);
+const TreeNormalStructure = compilePrefab(treeNormalBlueprint);
+const TreeMushroomStructure = compilePrefab(treeMushroomBlueprint);
+const TreeGlassStructure = compilePrefab(treeGlassBlueprint);
+const TreeArchStructure = compilePrefab(treeArchBlueprint);
+const RuinsStructure = compilePrefab(ruinsBlueprint);
+const CrystalSpireStructure = compilePrefab(crystalSpireBlueprint);
+const MeteorStructure = compilePrefab(meteorBlueprint);
+export const ShipStructure = compilePrefab(shipBlueprint);
 
 function spatialHash(seed, x, y) {
   let h = seed | 0;
@@ -87,15 +89,22 @@ const hash = (x, z, seed = 0) => {
 export const getStructuresForChunk = (
   targetCx,
   targetCz,
-  getSurfaceHeight,
+  getSurfaceHeights,
   seed,
   tempNoiseFunc,
   moistNoiseFunc
 ) => {
+  // Helper to get all valid surfaces for a column
+  const getValidSurfaces = (x, z) => {
+    return getSurfaceHeights(x, z).filter(y => y !== undefined && y > CHUNK_Y_MIN + 5);
+  };
+
   const floraBlocks = [];
   const treeBlocks = [];
   const majorBlocks = [];
   const anomalyBlocks = [];
+
+  const poiType = seed % 100;
 
   for (let cx = targetCx - 1; cx <= targetCx + 1; cx++) {
     for (let cz = targetCz - 1; cz <= targetCz + 1; cz++) {
@@ -103,12 +112,33 @@ export const getStructuresForChunk = (
         (cx * CHUNK_SIZE_X) ** 2 + (cz * CHUNK_SIZE_Z) ** 2
       );
 
+      // 0. Forced POI from Astrolabe
+      if (cx === 0 && cz === 0 && poiType > 0 && poiType <= 3) {
+        const worldX = Math.floor(CHUNK_SIZE_X / 2);
+        const worldZ = Math.floor(CHUNK_SIZE_Z / 2);
+        const surfaces = getValidSurfaces(worldX, worldZ);
+        if (surfaces.length > 0) {
+          const surfaceY = surfaces[surfaces.length - 1]; // Top surface
+          if (poiType === 1) { // Spark Crystal Deposit
+             majorBlocks.push({ template: CrystalSpireStructure, rootX: worldX, rootY: surfaceY + 1, rootZ: worldZ });
+             majorBlocks.push({ template: CrystalSpireStructure, rootX: worldX + 5, rootY: surfaceY + 1, rootZ: worldZ + 5 });
+             majorBlocks.push({ template: CrystalSpireStructure, rootX: worldX - 5, rootY: surfaceY + 1, rootZ: worldZ - 5 });
+          } else if (poiType === 2) { // Ruins
+             majorBlocks.push({ template: RuinsStructure, rootX: worldX, rootY: surfaceY, rootZ: worldZ });
+          } else if (poiType === 3) { // Meteor
+             anomalyBlocks.push({ template: MeteorStructure, rootX: worldX, rootY: surfaceY - 5, rootZ: worldZ });
+          }
+        }
+      }
+
       // 1. Crater / Meteor Anomaly (2% chance per chunk everywhere outside pure abstraction)
       if (dist < 700 && hash(cx, cz, seed + 99) < 0.02) {
         const worldX = cx * CHUNK_SIZE_X + Math.floor(CHUNK_SIZE_X / 2);
         const worldZ = cz * CHUNK_SIZE_Z + Math.floor(CHUNK_SIZE_Z / 2);
-        const surfaceY = getSurfaceHeight(worldX, worldZ);
-        if (surfaceY !== undefined && surfaceY > 0) {
+        const surfaces = getValidSurfaces(worldX, worldZ);
+        if (surfaces.length > 0) {
+          // Put the crater on the highest island
+          const surfaceY = surfaces[surfaces.length - 1];
           // The crater carves down by 6 blocks, so the meteor sits 5 blocks below surface
           anomalyBlocks.push({
             template: MeteorStructure,
@@ -138,14 +168,17 @@ export const getStructuresForChunk = (
         if (hash(cx, cz, seed + 101) < 0.5) {
           // Very high chance if you are actually in the arena
           // Spawn Crystal Spires around the arena
-          const surfaceY = getSurfaceHeight(chunkWorldX, chunkWorldZ);
-          if (surfaceY !== undefined && surfaceY > 0) {
-            majorBlocks.push({
-              template: CrystalSpireStructure,
-              rootX: chunkWorldX,
-              rootY: surfaceY + 1,
-              rootZ: chunkWorldZ,
-            });
+          const surfaces = getValidSurfaces(chunkWorldX, chunkWorldZ);
+          if (surfaces.length > 0) {
+            // Spire on all layers!
+            for (const surfaceY of surfaces) {
+              majorBlocks.push({
+                template: CrystalSpireStructure,
+                rootX: chunkWorldX,
+                rootY: surfaceY + 1,
+                rootZ: chunkWorldZ,
+              });
+            }
           }
         }
         continue; // Skip generic spawns in boss areas!
@@ -162,8 +195,10 @@ export const getStructuresForChunk = (
             cx * CHUNK_SIZE_X + Math.floor(hash(cx, cz, seed + 56) * 12) + 2;
           const worldZ =
             cz * CHUNK_SIZE_Z + Math.floor(hash(cx, cz, seed + 57) * 12) + 2;
-          const surfaceY = getSurfaceHeight(worldX, worldZ);
-          if (surfaceY !== undefined && surfaceY > 0) {
+          const surfaces = getValidSurfaces(worldX, worldZ);
+          if (surfaces.length > 0) {
+            // Put ruins on the top-most layer
+            const surfaceY = surfaces[surfaces.length - 1];
             majorBlocks.push({
               template: RuinsStructure,
               rootX: worldX,
@@ -179,8 +214,10 @@ export const getStructuresForChunk = (
             cx * CHUNK_SIZE_X + Math.floor(hash(cx, cz, seed + 43) * 12) + 2;
           const worldZ =
             cz * CHUNK_SIZE_Z + Math.floor(hash(cx, cz, seed + 44) * 12) + 2;
-          const surfaceY = getSurfaceHeight(worldX, worldZ);
-          if (surfaceY !== undefined && surfaceY > SEA_LEVEL) {
+          const surfaces = getValidSurfaces(worldX, worldZ);
+          if (surfaces.length > 0) {
+            // Put shop on the lowest safe island layer
+            const surfaceY = surfaces[0];
             majorBlocks.push({
               template: ShopStructure,
               rootX: worldX,
@@ -210,20 +247,16 @@ export const getStructuresForChunk = (
             );
             const worldX = cx * CHUNK_SIZE_X + tx + offsetX;
             const worldZ = cz * CHUNK_SIZE_Z + tz + offsetZ;
-            const surfaceY = getSurfaceHeight(worldX, worldZ);
+            const surfaces = getValidSurfaces(worldX, worldZ);
 
-            if (surfaceY !== undefined && surfaceY > SEA_LEVEL) {
-              const biomeId = getBiomeAt(
-                worldX,
-                worldZ,
-                tempNoiseFunc,
-                moistNoiseFunc,
-                seed
-              );
+            if (surfaces.length > 0) {
+              const biomeId = getBiomeAt(worldX, worldZ, tempNoiseFunc, moistNoiseFunc, seed);
               const biomeConfig = getBiomeConfig(biomeId);
 
               if (biomeConfig.structures.length > 0) {
-                const typeHash = hash(worldX, worldZ, seed + 13);
+                for (const surfaceY of surfaces) {
+                  // Only put trees on the surface if the hash passes, keeping them scattered vertically too
+                  const typeHash = hash(worldX, worldZ, seed + 13 + surfaceY);
                 let template = null;
 
                 // Select tree type based on what the biome allows
@@ -252,13 +285,14 @@ export const getStructuresForChunk = (
                 if (!template && biomeConfig.structures.includes('TreeSkinny'))
                   template = TreeSkinnyStructure;
 
-                if (template) {
-                  treeBlocks.push({
-                    template,
-                    rootX: worldX,
-                    rootY: surfaceY + 1,
-                    rootZ: worldZ,
-                  });
+                  if (template) {
+                    treeBlocks.push({
+                      template,
+                      rootX: worldX,
+                      rootY: surfaceY + 1,
+                      rootZ: worldZ,
+                    });
+                  }
                 }
               }
             }
@@ -277,14 +311,16 @@ export const getStructuresForChunk = (
             cx * CHUNK_SIZE_X + Math.floor(hash(cx, cz, seed + 67) * 12) + 2;
           const worldZ =
             cz * CHUNK_SIZE_Z + Math.floor(hash(cx, cz, seed + 68) * 12) + 2;
-          const surfaceY = getSurfaceHeight(worldX, worldZ);
-          if (surfaceY !== undefined && surfaceY > 0) {
-            majorBlocks.push({
-              template: CrystalSpireStructure,
-              rootX: worldX,
-              rootY: surfaceY + 1,
-              rootZ: worldZ,
-            });
+          const surfaces = getValidSurfaces(worldX, worldZ);
+          if (surfaces.length > 0) {
+            for (const surfaceY of surfaces) {
+              majorBlocks.push({
+                template: CrystalSpireStructure,
+                rootX: worldX,
+                rootY: surfaceY + 1,
+                rootZ: worldZ,
+              });
+            }
           }
         }
       }
@@ -306,19 +342,13 @@ export const getStructuresForChunk = (
 
             // 60% chance to spawn on a block inside a patch
             if (fHash < 0.6) {
-              const surfaceY = getSurfaceHeight(worldX, worldZ);
-              if (surfaceY !== undefined && surfaceY > SEA_LEVEL) {
-                const biomeId = getBiomeAt(
-                  worldX,
-                  worldZ,
-                  tempNoiseFunc,
-                  moistNoiseFunc,
-                  seed
-                );
+              const surfaces = getValidSurfaces(worldX, worldZ);
+              if (surfaces.length > 0) {
+                const biomeId = getBiomeAt(worldX, worldZ, tempNoiseFunc, moistNoiseFunc, seed);
                 const biomeConfig = getBiomeConfig(biomeId);
 
-                // If the biome allows flora
                 if (biomeConfig.flora && biomeConfig.flora.length > 0) {
+                  for (const surfaceY of surfaces) {
                   let tex = biomeConfig.flora[0];
 
                   if (biomeConfig.flora.length > 1 && fHash < 0.05) {
@@ -344,6 +374,7 @@ export const getStructuresForChunk = (
         }
       }
     }
+  }
   }
 
   return [...floraBlocks, ...treeBlocks, ...majorBlocks, ...anomalyBlocks];

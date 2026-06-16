@@ -1,7 +1,7 @@
 import { useCallback, memo } from 'react';
 import { useStore } from '../../stores/useStore';
 import { useInventoryStore } from '../../stores/inventorySlice';
-import { gameAudio } from '../../audio/GameAudio';
+import { EventBus } from '../../utils/EventBus';
 import { GlobalRegistry } from '../../registry/Registry';
 
 export const InventorySlot = memo(({ index, containerId }) => {
@@ -81,24 +81,30 @@ export const InventorySlot = memo(({ index, containerId }) => {
          if (heldItem.count + displayItem.count > 64) return;
          executeLocalTransaction(sourceLoc, null, 'CRAFT_EXTRACT', 1);
          setHeldItem({ ...heldItem, count: heldItem.count + displayItem.count });
-         gameAudio.playGlobal('click');
+         EventBus.emit('audio', { sound: 'click', source: 'local' });
          return;
       }
       if (isRightClick) return; // Cannot split from result
       if (isShiftClick) {
          executeLocalTransaction(sourceLoc, null, 'CRAFT_EXTRACT', 'QUICK');
-         gameAudio.playGlobal('click');
+         EventBus.emit('audio', { sound: 'click', source: 'local' });
          return;
       }
       // Standard click (pick up 1 craft yield)
       setHeldItem({ ...displayItem, sourceLoc });
       executeLocalTransaction(sourceLoc, null, 'CRAFT_EXTRACT', 1);
-      gameAudio.playGlobal('click');
+      EventBus.emit('audio', { sound: 'click', source: 'local' });
       return;
     }
 
     if (!heldItem && displayItem) {
       // Pick up item (use displayItem!)
+      if (isShiftClick) {
+        executeLocalTransaction(sourceLoc, null, 'QUICK_MOVE');
+        EventBus.emit('audio', { sound: 'click', source: 'local' });
+        return;
+      }
+      
       if (isRightClick && displayItem.count > 1) {
         const half = Math.floor(displayItem.count / 2);
         setHeldItem({ ...displayItem, count: half, sourceLoc });
@@ -108,7 +114,7 @@ export const InventorySlot = memo(({ index, containerId }) => {
         // Optimistically empty the slot visually
         executeLocalTransaction(sourceLoc, null, 'MOVE_START');
       }
-      gameAudio.playGlobal('click');
+      EventBus.emit('audio', { sound: 'click', source: 'local' });
     } else if (heldItem) {
       // Place item or swap
       if (
@@ -149,7 +155,7 @@ export const InventorySlot = memo(({ index, containerId }) => {
           setHeldItem(null);
         }
       }
-      gameAudio.playGlobal('click');
+      EventBus.emit('audio', { sound: 'click', source: 'local' });
     }
   };
 
@@ -193,6 +199,7 @@ export const InventorySlot = memo(({ index, containerId }) => {
                 style={{ opacity: 0 }}
                 onLoad={(e) => {
                   e.target.style.opacity = 1;
+                  e.target.style.display = '';
                 }}
                 onError={(e) => {
                   e.target.style.display = 'none';

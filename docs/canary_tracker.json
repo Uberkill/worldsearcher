@@ -1,0 +1,5 @@
+{
+  "version": 5,
+  "last_updated_by": "Antigravity Agent",
+  "reason": "Applied Multi-Agent Architecture Audit fixes: Decoupled useSettingsStore to resolve GameAudio -> useStore circular dependencies."
+}

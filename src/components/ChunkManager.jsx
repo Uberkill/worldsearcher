@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useStore } from '../stores/useStore';
 import { useChunkStore } from '../stores/chunkSlice';
+import { useSyncStore } from '../stores/syncSlice';
 
 import { networkActions } from '../stores/networkActions';
 import { playerPosition } from '../globals';
@@ -24,7 +25,6 @@ function* chunkSweep(
   currentCz,
   renderDistance,
   knownChunks,
-  pendingUnloads,
   failedChunks,
   chunksToCheck
 ) {
@@ -40,16 +40,12 @@ function* chunkSweep(
       const chunkKey = `${cx},${cz}`;
       desiredChunks.add(chunkKey);
 
-      // Cancel pending unload if this chunk is back in range
-      if (pendingUnloads.has(chunkKey)) {
-        clearTimeout(pendingUnloads.get(chunkKey));
-        pendingUnloads.delete(chunkKey);
-        yield { type: 'RELOAD', cx, cz, chunkKey };
-      }
-
       // Queue for loading if not yet known
-      if (!knownChunks.has(chunkKey) && !failedChunks.has(chunkKey)) {
-        toLoad.push({ cx, cz, dist: Math.abs(x) + Math.abs(z), chunkKey });
+      if (!knownChunks.has(chunkKey)) {
+        const failCount = failedChunks.get(chunkKey) || 0;
+        if (failCount < 3) {
+          toLoad.push({ cx, cz, dist: Math.abs(x) + Math.abs(z), chunkKey });
+        }
       }
     }
   }
@@ -62,9 +58,9 @@ function* chunkSweep(
     yield { type: 'LOAD', ...item };
   }
 
-  // Step 3: Schedule DEFERRED unloads
+  // Step 3: Schedule IMMEDIATE forget for out-of-bounds chunks
   for (const key of chunksToCheck) {
-    if (!desiredChunks.has(key) && !pendingUnloads.has(key)) {
+    if (!desiredChunks.has(key)) {
       yield { type: 'UNLOAD', chunkKey: key };
     }
   }
@@ -82,8 +78,7 @@ export const ChunkManager = () => {
   const knownChunks = useRef(new Set());
   const pass1Chunks = useRef(new Set());
   const pass2Chunks = useRef(new Set());
-  const pendingUnloads = useRef(new Map());
-  const failedChunks = useRef(new Set());
+  const failedChunks = useRef(new Map());
   const lastPlayerCx = useRef(null);
   const lastPlayerCz = useRef(null);
   const booted = useRef(false);
@@ -93,6 +88,18 @@ export const ChunkManager = () => {
   const frameCount = useRef(0);
   const gateFrameSkip = useRef(0); // Throttle checkPass2Gate to every 3 frames
 
+  const worldEpoch = useSyncStore((state) => state.worldEpoch);
+  useEffect(() => {
+    knownChunks.current.clear();
+    pass1Chunks.current.clear();
+    pass2Chunks.current.clear();
+    failedChunks.current.clear();
+    lastPlayerCx.current = null;
+    lastPlayerCz.current = null;
+    booted.current = false;
+    sweepGen.current = null;
+    liveTracking.current = false;
+  }, [worldEpoch]);
 
   useEffect(() => {
     let isMounted = true;
@@ -119,6 +126,7 @@ export const ChunkManager = () => {
       const cx = SPAWN_CX + x;
       const cz = SPAWN_CZ + z;
       const chunkKey = `${cx},${cz}`;
+
       knownChunks.current.add(chunkKey);
       return loadChunkAsync(cx, cz)
         .then((success) => {
@@ -129,9 +137,15 @@ export const ChunkManager = () => {
           } else if (success === 'PRISTINE' || success === true) {
             pass1Chunks.current.add(chunkKey);
           } else {
+            console.error(`[ChunkManager] Chunk ${chunkKey} failed to load! success=`, success);
             knownChunks.current.delete(chunkKey);
-            failedChunks.current.add(chunkKey);
-            setTimeout(() => failedChunks.current.delete(chunkKey), 5000);
+            useStore.getState().unloadChunk(chunkKey);
+            const fails = failedChunks.current.get(chunkKey) || 0;
+            failedChunks.current.set(chunkKey, fails + 1);
+            const cooldown = fails + 1 < 3 ? 5000 : 30000;
+            setTimeout(() => {
+              failedChunks.current.delete(chunkKey);
+            }, cooldown);
           }
           confirmed++;
           if (isMounted && (confirmed % 3 === 0 || confirmed === total)) {
@@ -141,8 +155,13 @@ export const ChunkManager = () => {
         .catch((err) => {
           console.error(`Chunk load failed during boot for ${chunkKey}:`, err);
           knownChunks.current.delete(chunkKey);
-          failedChunks.current.add(chunkKey);
-          setTimeout(() => failedChunks.current.delete(chunkKey), 5000);
+          useStore.getState().unloadChunk(chunkKey);
+          const fails = failedChunks.current.get(chunkKey) || 0;
+          failedChunks.current.set(chunkKey, fails + 1);
+          const cooldown = fails + 1 < 3 ? 5000 : 30000;
+          setTimeout(() => {
+            failedChunks.current.delete(chunkKey);
+          }, cooldown);
           confirmed++;
           if (isMounted && (confirmed % 3 === 0 || confirmed === total)) {
             setLoadingProgress(Math.floor((confirmed / total) * 100));
@@ -172,21 +191,21 @@ export const ChunkManager = () => {
       if (!isMounted) return;
       setWorldReady();
       liveTracking.current = true;
+    }).catch(err => {
+      console.error("[ChunkManager] Boot sequence failed:", err);
+      if (!isMounted) return;
+      setLoadingProgress(100);
+      setWorldReady();
+      liveTracking.current = true;
     });
 
-    const unloads = pendingUnloads.current;
     const p1 = pass1Chunks.current;
     const p2 = pass2Chunks.current;
 
     return () => {
       isMounted = false;
       booted.current = false;
-      console.log(`[ChunkManager] UNMOUNTING! Cleanup running.`);
-      // Cancel any pending unload timeouts on unmount and explicitly unload them
-      for (const [_chunkKey, id] of unloads.entries()) {
-        clearTimeout(id);
-      }
-      unloads.clear();
+
 
       // Unload ALL known chunks to prevent memory leaks when switching worlds/disconnecting!
       const store = useStore.getState();
@@ -197,14 +216,14 @@ export const ChunkManager = () => {
       p1.clear();
       p2.clear();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    
+    }, [worldEpoch]);
 
   const updatePhysicsGrid = (currentCx, currentCz) => {
     const physicsSet = new Set();
     const addGrid = (cx, cz) => {
-      for (let x = -2; x <= 2; x++) {
-        for (let z = -2; z <= 2; z++) {
+      for (let x = -3; x <= 3; x++) {
+        for (let z = -3; z <= 3; z++) {
           physicsSet.add(`${cx + x},${cz + z}`);
         }
       }
@@ -307,18 +326,27 @@ export const ChunkManager = () => {
           .getState()
           .loadChunkPass2Async(cCx, cCz)
           .then((success) => {
+            if (!knownChunks.current.has(chunkKey)) return;
+
             if (success === false) {
               // Pass2 returned false: fatal worker error
               pass2Chunks.current.delete(chunkKey);
               knownChunks.current.delete(chunkKey);
-              failedChunks.current.add(chunkKey);
-              setTimeout(() => failedChunks.current.delete(chunkKey), 5000);
+              useStore.getState().unloadChunk(chunkKey);
+              const fails = failedChunks.current.get(chunkKey) || 0;
+              failedChunks.current.set(chunkKey, fails + 1);
+              const cooldown = fails + 1 < 3 ? 5000 : 30000;
+              setTimeout(() => {
+                failedChunks.current.delete(chunkKey);
+              }, cooldown);
               lastPlayerCx.current = null;
             } else if (success === 'CANCELLED') {
               // Pass2 was cancelled mid-flight (chunk unloaded, player moved away)
               // put it back — the gate will retry when neighbors are still ready
               pass2Chunks.current.delete(chunkKey);
-              pass1Chunks.current.add(chunkKey);
+              if (knownChunks.current.has(chunkKey)) {
+                pass1Chunks.current.add(chunkKey);
+              }
             } else if (success === 'NO_DATA') {
               // pass1Cache was evicted (worker crash / DataCloneError / context loss).
               // The chunk has NO terrain data to re-mesh. Must fully evict so the
@@ -326,20 +354,28 @@ export const ChunkManager = () => {
               pass2Chunks.current.delete(chunkKey);
               pass1Chunks.current.delete(chunkKey);
               knownChunks.current.delete(chunkKey);
+              useStore.getState().unloadChunk(chunkKey);
               // Short cooldown before allowing re-load to avoid hammering crashed workers
-              failedChunks.current.add(chunkKey);
+              const fails = failedChunks.current.get(chunkKey) || 0;
+              failedChunks.current.set(chunkKey, fails + 1);
+              const cooldown = fails + 1 < 3 ? 2000 : 30000;
               setTimeout(() => {
                 failedChunks.current.delete(chunkKey);
                 lastPlayerCx.current = null; // Force next-frame sweep to re-check
-              }, 2000);
+              }, cooldown);
             }
           })
           .catch((err) => {
             console.error(`Pass 2 failed for ${chunkKey}:`, err);
             pass2Chunks.current.delete(chunkKey);
             knownChunks.current.delete(chunkKey);
-            failedChunks.current.add(chunkKey);
-            setTimeout(() => failedChunks.current.delete(chunkKey), 5000);
+            useStore.getState().unloadChunk(chunkKey);
+            const fails = failedChunks.current.get(chunkKey) || 0;
+            failedChunks.current.set(chunkKey, fails + 1);
+            const cooldown = fails + 1 < 3 ? 5000 : 30000;
+            setTimeout(() => {
+              failedChunks.current.delete(chunkKey);
+            }, cooldown);
             lastPlayerCx.current = null;
           });
       }
@@ -362,9 +398,9 @@ export const ChunkManager = () => {
     const currentCx = Math.floor(playerPosition.x / 16);
     const currentCz = Math.floor(playerPosition.z / 16);
 
-    // Throttle physics grid update to once every 10 frames
+    // Throttle physics grid update to once every 3 frames
     frameCount.current++;
-    if (frameCount.current % 10 === 0) {
+    if (frameCount.current % 3 === 0) {
       updatePhysicsGrid(currentCx, currentCz);
     }
 
@@ -387,17 +423,13 @@ export const ChunkManager = () => {
       lastPlayerCz.current = currentCz;
       setPlayerChunk(currentCx, currentCz);
 
-      const chunksToCheck = new Set([
-        ...knownChunks.current,
-        ...Object.keys(useChunkStore.getState().chunks || {}),
-      ]);
+      const chunksToCheck = new Set(knownChunks.current);
 
       sweepGen.current = chunkSweep(
         currentCx,
         currentCz,
         useStore.getState().renderDistance,
         knownChunks.current,
-        pendingUnloads.current,
         failedChunks.current,
         chunksToCheck
       );
@@ -412,10 +444,9 @@ export const ChunkManager = () => {
         const { value, done } = sweepGen.current.next();
         if (done) {
           if (window.__DEBUG_STATS__) {
-            window.__DEBUG_STATS__.pendingUnloads = pendingUnloads.current.size;
             window.__DEBUG_STATS__.failedChunks = failedChunks.current.size;
             window.__DEBUG_STATS__.failedChunkKeys = Array.from(
-              failedChunks.current
+              failedChunks.current.keys()
             );
             window.__DEBUG_STATS__.desiredChunksCount =
               value && value.desiredChunks ? value.desiredChunks.size : 0;
@@ -426,50 +457,43 @@ export const ChunkManager = () => {
 
         totalSteps++;
 
-        if (value.type === 'RELOAD') {
-          const { chunkKey, cx, cz } = value;
-          loadChunkAsync(cx, cz)
-            .then((success) => {
-              if (success === 'CANCELLED' || success === false) {
-                knownChunks.current.delete(chunkKey);
-                if (success === false) lastPlayerCx.current = null;
-              } else if (success === 'DECORATED') {
-                pass2Chunks.current.add(chunkKey);
-              } else if (success === 'PRISTINE' || success === true) {
-                pass1Chunks.current.add(chunkKey);
-              } else {
-                knownChunks.current.delete(chunkKey);
-                failedChunks.current.add(chunkKey);
-                setTimeout(() => failedChunks.current.delete(chunkKey), 5000);
-              }
-            })
-            .catch(() => {
-              knownChunks.current.delete(chunkKey);
-              failedChunks.current.add(chunkKey);
-              setTimeout(() => failedChunks.current.delete(chunkKey), 5000);
-            });
-        } else if (value.type === 'LOAD') {
+        if (value.type === 'LOAD') {
           const { chunkKey, cx, cz } = value;
           knownChunks.current.add(chunkKey);
           loadChunkAsync(cx, cz)
             .then((success) => {
-              if (success === 'CANCELLED' || success === false) {
+              if (!knownChunks.current.has(chunkKey)) return;
+
+              if (success === 'CANCELLED') {
                 knownChunks.current.delete(chunkKey);
-                if (success === false) lastPlayerCx.current = null; // Force sweep retry!
               } else if (success === 'DECORATED') {
                 pass2Chunks.current.add(chunkKey);
               } else if (success === 'PRISTINE' || success === true) {
-                pass1Chunks.current.add(chunkKey);
+                if (knownChunks.current.has(chunkKey)) {
+                  pass1Chunks.current.add(chunkKey);
+                }
               } else {
+                // success === false or NO_DATA
                 knownChunks.current.delete(chunkKey);
-                failedChunks.current.add(chunkKey);
-                setTimeout(() => failedChunks.current.delete(chunkKey), 5000);
+                useStore.getState().unloadChunk(chunkKey);
+                const fails = failedChunks.current.get(chunkKey) || 0;
+                failedChunks.current.set(chunkKey, fails + 1);
+                const cooldown = fails + 1 < 3 ? 5000 : 30000;
+                setTimeout(() => {
+                  failedChunks.current.delete(chunkKey);
+                  lastPlayerCx.current = null; // Force sweep retry after cooldown!
+                }, cooldown);
               }
             })
             .catch((_err) => {
               knownChunks.current.delete(chunkKey);
-              failedChunks.current.add(chunkKey);
-              setTimeout(() => failedChunks.current.delete(chunkKey), 5000);
+              useStore.getState().unloadChunk(chunkKey);
+              const fails = failedChunks.current.get(chunkKey) || 0;
+              failedChunks.current.set(chunkKey, fails + 1);
+              const cooldown = fails + 1 < 3 ? 5000 : 30000;
+              setTimeout(() => {
+                failedChunks.current.delete(chunkKey);
+              }, cooldown);
             });
 
           loadSteps++;
@@ -478,28 +502,13 @@ export const ChunkManager = () => {
           }
         } else if (value.type === 'UNLOAD') {
           const key = value.chunkKey;
-          useStore.getState().cancelLoadChunk(key);
-
-          // Calculate distance to determine grace period
-          const [ux, uz] = key.split(',').map(Number);
-          const dist = Math.max(
-            Math.abs(ux - currentCx),
-            Math.abs(uz - currentCz)
-          );
-          const currentR = useStore.getState().renderDistance;
-
-          // If chunk is deeply out of bounds (e.g. user lowered render distance slider), unload instantly!
-          // Otherwise use the 15-second grace period for normal walking boundary thrashing.
-          const delay = dist > currentR + 2 ? 100 : UNLOAD_GRACE_MS;
-
-          const id = setTimeout(() => {
-            knownChunks.current.delete(key);
-            pass1Chunks.current.delete(key);
-            pass2Chunks.current.delete(key);
-            pendingUnloads.current.delete(key);
-            unloadChunk(key);
-          }, delay);
-          pendingUnloads.current.set(key, id);
+          useStore.getState().unloadChunk(key);
+          
+          // IMMEDIATE FORGET: 
+          // Drop it from React's internal arrays to hand over control to Engine GC natively.
+          knownChunks.current.delete(key);
+          pass1Chunks.current.delete(key);
+          pass2Chunks.current.delete(key);
         }
       }
     }

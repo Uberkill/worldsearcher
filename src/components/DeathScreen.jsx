@@ -99,16 +99,26 @@ export const DeathScreen = () => {
           <button
             onClick={() => {
               if (isGuest) {
-                networkActions.getState().disconnect(true);
-                sessionStorage.removeItem('saveSlotId');
-                window.location.reload();
+                networkActions.getState().disconnect(true).finally(() => {
+                  sessionStorage.removeItem('saveSlotId');
+                  window.location.reload();
+                });
                 return;
               }
               if (isHardcore) {
                 resetWorld();
               } else {
-                sessionStorage.removeItem('saveSlotId');
-                window.location.reload();
+                // Host graceful disconnect
+                const state = useStore.getState();
+                Promise.all([
+                  state.savePlayerState([0, 260, 0], [0, 0, 0, 1]), // Respawn at y=260 safely
+                  state.saveWorld()
+                ]).finally(() => {
+                  networkActions.getState().disconnect(true).finally(() => {
+                    sessionStorage.removeItem('saveSlotId');
+                    window.location.reload();
+                  });
+                });
               }
             }}
             className="group flex-1 flex flex-col items-center justify-center py-6 bg-black/40 border border-white/10 rounded-xl hover:bg-white/10 hover:border-white/20 hover:shadow-[0_0_30px_rgba(255,255,255,0.05)] transition-all duration-300 cursor-pointer"

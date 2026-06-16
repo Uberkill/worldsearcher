@@ -5,7 +5,7 @@ import {
 } from '../registry/BlockRegistry';
 
 export const ATLAS_GRID_SIZE = 16;
-export const ATLAS_TILE_SIZE = 128; // Updated for 128x128 textures
+const ATLAS_TILE_SIZE = 128; // Updated for 128x128 textures
 
 let generatedAtlas = null;
 

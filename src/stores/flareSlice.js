@@ -1,17 +1,15 @@
 import { create } from 'zustand';
 
-// Temporary local cache for flare light mapping, mirroring the old file's functionality.
-// In Phase 3, this will be fully internalized here.
-export const newFlareLightMap = new Map();
+
 
 export const useFlareStore = create((set, get) => ({
   placedFlares: [],
 
-  placeFlare: (pos, normal, id) => {
+  placeFlare: (pos, normal, id, isShip = false) => {
     set((prev) => ({
       placedFlares: [
         ...prev.placedFlares,
-        { id: id, pos, normal, emitLight: true },
+        { id: id, pos, normal, isShip, emitLight: true },
       ],
     }));
   },

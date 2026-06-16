@@ -1,53 +1,23 @@
 # World Search - Custom Voxel Engine
 
+A high-performance, deterministic custom voxel engine built natively for the browser using WebGL, WebWorkers, and WebRTC.
+
+## The Sky Island & Ship Expansion
+World Search now features procedural floating islands set over a bottomless void. Players can construct, pilot, and maintain their own customizable physical voxel ships using the new Hybrid Flight System. Engage the Warp Drive to traverse the void to new dimensional coordinates while fending off Glitch Storms alongside your crew!
+
 > [!WARNING]  
-> **AI AGENTS:** Before modifying this codebase, you MUST read [`docs/AI_AGENT_WARNINGS.md`](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/AI_AGENT_WARNINGS.md). Failure to follow these architectural rules will destroy the engine's performance.
-
-## Documentation Index
-All core architectural notes, rules, and system guides are located in the `docs/` folder:
-- **[AI Warnings & Rules](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/AI_AGENT_WARNINGS.md)** (CRITICAL)
-- **[Architecture & Engine Data](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/architecture.md)**
-- **[Current State & Tech Debt](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/current_state.md)**
-- **[Graphify Insights](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/GRAPHIFY_INSIGHTS.md)**
-- **[Combat & Entities](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/COMBAT.md)**
-- **[Memory & State Management](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/MEMORY.md)**
-- **[Design & Vibe](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/design.md)**
-- **[Design System (ECS)](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/design_system.md)**
-- **[Game Modes](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/GAME_MODES.md)**
-- **[Host Commands](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/COMMANDS.md)**
-
-A high-performance, deterministic custom voxel engine built natively for the browser. This project leverages WebGL, WebWorkers, and WebRTC to deliver a seamless, procedurally generated multiplayer experience.
-
-## Technology Stack
-
-Our custom architecture combines several open-source libraries into a bespoke pipeline:
-- **Rendering:** React Three Fiber (Three.js wrapper)
-- **Physics Engine:** `@react-three/rapier` (Rust-based WASM Physics)
-- **Procedural Generation:** Custom WebWorker pool with Simplex Noise
-- **State Management:** Zustand (modular, atomic state slicing)
-- **Multiplayer Networking:** PeerJS (WebRTC Data Channels for serverless P2P syncing)
-- **Offline Persistence:** IndexedDB via `idb-keyval` (Binary RLE Chunk Storage)
-
-## Core Engine Features
-
-### 1. Hybrid Server Tick Architecture (20Hz)
-To guarantee determinism and prevent network desyncs between players on high vs low refresh rate monitors, all core game logic runs on a dedicated **20Hz Fixed Tick (Accumulator)**. 
-- Pathfinding, Host-Authoritative Hitscans, and Player Physics are decoupled from the display refresh rate.
-- **Death Spiral Limiter:** Missed ticks (e.g., when tabbing out of the browser) are dropped after a hard cap to prevent physics stalls or CPU lock-ups upon returning.
-
-### 2. Snapshot Visual Interpolation
-Even though the core engine simulates logic at 20 Ticks Per Second, visual rendering via `useFrame` runs at up to 144Hz. Network guest entities use **Snapshot Buffering** to seamlessly interpolate between ticks in the past, ensuring buttery-smooth visual framerates despite the slower underlying simulation.
-
-### 3. Voxel Pipeline (Greedy Meshing)
-Chunks are generated off the main thread in a WebWorker pool.
-- Utilizes an ECS 32-bit integer packing format for ultra-low memory overhead.
-- Geometry is extracted via Greedy Meshing, baking ambient occlusion and custom voxel block lighting directly into vertex attributes.
-
-### 4. P2P Host-Authoritative Networking
-Multiplayer is completely serverless. The browser acts as the Host server via WebRTC data channels, propagating chunk differences, managing enemy AI swarms, and validating combat raycasts against all connected guests.
+> **AI AGENTS:** Do not blindly load monolithic documentation files. You MUST read `docs/context_map.json` to determine which specific sub-document to load for your current task. 
+> 
+> You MUST also read `docs/core/AI_AGENT_WARNINGS.md` before making any code modifications. Failure to adhere to the Canary tracking rules will result in your changes being rejected by the test suite.
 
 ## Getting Started
 
 1. Install dependencies: `npm install`
 2. Start the development server: `npm run dev`
-3. Hit `F3` or `F12` in-game to view the live Engine Dump metrics (TPS, MSPT, Draw Calls).
+3. Run the engine test suite: `npm run test:unit`
+4. Hit `F3` or `F12` in-game to view the live Engine Dump metrics (TPS, MSPT, Draw Calls).
+
+## Recent Engine Updates (V3 - V5)
+* **Decoupled Entity Persistence**: Global objects like Chests, Machines, Tombstones, and Dropped Items have been successfully decoupled from the chunking system. They now save properly to the `_world_entities` IndexedDB tables and synchronize reliably across the network.
+* **Persistent Ship Containers**: Ships now robustly support interactive containers. You can place chests and furnaces on ships, load them with fuel and items, fly the ship, and they will persist accurately.
+* **Item Drop Vector Math**: Breaking a ship container automatically triggers a global matrix transformation, projecting the local `x, y, z` ship coordinates into global world space to spawn physics-based item drops safely on the deck of your ship!

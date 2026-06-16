@@ -23,8 +23,9 @@ export const ChunkPhysics = memo(({ chunkKey }) => {
         {physicsDataArray.map((physicsData, i) => (
           physicsData.pos && physicsData.pos.length > 0 && (
             <TrimeshCollider
-              key={`${chunkData.physicsRebuildId || 0}-${i}`}
+              key={`${chunkData.rebuildId || 0}-${i}`}
               args={[physicsData.pos, physicsData.idx]}
+              collisionGroups={0x0001FFFF}
               userData={{ type: 'terrain' }}
             />
           )

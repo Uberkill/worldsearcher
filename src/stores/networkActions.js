@@ -1,6 +1,7 @@
 import { getGameStore, setNetworkStore } from './storeLinker';
 import { useChunkStore } from './chunkSlice';
 import { useInventoryStore } from './inventorySlice';
+import { BlockKeyById } from '../registry/BlockRegistry';
 import { useChatStore } from './chatSlice';
 import { useSyncStore } from './syncSlice';
 import { useConnectionStore } from './connectionSlice';
@@ -247,6 +248,51 @@ export const networkActions = create((rawSet, rawGet) => {
         sendFeedback('Usage: /weather <clear|rain>');
       }
     }
+    else if (cmd === '/ship') {
+      if (!isOp) return sendFeedback('You do not have permission to use this command.');
+      
+      const useStore = getGameStore();
+      if (!useStore) return sendFeedback('Store not ready.');
+      
+      let pPos = null;
+      if (isSelf) {
+         pPos = [playerPosition.x, playerPosition.y, playerPosition.z];
+      } else {
+         pPos = state.players[senderId]?.pos;
+      }
+      
+      if (!pPos) return sendFeedback('Player position unknown.');
+      
+      const px = Math.floor(pPos[0]);
+      const py = Math.floor(pPos[1]);
+      const pz = Math.floor(pPos[2]);
+
+      // Host generates the prefab ship
+      useStore.getState().initializeShip();
+      
+      const shipPos = [px, py + 15, pz];
+      useStore.getState().setShipTransform('default', shipPos, [0, 0, 0]);
+      state.broadcastEvent({ type: 'SHIP_TRANSFORM', position: shipPos, rotation: [0, 0, 0] });
+      
+      // Compress and broadcast the new ship buffer
+      const buffer = useStore.getState().shipBuffer;
+      const rle = [];
+      let currentVal = buffer[0];
+      let count = 0;
+      for (let i = 0; i < buffer.length; i++) {
+          if (buffer[i] === currentVal) {
+              count++;
+          } else {
+              rle.push(currentVal, count);
+              currentVal = buffer[i];
+              count = 1;
+          }
+      }
+      rle.push(currentVal, count);
+      state.broadcastEvent({ type: 'SHIP_BUFFER_SYNC', shipBufferRLE: rle });
+      
+      sendFeedback('Ship spawned successfully from prefab!');
+    }
     else if (cmd === '/time') {
       if (!isOp) return sendFeedback('You do not have permission to use this command.');
       if (args[1] === 'set') {
@@ -440,6 +486,31 @@ export const networkActions = create((rawSet, rawGet) => {
              pitch: playerRotation.x,
              yaw: playerRotation.y
           });
+          
+          // Broadcast ship position if active
+          const gameState = getGameStore()?.getState();
+          if (gameState && gameState.isShipActive) {
+             const transform = window.shipTransforms ? window.shipTransforms.get('default') : null;
+             if (transform && transform.actualVelocity) {
+                // Only broadcast if the ship is actually moving to save bandwidth
+                const moving = Math.abs(transform.actualVelocity.x) > 0.01 || 
+                               Math.abs(transform.actualVelocity.y) > 0.01 || 
+                               Math.abs(transform.actualVelocity.z) > 0.01;
+                
+                if (moving || window.__forceShipBroadcast) {
+                    const payload = {
+                        type: 'SHIP_TRANSFORM',
+                        position: [transform.position.x, transform.position.y, transform.position.z],
+                        rotation: [transform.rotation.x, transform.rotation.y, transform.rotation.z]
+                    };
+                    netState.connections.forEach(conn => { try { conn.send(payload); } catch { /* ignore */ } });
+                    
+                    if (!moving && window.__forceShipBroadcast) {
+                        window.__forceShipBroadcast = false; // Broadcast one resting frame
+                    }
+                }
+             }
+          }
         }, 33); // ~30Hz
 
       set({ pingInterval, positionalSyncInterval });
@@ -483,6 +554,36 @@ export const networkActions = create((rawSet, rawGet) => {
            const guestKey = `${prefix}_guest_${conn.metadata?.playerId}`;
            idbGet(guestKey).then((savedState) => {
                try {
+                 const useStore = getGameStore();
+                 const gameState = useStore ? useStore.getState() : null;
+                 
+                 let shipData = null;
+                 if (gameState && gameState.isShipActive) {
+                    const transform = window.shipTransforms ? window.shipTransforms.get('default') : null;
+                    const rle = [];
+                    const buffer = gameState.shipBuffer;
+                    if (buffer) {
+                        let currentVal = buffer[0];
+                        let count = 0;
+                        for (let i = 0; i < buffer.length; i++) {
+                            if (buffer[i] === currentVal) {
+                                count++;
+                            } else {
+                                rle.push(currentVal, count);
+                                currentVal = buffer[i];
+                                count = 1;
+                            }
+                        }
+                        rle.push(currentVal, count);
+                    }
+                    shipData = {
+                        bufferRLE: rle,
+                        helmId: gameState.shipHelmPlayerId,
+                        position: transform ? [transform.position.x, transform.position.y, transform.position.z] : [0,10000,0],
+                        rotation: transform ? [transform.rotation.x, transform.rotation.y, transform.rotation.z] : [0,0,0]
+                    };
+                 }
+                 
                  conn.send({ 
                     type: 'WELCOME', 
                     hostId: get().playerId, 
@@ -491,8 +592,9 @@ export const networkActions = create((rawSet, rawGet) => {
                     lastAttackTimestamps: {},
                     pendingHostAttacks: [],
                     guestState: savedState || null,
-                    syncLevel: getGameStore()?.getState()?.syncLevel || 1,
-                    mainQuestProgress: getGameStore()?.getState()?.mainQuestProgress || null
+                    syncLevel: gameState?.syncLevel || 1,
+                    mainQuestProgress: gameState?.mainQuestProgress || null,
+                    shipData
                  });
                } catch { /* ignore */ }
            });
@@ -529,7 +631,7 @@ export const networkActions = create((rawSet, rawGet) => {
         
         const guestName = conn.metadata?.playerName || (conn.metadata?.playerId ? `Guest-${conn.metadata.playerId.substring(0,4)}` : 'A guest');
         get().broadcastSystemMessage(`${guestName} left the game.`);
-        get().removePlayer(conn.metadata?.playerId);
+        get().cullDeadConnection(conn.metadata?.playerId);
       });
       
       // If the guest provided their name in the initial metadata, save it!
@@ -824,6 +926,28 @@ export const networkActions = create((rawSet, rawGet) => {
          });
       }
       
+      // Load ship state if provided
+      if (data.shipData) {
+         import('./useStore').then(({ useStore }) => {
+             const gameState = useStore.getState();
+             const buffer = new Uint32Array(32768);
+             let idx = 0;
+             const rle = data.shipData.bufferRLE;
+             for (let i = 0; i < rle.length; i += 2) {
+                 const val = rle[i];
+                 const count = rle[i+1];
+                 if (idx < 32768) {
+                     buffer.fill(val, idx, Math.min(idx + count, 32768));
+                     idx += count;
+                 }
+             }
+             gameState.setShipBufferRaw(buffer);
+             gameState.setShipTransform('default', data.shipData.position, data.shipData.rotation);
+             gameState.setShipHelmPlayerId(data.shipData.helmId);
+             useStore.setState({ isShipActive: true });
+         });
+      }
+      
       if (data.mainQuestProgress) {
          const useStore = getGameStore();
          if (useStore && useStore.getState().setMainQuestSync) {
@@ -941,6 +1065,9 @@ export const networkActions = create((rawSet, rawGet) => {
            if (data.chests) {
                useInventoryStore.setState({ chests: data.chests });
            }
+           if (data.machines) {
+               useInventoryStore.setState({ machines: data.machines });
+           }
            
            // --- DELTA SYNCING ---
            if (data.delta) {
@@ -965,6 +1092,78 @@ export const networkActions = create((rawSet, rawGet) => {
       if (useStore) {
         useStore.getState().applyWorldSync({ [data.chunkKey]: data.buffer });
       }
+    }
+    else if (data.type === 'SHIP_BUFFER_SYNC') {
+      const useStore = getGameStore();
+      if (useStore && data.shipBufferRLE) {
+          const buffer = new Uint32Array(32768);
+          const rle = data.shipBufferRLE;
+          let idx = 0;
+          for (let i = 0; i < rle.length; i += 2) {
+              const val = rle[i];
+              const count = rle[i+1];
+              if (idx < 32768) {
+                  buffer.fill(val, idx, Math.min(idx + count, 32768));
+                  idx += count;
+              }
+          }
+          useStore.getState().setShipBufferRaw(buffer);
+          useStore.setState({ isShipActive: true });
+      }
+    }
+    else if (data.type === 'SHIP_TRANSFORM') {
+        const useStore = getGameStore();
+        if (useStore) {
+            useStore.getState().setShipTransform('default', data.position, data.rotation);
+            useStore.setState({ isShipActive: true });
+        }
+    }
+    else if (data.type === 'REQUEST_HELM') {
+       if (!state.isHost) return;
+       const useStore = getGameStore();
+       if (!useStore) return;
+       const currentHelm = useStore.getState().shipHelmPlayerId;
+       const reqId = data.playerId || (senderConn ? senderConn.metadata?.playerId : state.playerId);
+       if (!currentHelm) {
+           useStore.getState().setShipHelmPlayerId(reqId);
+           state.broadcastEvent({ type: 'HELM_UPDATE', playerId: reqId });
+           if (reqId === state.playerId) {
+               useStore.setState({ isSeated: true });
+           }
+       }
+    }
+    else if (data.type === 'RELEASE_HELM') {
+       if (!state.isHost) return;
+       const useStore = getGameStore();
+       if (!useStore) return;
+       const currentHelm = useStore.getState().shipHelmPlayerId;
+       const reqId = data.playerId || (senderConn ? senderConn.metadata?.playerId : state.playerId);
+       if (currentHelm === reqId) {
+           useStore.getState().setShipHelmPlayerId(null);
+           state.broadcastEvent({ type: 'HELM_UPDATE', playerId: null });
+           if (reqId === state.playerId) {
+               useStore.setState({ isSeated: false });
+           }
+       }
+    }
+    else if (data.type === 'HELM_UPDATE') {
+       const useStore = getGameStore();
+       if (!useStore) return;
+       const wasHelm = useStore.getState().shipHelmPlayerId === state.playerId;
+       useStore.getState().setShipHelmPlayerId(data.playerId);
+       
+       if (data.playerId === state.playerId) {
+           useStore.setState({ isSeated: true });
+       } else if (wasHelm && data.playerId !== state.playerId) {
+           useStore.setState({ isSeated: false });
+       }
+    }
+    else if (data.type === 'SHIP_STEER_INTENT') {
+       const useStore = getGameStore();
+       if (useStore && state.isHost) {
+           const id = data.playerId || (senderConn ? senderConn.metadata?.playerId : state.playerId);
+           useStore.getState().setShipSteerIntent(id, data);
+       }
     }
     else if (data.type === 'INVENTORY_INTENT') {
        if (!state.isHost) return; // Only Host processes intents
@@ -1245,6 +1444,103 @@ export const networkActions = create((rawSet, rawGet) => {
        set(prev => ({
            pendingHostAttacks: [...prev.pendingHostAttacks, { senderId, weaponId, dir, origin, timestamp: Date.now() }]
        }));
+    }
+    else if (data.type === 'LAUNCH_SHIP_INTENT') {
+         if (!state.isHost) return;
+         const useStore = getGameStore();
+         if (useStore) {
+            const cx = Math.floor(data.pos[0]);
+            const cy = Math.floor(data.pos[1]);
+            const cz = Math.floor(data.pos[2]);
+
+            const SHIP_SIZE_X = 32, SHIP_SIZE_Y = 32, SHIP_SIZE_Z = 32;
+            const SHIP_CENTER_X = 16, SHIP_CENTER_Y = 16, SHIP_CENTER_Z = 16;
+            const buffer = new Uint32Array(SHIP_SIZE_X * SHIP_SIZE_Y * SHIP_SIZE_Z);
+            
+            const blocksToRemove = [];
+            const worldState = useStore.getState();
+            const invState = useInventoryStore.getState();
+            let nextChests = { ...invState.chests };
+            let nextMachines = { ...invState.machines };
+            let inventoryChanged = false;
+
+            const getBlock = (wx, wy, wz) => {
+                const chunkX = Math.floor(wx / 16);
+                const chunkZ = Math.floor(wz / 16);
+                const chunkKey = `${chunkX},${chunkZ}`;
+                const chunk = worldState.chunks[chunkKey];
+                if (!chunk || !chunk.buffer) return -1;
+                const lx = (wx % 16 + 16) % 16;
+                const lz = (wz % 16 + 16) % 16;
+                if (wy < 0 || wy >= 512) return -1;
+                return chunk.buffer[wy * 256 + lz * 16 + lx];
+            };
+
+            for (let x = 0; x < SHIP_SIZE_X; x++) {
+                for (let y = 0; y < SHIP_SIZE_Y; y++) {
+                    for (let z = 0; z < SHIP_SIZE_Z; z++) {
+                        const wx = cx + (x - SHIP_CENTER_X);
+                        const wy = cy + (y - SHIP_CENTER_Y);
+                        const wz = cz + (z - SHIP_CENTER_Z);
+                        
+                        const val = getBlock(wx, wy, wz);
+                        if (val > 0) {
+                            const tex = val & 0xff;
+                            const key = BlockKeyById[tex];
+                            if (key && !['grass', 'dirt', 'stone', 'sand', 'bedrock', 'water'].includes(key)) {
+                                const idx = y * (SHIP_SIZE_X * SHIP_SIZE_Z) + z * SHIP_SIZE_X + x;
+                                buffer[idx] = val;
+                                blocksToRemove.push({ x: wx, y: wy, z: wz });
+
+                                if (key === 'chest' || key === 'ship_furnace') {
+                                    const worldKey = `${wx},${wy},${wz}`;
+                                    const shipKey = `ship_${x}_${y}_${z}`;
+                                    if (nextChests[worldKey]) {
+                                        nextChests[shipKey] = nextChests[worldKey];
+                                        delete nextChests[worldKey];
+                                        inventoryChanged = true;
+                                    }
+                                    if (nextMachines[worldKey]) {
+                                        nextMachines[shipKey] = nextMachines[worldKey];
+                                        delete nextMachines[worldKey];
+                                        inventoryChanged = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (inventoryChanged) {
+                useInventoryStore.setState({ chests: nextChests, machines: nextMachines });
+                get().broadcastEvent({ type: 'INVENTORY_SYNC', chests: nextChests, machines: nextMachines });
+            }
+
+            if (blocksToRemove.length > 0) {
+                worldState.removeCubesBulk(blocksToRemove, true, null);
+            }
+
+            worldState.setShipBufferRaw(buffer);
+            const shipPos = [cx, cy + 15, cz];
+            worldState.setShipTransform('default', shipPos, [0, 0, 0]);
+            get().broadcastEvent({ type: 'SHIP_TRANSFORM', position: shipPos, rotation: [0, 0, 0] });
+            
+            const rle = [];
+            let currentVal = buffer[0];
+            let count = 0;
+            for (let i = 0; i < buffer.length; i++) {
+                if (buffer[i] === currentVal) {
+                    count++;
+                } else {
+                    rle.push(currentVal, count);
+                    currentVal = buffer[i];
+                    count = 1;
+                }
+            }
+            rle.push(currentVal, count);
+            get().broadcastEvent({ type: 'SHIP_BUFFER_SYNC', shipBufferRLE: rle });
+         }
     }
     else if (data.type === 'COMMAND_INTENT') {
       if (!state.isHost) return;
@@ -1892,7 +2188,11 @@ export const networkActions = create((rawSet, rawGet) => {
      }
      
      get().removePlayer(id);
-     if (get().isHost) {
+    if (get().isHost) {
+         const useStore = getGameStore();
+         if (useStore && useStore.getState().shipHelmPlayerId === id) {
+             get().handleNetworkData({ type: 'RELEASE_HELM', playerId: id });
+         }
          set(state => {
              const deadConns = state.connections.filter(c => c.metadata?.playerId === id);
              deadConns.forEach(c => {

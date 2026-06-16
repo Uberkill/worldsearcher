@@ -52,7 +52,7 @@ walkDir(SRC_DIR, function(filePath) {
 
 if (hasError) {
   console.error('\x1b[31m[Architecture Linter] Failed. Please fix the above architectural violations.\x1b[0m');
-  console.log('\x1b[33mSee AI_AGENT_WARNINGS.md for more context.\x1b[0m');
+  console.log('\x1b[33mSee docs/core/AI_AGENT_WARNINGS.md for more context.\x1b[0m');
   process.exit(1);
 } else {
   console.log('\x1b[32m[Architecture Linter] Passed. No architectural violations found.\x1b[0m');

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { getGameStore } from '../stores/storeLinker';
+import { useSettingsStore } from '../stores/useSettingsStore';
+import { EventBus } from '../utils/EventBus';
 
 class GameAudioSystem {
   constructor() {
@@ -105,20 +106,39 @@ class GameAudioSystem {
 
     // 4. Subscribe to Zustand settings
     this.updateVolumes();
-    const useStore = getGameStore();
-    if (useStore) {
-      useStore.subscribe(() => this.updateVolumes());
-    }
+    useSettingsStore.subscribe(() => this.updateVolumes());
 
     this.initialized = true;
+    
+    // Subscribe to EventBus for discrete audio triggers
+    EventBus.on('audio', 'GameAudioSystem', (payload) => {
+      // 1. Sanitization fallback
+      const soundName = typeof payload === 'string' ? payload : payload?.sound;
+      if (!soundName) return;
+
+      // 2. Throttle identical sounds (50ms)
+      if (!this.lastPlayed) this.lastPlayed = {};
+      const now = performance.now();
+      if (now - (this.lastPlayed[soundName] || 0) < 50) return;
+      
+      // 3. Temporary Multiplayer Distance Culling (Max 32 blocks)
+      if (typeof payload === 'object' && payload.position && payload.source === 'network' && this.listener) {
+        const dist = this.listener.position.distanceTo(
+          new THREE.Vector3(payload.position[0], payload.position[1], payload.position[2])
+        );
+        if (dist > 32) return; // Drop sounds too far away
+      }
+
+      this.lastPlayed[soundName] = now;
+      this.playGlobal(soundName);
+    });
+
     console.log('GameAudioSystem Initialized!');
   }
 
   updateVolumes() {
     if (!this.initialized) return;
-    const useStore = getGameStore();
-    if (!useStore) return;
-    const state = useStore.getState();
+    const state = useSettingsStore.getState();
     const isMuted = state.isMuted;
 
     const masterVol = isMuted ? 0 : state.masterVolume;
@@ -248,15 +268,13 @@ class GameAudioSystem {
 
   triggerDucking() {
     if (!this.initialized) return;
-    const useStore = getGameStore();
-    if (!useStore) return;
     // Duck music heavily for 0.5s, then recover over 1s
     const now = this.context.currentTime;
     const currentVol = this.musicGain.gain.value;
     this.musicGain.gain.cancelScheduledValues(now);
     this.musicGain.gain.setValueAtTime(Math.max(0.001, currentVol * 0.2), now);
     this.musicGain.gain.exponentialRampToValueAtTime(
-      Math.max(0.001, useStore.getState().musicVolume * 0.5),
+      Math.max(0.001, useSettingsStore.getState().musicVolume * 0.5),
       now + 1.5
     );
   }

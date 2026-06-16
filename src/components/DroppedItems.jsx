@@ -132,8 +132,11 @@ export const DroppedItems = () => {
     const inventoryState = useInventoryStore.getState();
     const netState = networkActions.getState();
     const currentItems = inventoryState.droppedItems || [];
+    const renderDistance = state.renderDistance || 8;
+    const maxDistSq = renderDistance * renderDistance * 256;
 
     let needsUpdate = false;
+    const toDespawn = [];
 
     for (const item of currentItems) {
       const idx = activeKeys.current.get(item.key);
@@ -210,9 +213,9 @@ export const DroppedItems = () => {
         }
       }
 
-      // Memory Leak Fix: Despawn items that fall into the void (though static shouldn't fall, this catches bugs)
-      if (renderPos.y < -100) {
-        state.despawnLoot(item.key);
+      // Phase 4: Void Item Memory Fog deletion (distance-based instead of Y < -10)
+      if (renderPos.y < -100 || (dx * dx + dz * dz > maxDistSq)) {
+        toDespawn.push(item.key);
         continue;
       }
 
@@ -241,6 +244,10 @@ export const DroppedItems = () => {
         meshRef.current.instanceColor.needsUpdate = true;
       }
     }
+
+    if (toDespawn.length > 0 && state.batchDespawnLoot) {
+      state.batchDespawnLoot(toDespawn);
+    }
   });
 
   return (
@@ -248,9 +255,9 @@ export const DroppedItems = () => {
       <InstancedRigidBodies
         ref={physicsRef}
         instances={instances}
-        type="fixed"
+        type="dynamic"
         colliders="cuboid"
-        sensor={true}
+        lockRotations={true}
         collisionGroups={0x00080008}
       >
         {/* We use a tiny collider box, visually the mesh is scaled to 0.25 */}

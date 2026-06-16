@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { gameAudio } from '../../audio/GameAudio';
+import { EventBus } from '../../utils/EventBus';
 import {
   Settings,
   Power,
@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../../stores/useStore';
+import { useUIStore } from '../../stores/useUIStore';
 import { networkActions } from '../../stores/networkActions';
 import { useSyncStore } from '../../stores/syncSlice';
 import { useConnectionStore } from '../../stores/connectionSlice';
@@ -33,11 +34,18 @@ import { DataBufferHUD } from './DataBufferHUD';
 import { ChestOverlay } from './ChestOverlay';
 import { CraftingOverlay } from './CraftingOverlay';
 import { ShopOverlay } from './ShopOverlay';
+import { HeartCoreOverlay } from './HeartCoreOverlay';
+import { LunarAnchorOverlay } from './LunarAnchorOverlay';
+import { ShipyardUI } from './ShipyardUI';
 import { ChatFeed } from './ChatFeed';
 import { Scoreboard } from './Scoreboard';
 import { QuestTracker } from './QuestTracker';
-
+import { Astrolabe } from './Astrolabe';
+import { WarpDriveUI } from './WarpDriveUI';
 import { MusicPlayerWidget } from './MusicPlayerWidget';
+import { ShipHUD } from './ShipHUD';
+import { UI_MODALS } from '../../stores/useUIStore';
+import FurnaceOverlay from './FurnaceOverlay';
 
 // Reusable Key UI
 const KeyUI = ({ children }) => (
@@ -138,14 +146,15 @@ export default function InGameUI() {
   const craftingOpen = useStore((state) => state.isCraftingTableOpen);
   const skillTreeOpen = useStore((state) => state.isSkillTreeOpen);
   const questJournalOpen = useStore((state) => state.isQuestJournalOpen);
+  const isHeartCoreOpen = useStore((state) => state.isHeartCoreOpen);
+  const isLunarAnchorOpen = useStore((state) => state.isLunarAnchorOpen);
   const activeChestId = useStore((state) => state.activeChestId);
 
+  const activeModal = useUIStore((state) => state.activeModal);
+  const toggleModal = useUIStore((state) => state.toggleModal);
+  const closeModal = useUIStore((state) => state.closeModal);
+
   const toggleMenu = useStore((state) => state.toggleMenu);
-  const toggleInventory = useStore((state) => state.toggleInventory);
-  const toggleShop = useStore((state) => state.toggleShop);
-  const toggleCraftingTable = useStore((state) => state.toggleCraftingTable);
-  const toggleSkillTree = useStore((state) => state.toggleSkillTree);
-  const toggleQuestJournal = useStore((state) => state.toggleQuestJournal);
   const closeChest = useStore((state) => state.closeChest);
   const saveWorld = useStore((state) => state.saveWorld);
   const savePlayerState = useStore((state) => state.savePlayerState);
@@ -169,6 +178,11 @@ export default function InGameUI() {
   const playerMana = useStore((state) => state.playerMana);
   const playerMaxMana = useStore((state) => state.playerMaxMana);
   const playerXP = useStore((state) => state.playerData);
+  const isDead = useStore((state) => state.isDead);
+  const isWorldReady = useStore((state) => state.isWorldReady);
+  const isAstrolabeOpen = useStore((state) => state.isAstrolabeOpen);
+  const isWarpDriveUIOpen = useStore((state) => state.isWarpDriveUIOpen);
+  const isSeated = useStore((state) => state.isSeated);
   
   const pickupFeed = useStore((state) => state.pickupFeed);
   const removePickupFeedItem = useStore((state) => state.removePickupFeedItem);
@@ -184,6 +198,12 @@ export default function InGameUI() {
   while (paddedMain.length < 27) paddedMain.push(null);
   const paddedHotbar = [...hotbarItems];
   while (paddedHotbar.length < 9) paddedHotbar.push(null);
+
+  useEffect(() => {
+    if (isDead) {
+      useUIStore.getState().closeModal();
+    }
+  }, [isDead]);
 
   const renderDistance = useStore((state) => state.renderDistance);
   const setRenderDistance = useStore((state) => state.setRenderDistance);
@@ -235,7 +255,7 @@ export default function InGameUI() {
   const connectionStatus = useConnectionStore((state) => state.connectionStatus);
   const isGuest = connectionStatus === 'connected' && !isHost;
   const players = useSyncStore((state) => state.players);
-  const playerCount = Object.keys(players).length + 1;
+  const playerCount = Object.keys(players || {}).length + 1;
 
   const uiStateRef = useRef({ internalMenu, settingsOpen });
   useEffect(() => {
@@ -262,13 +282,8 @@ export default function InGameUI() {
         return;
       }
 
-      const anyMenuOpen =
-        st.isMenuOpen ||
-        settingsOpen ||
-        st.isShopOpen ||
-        st.isInventoryOpen ||
-        st.isCraftingTableOpen ||
-        st.activeChestId !== null;
+      const { activeModal, closeModal, getAnyUIOpen, toggleModal } = useUIStore.getState();
+      const anyMenuOpen = st.isMenuOpen || settingsOpen || getAnyUIOpen();
 
       if (e.key === 'Enter' || e.key.toLowerCase() === 't') {
         if (!anyMenuOpen) {
@@ -297,38 +312,40 @@ export default function InGameUI() {
           st.setHeldItem(null);
           return;
         }
-        if (st.isInventoryOpen) st.toggleInventory();
-        else if (st.isCraftingTableOpen) st.toggleCraftingTable();
-        else if (st.isQuestJournalOpen) st.toggleQuestJournal();
-        else if (st.activeChestId !== null) st.closeChest();
-        else if (st.isShopOpen) st.toggleShop();
-        else if (settingsOpen) setSettingsOpen(false);
-        else st.toggleMenu();
+        
+        if (activeModal) {
+          if (activeModal === 'CHEST' && st.activeChestId !== null) st.closeChest();
+          else closeModal();
+        } else if (settingsOpen) {
+          setSettingsOpen(false);
+        } else {
+          st.toggleMenu();
+        }
+      }
+
+      if (e.key.toLowerCase() === 'b') {
+        if (!anyMenuOpen) {
+          st.toggleBuildMode();
+          showToast(st.isBuildMode ? "> BUILD MODE DISABLED" : "> BUILD MODE ENABLED");
+        }
       }
 
       if (e.key.toLowerCase() === 'j') {
-        if (!st.isMenuOpen && !settingsOpen && !st.isShopOpen && !st.isInventoryOpen && !st.isCraftingTableOpen && st.activeChestId === null) {
-          st.toggleQuestJournal();
+        if (!anyMenuOpen) {
+          toggleModal('QUEST_JOURNAL');
         }
       }
 
       if (e.key.toLowerCase() === 'e') {
-        if (!st.isMenuOpen && !settingsOpen && !st.isShopOpen) {
-          if (st.isCraftingTableOpen) st.toggleCraftingTable();
-          else if (st.activeChestId !== null) st.closeChest();
-          else st.toggleInventory();
+        if (!st.isMenuOpen && !settingsOpen && activeModal !== 'SHOP') {
+          if (activeModal === 'CRAFTING') toggleModal('CRAFTING');
+          else if (activeModal === 'CHEST') st.closeChest();
+          else toggleModal('INVENTORY');
         }
       }
 
       if (e.key.toLowerCase() === 'k') {
-        if (
-          !st.isMenuOpen &&
-          !settingsOpen &&
-          !st.isInventoryOpen &&
-          !st.isCraftingTableOpen &&
-          st.activeChestId === null
-        )
-          st.toggleShop();
+        if (!anyMenuOpen) toggleModal('SHOP');
       }
     };
 
@@ -347,11 +364,11 @@ export default function InGameUI() {
     };
   }, [setSettingsOpen]);
 
-  const showToast = (msg) => {
+  function showToast(msg) {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToastMessage(msg);
     toastTimeoutRef.current = setTimeout(() => setToastMessage(null), 3000);
-  };
+  }
 
   let activeOverlay = null;
   if (internalMenu) {
@@ -364,6 +381,10 @@ export default function InGameUI() {
     activeOverlay = 'skilltree';
   } else if (questJournalOpen) {
     activeOverlay = 'quest_journal';
+  } else if (isHeartCoreOpen) {
+    activeOverlay = 'heart_core';
+  } else if (isLunarAnchorOpen) {
+    activeOverlay = 'lunar_anchor';
   } else if (shopOpen) {
     activeOverlay = 'shop';
   } else if (settingsOpen) {
@@ -597,7 +618,18 @@ export default function InGameUI() {
         {/* Diegetic Data Buffer Gauge */}
         <DataBufferHUD />
         <QuestTracker />
+        
+        {/* Ship HUD */}
+        {isSeated && <ShipHUD />}
       </div>
+
+      {/* TV Static Low Battery Overlay */}
+      {!isDead && isWorldReady && playerPower < 20 && (
+        <div 
+          className="pointer-events-none fixed inset-0 z-[40] mix-blend-screen opacity-20 bg-cover bg-center animate-pulse"
+          style={{ backgroundImage: "url('/textures/ui/static.gif')" }} 
+        />
+      )}
 
       {/* Background Blur Overlay (Only when menus are open) */}
       <div
@@ -605,20 +637,26 @@ export default function InGameUI() {
       />
       {gameMode?.toLowerCase() === 'creative' ? (
         <CreativeInventory
-          active={inventoryOpen}
-          onClose={() => toggleInventory()}
+          active={activeModal === 'INVENTORY'}
+          onClose={() => toggleModal('INVENTORY')}
         />
       ) : (
         <InventoryOverlay
-          active={inventoryOpen}
-          onClose={() => toggleInventory()}
+          active={activeModal === 'INVENTORY'}
+          onClose={() => toggleModal('INVENTORY')}
         />
       )}
-      <CraftingOverlay active={craftingOpen} onClose={toggleCraftingTable} />
-      <SkillTreeOverlay active={skillTreeOpen} onClose={toggleSkillTree} />
-      <QuestJournal active={questJournalOpen} onClose={toggleQuestJournal} />
+      <CraftingOverlay active={activeModal === 'CRAFTING'} onClose={() => toggleModal('CRAFTING')} />
+      <SkillTreeOverlay active={activeModal === 'SKILL_TREE'} onClose={() => toggleModal('SKILL_TREE')} />
+      <QuestJournal active={activeModal === 'QUEST_JOURNAL'} onClose={() => toggleModal('QUEST_JOURNAL')} />
+      <HeartCoreOverlay active={activeModal === 'HEART_CORE'} onClose={() => toggleModal('HEART_CORE')} />
+      <LunarAnchorOverlay active={activeModal === 'LUNAR_ANCHOR'} onClose={() => toggleModal('LUNAR_ANCHOR')} />
+      <Astrolabe active={activeModal === 'ASTROLABE'} onClose={() => toggleModal('ASTROLABE')} />
+      <WarpDriveUI active={activeModal === 'WARP_DRIVE'} onClose={() => toggleModal('WARP_DRIVE')} />
+      <ShipyardUI active={activeModal === 'SHIPYARD'} onClose={() => toggleModal('SHIPYARD')} />
       <ChestOverlay chestId={activeChestId} onClose={closeChest} />
-      <ShopOverlay active={activeOverlay === 'shop'} onClose={toggleShop} />
+      {activeModal === 'FURNACE' && <FurnaceOverlay />}
+      <ShopOverlay active={activeModal === 'SHOP'} onClose={() => toggleModal('SHOP')} />
 
       {/* IN-GAME ESC */}
       <div
@@ -675,9 +713,9 @@ export default function InGameUI() {
           </div>
           <div className="flex space-x-6 mb-8 relative">
             <button
-              onMouseEnter={() => gameAudio.playGlobal('ui_hover')}
+              onMouseEnter={() => EventBus.emit('audio', { sound: 'ui_hover', source: 'local' })}
               onClick={() => {
-                gameAudio.playGlobal('ui_click');
+                EventBus.emit('audio', { sound: 'ui_click', source: 'local' });
                 toggleMenu();
               }}
               className="w-32 h-32 rounded-full flex flex-col items-center justify-center bg-white/5 border border-white/10 hover:border-cyan-400 hover:bg-cyan-900/20 hover:shadow-[0_0_30px_rgba(34,211,238,0.2)] transition-all duration-300 group cursor-pointer backdrop-blur-md"
@@ -693,9 +731,9 @@ export default function InGameUI() {
               </span>
             </button>
             <button
-              onMouseEnter={() => gameAudio.playGlobal('ui_hover')}
+              onMouseEnter={() => EventBus.emit('audio', { sound: 'ui_hover', source: 'local' })}
               onClick={() => {
-                gameAudio.playGlobal('ui_click');
+                EventBus.emit('audio', { sound: 'ui_click', source: 'local' });
                 setSettingsOpen(true);
               }}
               className="w-32 h-32 rounded-full flex flex-col items-center justify-center bg-white/5 border border-white/10 hover:border-white/40 hover:bg-white/10 transition-all duration-300 group cursor-pointer backdrop-blur-md"
@@ -711,9 +749,9 @@ export default function InGameUI() {
               </span>
             </button>
             <button
-              onMouseEnter={() => gameAudio.playGlobal('ui_hover')}
+              onMouseEnter={() => EventBus.emit('audio', { sound: 'ui_hover', source: 'local' })}
               onClick={() => {
-                gameAudio.playGlobal('ui_click');
+                EventBus.emit('audio', { sound: 'ui_click', source: 'local' });
                 setInternalMenu('delete_confirm');
               }}
               className="w-32 h-32 rounded-full flex flex-col items-center justify-center bg-black/40 border border-red-500/30 hover:border-red-400 hover:bg-red-900/20 hover:shadow-[0_0_30px_rgba(248,113,113,0.2)] transition-all duration-300 group cursor-pointer backdrop-blur-md"
@@ -820,9 +858,9 @@ export default function InGameUI() {
           </p>
           <div className="flex w-full space-x-4">
             <button
-              onMouseEnter={() => gameAudio.playGlobal('ui_hover')}
+              onMouseEnter={() => EventBus.emit('audio', { sound: 'ui_hover', source: 'local' })}
               onClick={() => {
-                gameAudio.playGlobal('ui_click');
+                EventBus.emit('audio', { sound: 'ui_click', source: 'local' });
                 handleSaveAndExit();
               }}
               className="flex-1 py-3 rounded-lg bg-red-900/40 border border-red-500/30 text-red-200 text-xs tracking-[0.2em] font-bold hover:bg-red-500/20 hover:border-red-400 transition-all cursor-pointer"
@@ -830,9 +868,9 @@ export default function InGameUI() {
               {isGuest ? 'YES, DISCONNECT' : 'YES, EXIT'}
             </button>
             <button
-              onMouseEnter={() => gameAudio.playGlobal('ui_hover')}
+              onMouseEnter={() => EventBus.emit('audio', { sound: 'ui_hover', source: 'local' })}
               onClick={() => {
-                gameAudio.playGlobal('ui_click');
+                EventBus.emit('audio', { sound: 'ui_click', source: 'local' });
                 setInternalMenu(null);
               }}
               className="flex-1 py-3 rounded-lg bg-white/5 border border-white/10 text-white/70 text-xs tracking-[0.2em] font-bold hover:bg-white/10 hover:text-white transition-all cursor-pointer"

@@ -53,6 +53,7 @@ const scheduleRafFlush = (get, rawGet, rawSet) => {
   rafRebuildHandle = requestAnimationFrame(() => flushDirtyChunks(get, rawGet, rawSet));
 };
 export const pass1Cache = new Map();
+const pendingUnloads = new Map();
 const flareLightMap = new Map();
 const bufferRecycleQueue = [];
 let bufferRecycleTimer = null;
@@ -108,6 +109,36 @@ export const worldActions = (rawSet, rawGet) => {
     pendingDeltas: {},
     isResetting: false,
     tickFluids: () => tickFluids(rawGet, rawSet),
+    unloadDistantChunks: (playerPosition) => {
+      const renderDistance = get().renderDistance || 8;
+      const chunks = useChunkStore.getState().chunks;
+      const unmountDistance = renderDistance + 2;
+      const unmountSq = unmountDistance * unmountDistance;
+      const playerCx = Math.floor(playerPosition[0] / 16);
+      const playerCz = Math.floor(playerPosition[2] / 16);
+
+      for (const chunkKey of Object.keys(chunks)) {
+        const [cxStr, czStr] = chunkKey.split(',');
+        const dx = parseInt(cxStr, 10) - playerCx;
+        const dz = parseInt(czStr, 10) - playerCz;
+        if (dx * dx + dz * dz > unmountSq) {
+          if (!pendingUnloads.has(chunkKey)) {
+            pendingUnloads.set(chunkKey, Date.now());
+          }
+        } else {
+          pendingUnloads.delete(chunkKey);
+        }
+      }
+    },
+    tickGarbageCollection: () => {
+      const now = Date.now();
+      for (const [chunkKey, timestamp] of pendingUnloads.entries()) {
+        if (now - timestamp > 15000) {
+          get().unloadChunk(chunkKey);
+          pendingUnloads.delete(chunkKey);
+        }
+      }
+    },
     queueBuffersForRecycling: buffers => {
       if (!buffers || buffers.length === 0) return;
       for (let i = 0; i < buffers.length; i++) {
@@ -120,6 +151,47 @@ export const worldActions = (rawSet, rawGet) => {
           flushBufferRecycleQueue();
           bufferRecycleTimer = null;
         }, 50);
+      }
+    },
+    recycleChunkDataInternal: (chunkData) => {
+      if (!chunkData) return;
+      const buffersToRecycle = [];
+      if (chunkData.buffer) {
+        const ab = chunkData.buffer.buffer || chunkData.buffer;
+        if (ab && ab.byteLength > 0) buffersToRecycle.push(ab);
+      }
+      if (chunkData.meshArrays) {
+        for (const group of Object.values(chunkData.meshArrays)) {
+          if (!group) continue;
+          if (Array.isArray(group)) {
+            for (const sub of group) {
+              ['pos', 'norm', 'color', 'uv', 'packed', 'matrices', 'heightmap'].forEach(attr => {
+                if (sub[attr] && sub[attr].buffer) {
+                  const ab = sub[attr].buffer.buffer || sub[attr].buffer;
+                  if (ab && ab.byteLength > 0) buffersToRecycle.push(ab);
+                }
+              });
+              if (sub.idx && sub.idx.buffer) {
+                const ab = sub.idx.buffer.buffer || sub.idx.buffer;
+                if (ab && ab.byteLength > 0) buffersToRecycle.push(ab);
+              }
+            }
+          } else {
+            ['pos', 'norm', 'color', 'uv', 'packed', 'matrices', 'heightmap'].forEach(attr => {
+              if (group[attr] && group[attr].buffer) {
+                const ab = group[attr].buffer.buffer || group[attr].buffer;
+                if (ab && ab.byteLength > 0) buffersToRecycle.push(ab);
+              }
+            });
+            if (group.idx && group.idx.buffer) {
+              const ab = group.idx.buffer.buffer || group.idx.buffer;
+              if (ab && ab.byteLength > 0) buffersToRecycle.push(ab);
+            }
+          }
+        }
+      }
+      if (buffersToRecycle.length > 0) {
+        rawGet().queueBuffersForRecycling(buffersToRecycle);
       }
     },
     mountNextMesh: (batchSize = 1) => {
@@ -139,6 +211,17 @@ export const worldActions = (rawSet, rawGet) => {
             }
           }
           continue;
+        } else {
+          // Chunk exists! But if it's out of visual range, ChunkRenderer won't dispose it.
+          // We must add the overwritten mesh arrays to the recycle queue!
+          if (existingChunk.meshArrays) {
+            const isVisual = useChunkStore.getState().overflowChunks.includes(nextMount.chunkKey);
+            if (!isVisual || !existingChunk.meshArrays._isMounted) {
+              for (const [key, group] of Object.entries(existingChunk.meshArrays)) {
+                if (group && !group._isCached) toRecycle[`${nextMount.chunkKey}_${key}_old`] = group;
+              }
+            }
+          }
         }
         let tightMeshArrays = null;
         if (nextMount.meshArrays) {
@@ -175,16 +258,14 @@ export const worldActions = (rawSet, rawGet) => {
             addedOverflow.push(nextMount.chunkKey);
           }
         }
+        const existingChunkData = useChunkStore.getState().chunks[nextMount.chunkKey] || {};
         const finalMeshArrays = {
           ...tightMeshArrays
         };
-        if (existingChunk.physicsRebuildId === (existingChunk.rebuildId || 0) && existingChunk.meshArrays?.__physics) {
-          finalMeshArrays.__physics = existingChunk.meshArrays.__physics;
-        }
         nextChunks[nextMount.chunkKey] = {
-          ...existingChunk,
+          ...existingChunkData,
           meshArrays: finalMeshArrays,
-          physicsRebuildId: nextMount.rebuildId ?? (existingChunk.rebuildId || 0)
+          rebuildId: nextMount.rebuildId ?? (existingChunkData.rebuildId || 0)
         };
       }
       const buffersToRecycle = [];
@@ -192,7 +273,7 @@ export const worldActions = (rawSet, rawGet) => {
         if (!group) continue;
         if (Array.isArray(group)) {
           for (const sub of group) {
-            ['pos', 'norm', 'color', 'uv'].forEach(attr => {
+            ['pos', 'norm', 'color', 'uv', 'packed', 'matrices', 'heightmap'].forEach(attr => {
               if (sub[attr] && sub[attr].buffer && sub[attr].buffer.byteLength > 0) {
                 buffersToRecycle.push(sub[attr].buffer);
               }
@@ -202,7 +283,7 @@ export const worldActions = (rawSet, rawGet) => {
             }
           }
         } else {
-          ['pos', 'norm', 'color', 'uv'].forEach(attr => {
+          ['pos', 'norm', 'color', 'uv', 'packed', 'matrices', 'heightmap'].forEach(attr => {
             if (group[attr] && group[attr].buffer && group[attr].buffer.byteLength > 0) {
               buffersToRecycle.push(group[attr].buffer);
             }
@@ -637,7 +718,8 @@ export const worldActions = (rawSet, rawGet) => {
             ...prev.chunks,
             [chunkKey]: {
               ...chunk,
-              meshArrays: newMeshArrays
+              meshArrays: newMeshArrays,
+              rebuildId: (chunk.rebuildId || 0) + 1
             }
           }
         };
@@ -1278,6 +1360,7 @@ export const worldActions = (rawSet, rawGet) => {
               const c = prev.chunks[chunkKey];
               // Discard stale worker results if the chunk was modified again during computation
               if (!c || (c.rebuildId || 0) !== targetRebuildId) {
+                get().recycleChunkDataInternal(workerResult);
                 return prev;
               }
               const finalMeshArrays = {
@@ -1287,11 +1370,8 @@ export const worldActions = (rawSet, rawGet) => {
               // PHYSICS BVH CACHING OPTIMIZATION:
               // If this chunk's blocks weren't modified (it was only rebuilt to propagate light),
               // its rebuildId hasn't changed since the last physics build.
-              // We preserve the exact Float32Array reference so React Three Rapier completely skips
-              // rebuilding the WASM BVH tree for this chunk, eliminating the lag spike!
-              if (c.physicsRebuildId === (c.rebuildId || 0) && c.meshArrays?.__physics) {
-                finalMeshArrays.__physics = c.meshArrays.__physics;
-              }
+              // Physics preservation caching has been deprecated; we rely on exact
+              // Float32Array passing from the worker which react-three-rapier handles natively.
               return {
                 pendingMeshMounts: [...prev.pendingMeshMounts, {
                   chunkKey,
@@ -1362,7 +1442,7 @@ export const worldActions = (rawSet, rawGet) => {
     loadChunkAsync: async (cx, cz, skipDB = false) => {
       const chunkKey = `${cx},${cz}`;
       if (useChunkStore.getState().chunks[chunkKey]) return 'DECORATED';
-      if (cx === 0 && cz === 0) console.log(`[LOAD CHUNK 0,0] Starting loadChunkAsync`);
+
       if (inFlightChunks.has(chunkKey)) {
         cancelledChunks.delete(chunkKey);
         return 'PRISTINE';
@@ -1547,6 +1627,7 @@ export const worldActions = (rawSet, rawGet) => {
           chunkData.buffer = new Uint32Array(chunkData.buffer);
         }
         if (cancelledChunks.has(chunkKey)) {
+          get().recycleChunkDataInternal(chunkData);
           inFlightChunks.delete(chunkKey);
           return 'CANCELLED';
         }
@@ -1656,8 +1737,87 @@ export const worldActions = (rawSet, rawGet) => {
             })();
           }
         }
+
+        // ── Handle Light Overflow ──
+        const lightOverflowPayload = chunkData.lightOverflow || [];
+        if (lightOverflowPayload.length > 0) {
+          const neighborsToRebuild = new Set();
+          (() => {
+            const prev = getCombinedState(rawGet);
+            const __patch = (prev => {
+              const nextChunks = { ...prev.chunks };
+              let changed = false;
+              for (let i = 0; i < lightOverflowPayload.length; i++) {
+                const overflow = lightOverflowPayload[i];
+                const ncx = Math.floor(overflow.x / 16);
+                const ncz = Math.floor(overflow.z / 16);
+                const nKey = `${ncx},${ncz}`;
+                const nChunk = nextChunks[nKey];
+                
+                const lx = (overflow.x % 16 + 16) % 16;
+                const lz = (overflow.z % 16 + 16) % 16;
+                const idx = getIndex(lx, overflow.y, lz);
+                
+                if (nChunk && nChunk.buffer) {
+                  const oldVal = nChunk.buffer[idx];
+                  let newVal = oldVal;
+                  if (overflow.type === 'sun') {
+                    const currentSun = oldVal >> 26 & 0xf;
+                    if (overflow.val > currentSun) {
+                      newVal = oldVal & ~(0xf << 26) | (overflow.val & 0xf) << 26;
+                    }
+                  } else {
+                    const currentBlk = oldVal >> 22 & 0xf;
+                    if (overflow.val > currentBlk) {
+                      newVal = oldVal & ~(0xf << 22) | (overflow.val & 0xf) << 22;
+                    }
+                  }
+                  if (newVal !== oldVal) {
+                    nChunk.buffer[idx] = newVal;
+                    neighborsToRebuild.add(nKey);
+                    changed = true;
+                  }
+                } else if (pass1Cache.has(nKey)) {
+                  const pData = pass1Cache.get(nKey);
+                  if (pData && pData.buffer) {
+                    const oldVal = pData.buffer[idx];
+                    let newVal = oldVal;
+                    if (overflow.type === 'sun') {
+                      const currentSun = oldVal >> 26 & 0xf;
+                      if (overflow.val > currentSun) {
+                        newVal = oldVal & ~(0xf << 26) | (overflow.val & 0xf) << 26;
+                      }
+                    } else {
+                      const currentBlk = oldVal >> 22 & 0xf;
+                      if (overflow.val > currentBlk) {
+                        newVal = oldVal & ~(0xf << 22) | (overflow.val & 0xf) << 22;
+                      }
+                    }
+                    if (newVal !== oldVal) {
+                      pData.buffer[idx] = newVal;
+                    }
+                  }
+                }
+              }
+              if (changed) {
+                neighborsToRebuild.forEach(k => {
+                  nextChunks[k] = { ...nextChunks[k], rebuildId: (nextChunks[k].rebuildId || 0) + 1 };
+                });
+                return { chunks: nextChunks };
+              }
+              return {};
+            })(prev);
+            
+            if (__patch.chunks !== undefined) {
+              useChunkStore.setState({ chunks: __patch.chunks });
+            }
+          })();
+          neighborsToRebuild.forEach(nKey => {
+            if (useChunkStore.getState().chunks[nKey]) get().requestMeshRebuild(nKey);
+          });
+        }
+
         chunkData.rebuildId = 0;
-        chunkData.physicsRebuildId = 0;
         const pending = get().pendingDeltas[chunkKey];
         if (pending) {
           for (let i = 0; i < pending.length; i += 2) {
@@ -1802,7 +1962,7 @@ export const worldActions = (rawSet, rawGet) => {
     unloadChunk: async chunkKey => {
       if (pass1Cache.has(chunkKey)) pass1Cache.delete(chunkKey);
       if (inFlightChunks.has(chunkKey)) {
-        cancelledChunks.add(chunkKey);
+        get().cancelLoadChunk(chunkKey);
         return;
       }
       const [cxStr, czStr] = chunkKey.split(',');
@@ -1815,6 +1975,9 @@ export const worldActions = (rawSet, rawGet) => {
       inFlightRebuildSet.delete(chunkKey);
       
       if (!chunkData) return;
+
+      get().recycleChunkDataInternal(chunkData);
+
       (() => {
         const prev = getCombinedState(rawGet);
         const __patch = (prev => {
@@ -2722,7 +2885,7 @@ export const worldActions = (rawSet, rawGet) => {
         })();
       }
     },
-    triggerExplosion: (ex, ey, ez, radius = 4) => {
+    triggerExplosion: (ex, ey, ez, radius = 3) => {
       const state = get();
       const blocksToDestroy = [];
       const minX = Math.floor(ex - radius);
@@ -2762,7 +2925,7 @@ export const worldActions = (rawSet, rawGet) => {
         state.removeCubesBulk(blocksToDestroy);
       }
       if (state.requestAreaDamage) {
-        setTimeout(() => state.requestAreaDamage([ex, ey, ez], radius + 3, 1000), 0);
+        setTimeout(() => state.requestAreaDamage([ex, ey, ez], radius + 3, 250), 0);
       }
       const blastRadius = Math.ceil(radius);
       for (let dx = -blastRadius - 1; dx <= blastRadius + 1; dx++) {

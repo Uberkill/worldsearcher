@@ -19,12 +19,13 @@ const TOOL_COLORS = {
   pickaxe: '#777777',
   lantern: '#ffcc44',
   flare: '#ff8800',
+  repair_tool: '#8b5cf6',
 };
 const getColor = (texture) =>
   TOOL_COLORS[texture] ?? GlobalRegistry[texture]?.color ?? '#ffffff';
 
 // Items that use the long "tool" shape instead of a cube
-const TOOL_SHAPES = new Set(['sword', 'gun', 'pickaxe', 'lantern', 'flare']);
+const TOOL_SHAPES = new Set(['sword', 'gun', 'pickaxe', 'lantern', 'flare', 'repair_tool']);
 
 // Shared geometry for the viewmodel mesh — avoid re-allocation on texture change
 const CUBE_GEO = new THREE.BoxGeometry(0.4, 0.4, 0.4);
@@ -201,12 +202,41 @@ const FallbackModels = {
       </mesh>
     </group>
   ),
+  repair_tool: () => (
+    <group position={[0, -0.2, -0.2]} rotation={[-0.4, 0, 0]}>
+      {/* Base Handle */}
+      <mesh castShadow receiveShadow position={[0, 0, 0]}>
+        <boxGeometry args={[0.06, 0.4, 0.06]} />
+        <meshStandardMaterial color="#333333" metalness={0.8} roughness={0.3} />
+      </mesh>
+      {/* Control Ring */}
+      <mesh castShadow receiveShadow position={[0, 0.15, 0]}>
+        <boxGeometry args={[0.08, 0.05, 0.08]} />
+        <meshStandardMaterial color="#111111" />
+      </mesh>
+      {/* Nanite Energy Tip */}
+      <mesh castShadow receiveShadow position={[0, 0.25, 0]}>
+        <boxGeometry args={[0.04, 0.15, 0.04]} />
+        <meshStandardMaterial color="#8b5cf6" emissive="#8b5cf6" emissiveIntensity={2.5} />
+      </mesh>
+      {/* Side Conductors */}
+      <mesh castShadow receiveShadow position={[0.04, 0.22, 0]}>
+        <boxGeometry args={[0.02, 0.08, 0.02]} />
+        <meshStandardMaterial color="#aaaaaa" metalness={1} />
+      </mesh>
+      <mesh castShadow receiveShadow position={[-0.04, 0.22, 0]}>
+        <boxGeometry args={[0.02, 0.08, 0.02]} />
+        <meshStandardMaterial color="#aaaaaa" metalness={1} />
+      </mesh>
+    </group>
+  ),
 };
 
 export const ViewModel = () => {
   const { camera } = useThree();
   const meshRef = useRef();
   const activeTexture = useStore((state) => state.texture);
+  const isSeated = useStore((state) => state.isSeated);
   const [isSwinging, setIsSwinging] = useState(false);
   const timeoutRef = useRef(null);
 
@@ -297,7 +327,7 @@ export const ViewModel = () => {
     <>
       <primitive object={camera} />
       {createPortal(
-        <group ref={meshRef}>
+        <group ref={meshRef} visible={!isSeated}>
           {modelUrl ? (
             <ErrorBoundary
               fallback={FallbackComponent ? <FallbackComponent /> : null}

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 export const useInventoryStore = create((set, get) => ({
   chests: {},
+  machines: {},
   droppedItems: [],
   tombstones: [],
   debris: [],
@@ -10,6 +11,7 @@ export const useInventoryStore = create((set, get) => ({
   shadowSetState: (newState) => {
     const updates = {};
     if (newState.chests !== undefined) updates.chests = newState.chests;
+    if (newState.machines !== undefined) updates.machines = newState.machines;
     if (newState.droppedItems !== undefined) updates.droppedItems = newState.droppedItems;
     if (newState.tombstones !== undefined) updates.tombstones = newState.tombstones;
     if (newState.debris !== undefined) updates.debris = newState.debris;

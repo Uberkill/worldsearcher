@@ -13,6 +13,8 @@ class WorkerManager {
     this._pending = new Map(); // workerObj → resolve fn
     this._queue = []; // waiting jobs
     this.workers = [];
+    this.pingPongPool = [];
+    this.activeChunks = new Set(); // Prevent chunk data race conditions
 
     for (let i = 0; i < POOL_SIZE; i++) {
       this.spawnWorker(i);
@@ -56,8 +58,11 @@ class WorkerManager {
 
   generatePass1(cx, cz, seed) {
     return new Promise((resolve) => {
-      const workerObj = this._idle.pop();
-      if (workerObj) {
+      const key = `${cx},${cz}`;
+      const canDispatch = this._idle.length > 0 && !this.activeChunks.has(key);
+      if (canDispatch) {
+        const workerObj = this._idle.pop();
+        this.activeChunks.add(key);
         this._dispatchGeneratePass1(workerObj, cx, cz, seed, resolve);
       } else {
         this._queue.push({ type: 'generatePass1', cx, cz, seed, resolve });
@@ -67,8 +72,11 @@ class WorkerManager {
 
   generatePass2(cx, cz, buffer, getSurfaceHeightMap, seed) {
     return new Promise((resolve) => {
-      const workerObj = this._idle.pop();
-      if (workerObj) {
+      const key = `${cx},${cz}`;
+      const canDispatch = this._idle.length > 0 && !this.activeChunks.has(key);
+      if (canDispatch) {
+        const workerObj = this._idle.pop();
+        this.activeChunks.add(key);
         this._dispatchGeneratePass2(
           workerObj,
           cx,
@@ -125,10 +133,27 @@ class WorkerManager {
     });
   }
 
-  rebuild(packedBuffer, neighborBuffers, cx, cz, seed, removedLights) {
+  cancelAllPending() {
+    this._queue.forEach(t => t.resolve({ error: 'CANCELLED' }));
+    this._queue = [];
+    for (const resolve of this._pending.values()) {
+      resolve({ error: 'CANCELLED' });
+    }
+    this._pending.clear();
+    if (window.__workerTelemetry) {
+      window.__workerTelemetry.activeJobs = 0;
+      window.__workerTelemetry.queueLength = 0;
+    }
+  }
+
+  rebuild(packedBuffer, neighborBuffers, cx, cz, seed, removedLights, isHighPriority = false) {
     return new Promise((resolve) => {
-      const workerObj = this._idle.pop();
-      if (workerObj) {
+      const key = `${cx},${cz}`;
+      const canDispatch = this._idle.length > 0 && !this.activeChunks.has(key);
+      
+      if (canDispatch) {
+        const workerObj = this._idle.pop();
+        this.activeChunks.add(key);
         this._dispatchRebuild(
           workerObj,
           cx,
@@ -139,7 +164,8 @@ class WorkerManager {
           removedLights
         );
       } else {
-        // PRIORITY: Mesh rebuilds (breaking/placing blocks) must jump ahead of chunk generation!
+        // PRIORITY: High-priority mesh rebuilds (breaking/placing blocks by player) jump ahead of generation!
+        // Low-priority rebuilds (decorator bleeds) append to the back to prevent blocking terrain queue.
         const firstGenIdx = this._queue.findIndex(
           (t) => t.type === 'generatePass1' || t.type === 'generatePass2'
         );
@@ -153,7 +179,7 @@ class WorkerManager {
           removedLights,
         };
 
-        if (firstGenIdx !== -1) {
+        if (isHighPriority && firstGenIdx !== -1) {
           this._queue.splice(firstGenIdx, 0, task);
         } else {
           this._queue.push(task);
@@ -170,9 +196,13 @@ class WorkerManager {
         if (batch.length > 0) {
             const workerObj = this.workers[i];
             if (workerObj && !workerObj.isDead) {
-                try {
-                    workerObj.instance.postMessage({ type: 'RECYCLE', buffers: batch }, batch);
-                } catch(_e) {}
+                const MAX_TRANSFER = 50;
+                for (let k = 0; k < batch.length; k += MAX_TRANSFER) {
+                    const subBatch = batch.slice(k, k + MAX_TRANSFER);
+                    try {
+                        workerObj.instance.postMessage({ type: 'RECYCLE', buffers: subBatch }, subBatch);
+                    } catch(_e) {}
+                }
             }
         }
     });
@@ -211,37 +241,44 @@ class WorkerManager {
   processNextJob() {
     window.__workerTelemetry.queueLength = this._queue.length;
     if (this._queue.length > 0) {
-      const workerObj = this._idle.pop();
-      if (workerObj) {
-        const task = this._queue.shift();
-        if (task.type === 'generatePass1') {
-          this._dispatchGeneratePass1(
-            workerObj,
-            task.cx,
-            task.cz,
-            task.seed,
-            task.resolve
-          );
-        } else if (task.type === 'generatePass2') {
-          this._dispatchGeneratePass2(
-            workerObj,
-            task.cx,
-            task.cz,
-            task.buffer,
-            task.getSurfaceHeightMap,
-            task.seed,
-            task.resolve
-          );
-        } else if (task.type === 'rebuild') {
-          this._dispatchRebuild(
-            workerObj,
-            task.cx,
-            task.cz,
-            task.packedBuffer,
-            task.neighborBuffers,
-            task.resolve,
-            task.removedLights
-          );
+      if (this._idle.length > 0) {
+        // Find the first task whose chunk isn't actively being processed by another worker
+        const taskIdx = this._queue.findIndex((t) => !this.activeChunks.has(`${t.cx},${t.cz}`));
+        
+        if (taskIdx !== -1) {
+          const workerObj = this._idle.pop();
+          const task = this._queue.splice(taskIdx, 1)[0];
+          this.activeChunks.add(`${task.cx},${task.cz}`);
+          
+          if (task.type === 'generatePass1') {
+            this._dispatchGeneratePass1(
+              workerObj,
+              task.cx,
+              task.cz,
+              task.seed,
+              task.resolve
+            );
+          } else if (task.type === 'generatePass2') {
+            this._dispatchGeneratePass2(
+              workerObj,
+              task.cx,
+              task.cz,
+              task.buffer,
+              task.getSurfaceHeightMap,
+              task.seed,
+              task.resolve
+            );
+          } else if (task.type === 'rebuild') {
+            this._dispatchRebuild(
+              workerObj,
+              task.cx,
+              task.cz,
+              task.packedBuffer,
+              task.neighborBuffers,
+              task.resolve,
+              task.removedLights
+            );
+          }
         }
       }
     }
@@ -249,6 +286,7 @@ class WorkerManager {
 
   _dispatchGeneratePass1(workerObj, cx, cz, seed, resolve) {
     workerObj.isBusy = true;
+    workerObj.activeChunkKey = `${cx},${cz}`;
     workerObj.lastPingTime = Date.now();
     workerObj.startTime = performance.now();
     this._pending.set(workerObj, resolve);
@@ -266,6 +304,7 @@ class WorkerManager {
     resolve
   ) {
     workerObj.isBusy = true;
+    workerObj.activeChunkKey = `${cx},${cz}`;
     workerObj.lastPingTime = Date.now();
     workerObj.startTime = performance.now();
     this._pending.set(workerObj, resolve);
@@ -322,35 +361,35 @@ class WorkerManager {
 
       const packedBuf = buffer.buffer;
 
-      // IMPORTANT: Do NOT transfer the heightmap buffer!
-      // getSurfaceHeightMap is ~1KB (16×16 float32). Cloning it via structured-clone is free (<0.01ms).
-      // If we transferred it, the Float32Array in pass1Cache would become detached (byteLength=0).
-      // A re-queued chunk would then hit the guard above and bail with DETACHED_BUFFER — that's correct
-      // fallback behaviour. But even without re-queuing, a transferred heightmap causes the next
-      // neighbor that reads pass1Cache to crash. Always clone it.
-      //
-      // [ARCHITECTURAL CONSTRAINT: DO NOT TOUCH]
-      // Why are we cloning `packedBuf` and `neighborBuffers` instead of transferring them?
-      //
-      // 1. If we transfer `packedBuf`, it becomes detached (neutered) on the main thread.
-      //    But `packedBuf` lives in `pass1Cache` and is actively used by neighboring chunks
-      //    to build their own boundary meshes! Detaching it crashes the neighboring chunk generations.
-      // 2. Why not use `SharedArrayBuffer`? Because of strict CORS / Cross-Origin Isolation constraints
-      //    on modern web browsers. Enabling SABs breaks many external assets and CDNs.
-      // 3. Why not extract thin 1D slices on the main thread? Looping 4096 times per neighbor on the
-      //    main thread causes severe frame drops. The browser's native C++ structured clone algorithm
-      //    (`postMessage`) can clone 1.1MB of contiguous memory in < 1ms, which is vastly faster.
+      // Implement Input Ping-Pong Pool to eliminate 2.8MB GC Spikes!
+      const transfers = new Set();
+      
+      let pBuf = this.pingPongPool.pop();
+      if (!pBuf || pBuf.byteLength !== packedBuf.byteLength) pBuf = new ArrayBuffer(packedBuf.byteLength);
+      new Uint32Array(pBuf).set(new Uint32Array(packedBuf));
+      transfers.add(pBuf);
+
+      const safeNeighborBuffers = neighborBuffers.map(n => {
+         if (!n.buffer || n.buffer.byteLength === 0) return { cx: n.cx, cz: n.cz, buffer: new Uint32Array(0) };
+         let nBuf = this.pingPongPool.pop();
+         if (!nBuf || nBuf.byteLength !== n.buffer.byteLength) nBuf = new ArrayBuffer(n.buffer.byteLength);
+         const sourceArray = n.buffer instanceof Uint32Array ? n.buffer : new Uint32Array(n.buffer);
+         new Uint32Array(nBuf).set(sourceArray);
+         transfers.add(nBuf);
+         return { cx: n.cx, cz: n.cz, buffer: new Uint32Array(nBuf) };
+      });
+
       workerObj.instance.postMessage(
         {
           type: 'generatePass2',
           cx,
           cz,
-          buffer: packedBuf,
+          buffer: pBuf,
           getSurfaceHeightMap: getSurfaceHeightMap.buffer,
           seed,
-          neighborBuffers,
+          neighborBuffers: safeNeighborBuffers,
         },
-        [] // No transfers — everything is structured-cloned to keep pass1Cache buffers alive.
+        Array.from(transfers)
       );
     } catch (e) {
       console.error('[WorkerManager] Generate postMessage failed:', e);
@@ -372,6 +411,7 @@ class WorkerManager {
     removedLights
   ) {
     workerObj.isBusy = true;
+    workerObj.activeChunkKey = `${cx},${cz}`;
     workerObj.lastPingTime = Date.now();
     workerObj.startTime = performance.now();
     this._pending.set(workerObj, resolve);
@@ -391,13 +431,32 @@ class WorkerManager {
     }
 
     try {
+      let safePackedBuffer = packedBuffer;
+      if (packedBuffer && packedBuffer.buffer) {
+         let pBuf = this.pingPongPool.pop();
+         if (!pBuf || pBuf.byteLength !== packedBuffer.buffer.byteLength) pBuf = new ArrayBuffer(packedBuffer.buffer.byteLength);
+         new Uint32Array(pBuf).set(new Uint32Array(packedBuffer.buffer));
+         uniqueTransfers.add(pBuf);
+         safePackedBuffer = new Uint32Array(pBuf);
+      }
+
+      const safeNeighborBuffers = neighborBuffers ? neighborBuffers.map(n => {
+         if (!n.buffer || n.buffer.byteLength === 0) return { cx: n.cx, cz: n.cz, buffer: new Uint32Array(0) };
+         let nBuf = this.pingPongPool.pop();
+         if (!nBuf || nBuf.byteLength !== n.buffer.byteLength) nBuf = new ArrayBuffer(n.buffer.byteLength);
+         const sourceArray = n.buffer instanceof Uint32Array ? n.buffer : new Uint32Array(n.buffer);
+         new Uint32Array(nBuf).set(sourceArray);
+         uniqueTransfers.add(nBuf);
+         return { cx: n.cx, cz: n.cz, buffer: new Uint32Array(nBuf) };
+      }) : [];
+
       workerObj.instance.postMessage(
         {
           type: 'rebuild',
           cx,
           cz,
-          packedBuffer,
-          neighborBuffers,
+          packedBuffer: safePackedBuffer,
+          neighborBuffers: safeNeighborBuffers,
           removedLights,
         },
         Array.from(uniqueTransfers)
@@ -419,6 +478,10 @@ class WorkerManager {
     }
 
     workerObj.isBusy = false;
+    if (workerObj.activeChunkKey) {
+        this.activeChunks.delete(workerObj.activeChunkKey);
+        workerObj.activeChunkKey = null;
+    }
 
     if (workerObj.startTime) {
       const ms = performance.now() - workerObj.startTime;
@@ -435,6 +498,14 @@ class WorkerManager {
     if (resolve) {
       this._pending.delete(workerObj);
       window.__workerTelemetry.activeJobs = this._pending.size;
+
+      if (data.recycledBuffers) {
+        for (const rb of data.recycledBuffers) {
+           if (rb && rb.byteLength > 0 && this.pingPongPool.length < 50) {
+             this.pingPongPool.push(rb);
+           }
+        }
+      }
 
       if (data.type === 'CORRUPTED_SAVE') {
         resolve({ error: 'CORRUPTED_SAVE', chunkKey: data.chunkKey });
@@ -458,6 +529,10 @@ class WorkerManager {
   _onError(workerObj, e) {
     console.error('[WorkerManager] worker error:', e?.message || e);
     workerObj.isBusy = false;
+    if (workerObj.activeChunkKey) {
+        this.activeChunks.delete(workerObj.activeChunkKey);
+        workerObj.activeChunkKey = null;
+    }
 
     const resolve = this._pending.get(workerObj);
     if (resolve) resolve({ error: 'WORKER_FATAL_ERROR' });

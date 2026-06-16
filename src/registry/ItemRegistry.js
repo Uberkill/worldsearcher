@@ -2,9 +2,9 @@ import itemsConfig from '../data/items.json';
 
 export const ItemRegistry = itemsConfig;
 
-export const ItemIds = {};
-export const ItemById = {};
-export const ItemKeyById = {};
+const ItemIds = {};
+const ItemById = {};
+const ItemKeyById = {};
 
 Object.keys(ItemRegistry).forEach((key) => {
   const item = ItemRegistry[key];
@@ -14,4 +14,4 @@ Object.keys(ItemRegistry).forEach((key) => {
   ItemKeyById[id] = key;
 });
 
-export const getItemKeys = () => Object.keys(ItemRegistry);
+

@@ -1,4 +1,4 @@
-export const CraftingRecipes = [
+const CraftingRecipes = [
   {
     shapeless: true,
     input: ['log'],
@@ -41,6 +41,24 @@ export const CraftingRecipes = [
       [null, 'wood', null],
     ],
     output: { texture: 'pickaxe', count: 1 },
+  },
+  {
+    shapeless: true,
+    input: ['spark_node', 'stone', 'stone'],
+    output: { texture: 'void_canister', count: 1 },
+  },
+  {
+    shape: [
+      ['ship_hull', 'spark_node', 'ship_hull'],
+      ['ship_hull', 'spark_node', 'ship_hull'],
+    ],
+    output: { texture: 'warp_drive_engine', count: 1 },
+  },
+  {
+    shape: [
+      ['crystal', 'spark_node', 'crystal'],
+    ],
+    output: { texture: 'warp_capacitor', count: 1 },
   },
 ];
 

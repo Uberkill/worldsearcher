@@ -1,4 +1,4 @@
-import { get, set, del, keys } from 'idb-keyval';
+import { get, set, keys } from 'idb-keyval';
 import './chunkData';
 import { playerPosition, playerRotation } from '../globals';
 
@@ -83,10 +83,10 @@ if (typeof window !== 'undefined') {
   document.addEventListener('visibilitychange', visibilityListener);
 }
 
-export const saveChunkToDB = async (chunkKey, chunkData) => {
+export const saveChunkToDB = async (chunkKey, chunkData, seed) => {
   const start = performance.now();
   const uint32Array = chunkData.buffer instanceof Uint32Array ? chunkData.buffer : new Uint32Array(chunkData.buffer);
-  const result = await sendWorkerRequest('SAVE_CHUNK', { chunkKey, slotPrefix: getSlotPrefix(), buffer: uint32Array });
+  const result = await sendWorkerRequest('SAVE_CHUNK', { chunkKey, slotPrefix: getSlotPrefix(), buffer: uint32Array, seed });
   const latency = performance.now() - start;
 
   if (window.__DEBUG_STATS__) {
@@ -99,9 +99,9 @@ export const saveChunkToDB = async (chunkKey, chunkData) => {
   return result;
 };
 
-export const loadChunkFromDB = async (chunkKey) => {
+export const loadChunkFromDB = async (chunkKey, seed) => {
   const start = performance.now();
-  const result = await sendWorkerRequest('LOAD_CHUNK', { chunkKey, slotPrefix: getSlotPrefix() });
+  const result = await sendWorkerRequest('LOAD_CHUNK', { chunkKey, slotPrefix: getSlotPrefix(), seed });
   const latency = performance.now() - start;
 
   if (window.__DEBUG_STATS__) {
@@ -118,27 +118,17 @@ export const cancelLoadFromDB = (_chunkKey) => {
   // Not strictly needed with async worker unless we add cancellation logic
 };
 
-export const deleteChunkFromDB = async (chunkKey) => {
-  await sendWorkerRequest('DELETE_CHUNK', { chunkKey, slotPrefix: getSlotPrefix() });
+export const deleteChunkFromDB = async (chunkKey, seed) => {
+  await sendWorkerRequest('DELETE_CHUNK', { chunkKey, slotPrefix: getSlotPrefix(), seed });
 };
 
 export const clearDB = async () => {
-  const allKeys = await keys();
   const prefix = getSlotPrefix();
-  for (const k of allKeys) {
-    if (k.startsWith(`${prefix}_`) || k === `saveState_${prefix}`) {
-      await del(k);
-    }
-  }
+  await sendWorkerRequest('CLEAR_DB', { slotId: prefix, isSlotPrefix: true });
 };
 
 export const clearSlotDB = async (slotId) => {
-  const allKeys = await keys();
-  for (const k of allKeys) {
-    if (k.startsWith(`${slotId}_`) || k === `saveState_slot${slotId}`) {
-      await del(k);
-    }
-  }
+  await sendWorkerRequest('CLEAR_DB', { slotId: slotId, isSlotPrefix: false });
 };
 
 // --- WORLD ENTITIES EXPORTER ---
@@ -150,6 +140,18 @@ export const saveWorldEntities = async (data) => {
 export const loadWorldEntities = async () => {
   const prefix = getSlotPrefix();
   return await get(`${prefix}_world_entities`);
+};
+
+// --- SHIP BUFFER PERSISTENCE ---
+export const saveShipToDB = async (shipBuffer) => {
+  const prefix = getSlotPrefix();
+  // shipBuffer is a Uint32Array, we can just save it
+  await set(`${prefix}_ship_buffer`, shipBuffer);
+};
+
+export const loadShipFromDB = async () => {
+  const prefix = getSlotPrefix();
+  return await get(`${prefix}_ship_buffer`);
 };
 
 // --- WORLD EXPORTER (.vx Blob) ---

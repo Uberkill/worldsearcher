@@ -67,6 +67,12 @@ export const SwarmManager = ({ type, max }) => {
   // Mesh Refs
   const bodyRef = useRef();
   const headRef = useRef();
+
+  const eyeLRef = useRef();
+  const eyeRRef = useRef();
+  const eyeMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#ff0000' }), []);
+  const eyeGeo = useMemo(() => cfg.eyeGeo ? new THREE.BoxGeometry(...cfg.eyeGeo) : null, [cfg.eyeGeo]);
+
   const armLRef = useRef();
   const armRRef = useRef();
   const legLRef = useRef();
@@ -91,6 +97,7 @@ export const SwarmManager = ({ type, max }) => {
     fuseStart: new Float64Array(max),
     lastAttack: new Float64Array(max),
     jumpCooldown: new Float64Array(max),
+      teleportCooldown: new Float64Array(max),
     flashUntil: new Float64Array(max),
     spawnTime: new Float64Array(max),
     // A* Pathfinding Data
@@ -397,11 +404,28 @@ export const SwarmManager = ({ type, max }) => {
 
       const pos = rb.translation();
       const vel = rb.linvel();
+        let targetY = pos.y;
+        if (cfg.isFlying) {
+          if (p.pathLengths[i] > 0) {
+            const wdx = p.paths[i * 90 + p.pathIndexes[i] * 3] - pos.x;
+            const wdz = p.paths[i * 90 + p.pathIndexes[i] * 3 + 2] - pos.z;
+            const distSq = wdx*wdx + wdz*wdz;
+            if (distSq < 1.0 && p.pathIndexes[i] < p.pathLengths[i] - 1) {
+              p.pathIndexes[i]++;
+            }
+            targetY = p.paths[i * 90 + p.pathIndexes[i] * 3 + 1] + cfg.yOffset;
+          }
+        }
 
       // Fix: Clamp vertical velocity to prevent entities from launching into the sky
       // Sometimes physics glitches push them up with immense force. This caps their upward and downward speed.
       if (!Number.isFinite(vel.y)) vel.y = 0;
-      vel.y = Math.max(-30, Math.min(10, vel.y));
+      if (cfg.isFlying) {
+            vel.y = (targetY - pos.y) * 2.0;
+            vel.y = Math.max(-10, Math.min(10, vel.y));
+          } else {
+            vel.y = Math.max(-30, Math.min(10, vel.y));
+          }
 
       _pos.set(pos.x, pos.y, pos.z);
       _vel.set(vel.x, vel.y, vel.z);
@@ -432,7 +456,7 @@ export const SwarmManager = ({ type, max }) => {
               // --- DROP XP ORB ---
               let xpAmount = 5;
               if (type === 'beast') xpAmount = 50;
-              else if (type === 'creeper') xpAmount = 15;
+              else if (type === 'bloop') xpAmount = 15;
 
               useStore.getState().updateObjectiveProgress('KILL', type, 1);
               
@@ -500,12 +524,30 @@ export const SwarmManager = ({ type, max }) => {
         _mat.makeTranslation(0, -100, 0);
         if (bodyRef.current) bodyRef.current.setMatrixAt(i, _mat);
         if (headRef.current) headRef.current.setMatrixAt(i, _mat);
-        if (cfg.isHumanoid) {
+
+        if (cfg.hasRedEyes && eyeLRef.current && eyeRRef.current) {
+          const eyeDist = 0.2;
+          const eyeForward = 0.26;
+          // Left eye (Zero-GC)
+          _aPos.set(-eyeDist, 0, eyeForward).applyQuaternion(_hQ).add(_hPos);
+          _mat.compose(_aPos, _hQ, _scale);
+          eyeLRef.current.setMatrixAt(i, _mat);
+          // Right eye (Zero-GC)
+          _aPos.set(eyeDist, 0, eyeForward).applyQuaternion(_hQ).add(_hPos);
+          _mat.compose(_aPos, _hQ, _scale);
+          eyeRRef.current.setMatrixAt(i, _mat);
+        }
+
+        if (cfg.isHumanoid) { 
           armLRef.current?.setMatrixAt(i, _mat);
           armRRef.current?.setMatrixAt(i, _mat);
           legLRef.current?.setMatrixAt(i, _mat);
           legRRef.current?.setMatrixAt(i, _mat);
-        }
+         }
+      if (cfg.hasRedEyes && eyeLRef.current && eyeRRef.current) {
+        eyeLRef.current.instanceMatrix.needsUpdate = true;
+        eyeRRef.current.instanceMatrix.needsUpdate = true;
+      }
         continue;
       }
 
@@ -516,7 +558,7 @@ export const SwarmManager = ({ type, max }) => {
         const mode = p.mode[i];
 
         // Kamikaze (Creeper)
-        if (type === 'creeper') {
+        if (type === 'bloop') {
           if (mode === MODE_EXPLODING) {
             rb.setLinvel({ x: 0, y: vel.y, z: 0 }, true);
             const flash = Math.sin(((now - p.fuseStart[i]) / 1500) * 30) > 0;
@@ -843,6 +885,20 @@ export const SwarmManager = ({ type, max }) => {
 
         _mat.compose(_hPos, _hQ, _scale);
         headRef.current.setMatrixAt(i, _mat);
+
+        if (cfg.hasRedEyes && eyeLRef.current && eyeRRef.current) {
+          const eyeDist = 0.2;
+          const eyeForward = 0.26;
+          // Left eye (Zero-GC)
+          _aPos.set(-eyeDist, 0, eyeForward).applyQuaternion(_hQ).add(_hPos);
+          _mat.compose(_aPos, _hQ, _scale);
+          eyeLRef.current.setMatrixAt(i, _mat);
+          // Right eye (Zero-GC)
+          _aPos.set(eyeDist, 0, eyeForward).applyQuaternion(_hQ).add(_hPos);
+          _mat.compose(_aPos, _hQ, _scale);
+          eyeRRef.current.setMatrixAt(i, _mat);
+        }
+
       }
 
       // Limbs (Humanoids)
@@ -953,6 +1009,40 @@ export const SwarmManager = ({ type, max }) => {
       if (closestId !== -1) {
         const dmg = 50 * useStore.getState().playerDamageMult;
         p.health[closestId] -= dmg;
+        const now = Date.now();
+        let teleported = false;
+        if (cfg.subTypeId === 0 && now > p.teleportCooldown[closestId]) { // shadowman is subTypeId 0
+          // Zero-GC Teleport chunk search
+          const angle = Math.random() * Math.PI * 2;
+          const dist = 5 + Math.random() * 5;
+          const tx = Math.floor(hitPos.x + Math.cos(angle) * dist);
+          const tz = Math.floor(hitPos.z + Math.sin(angle) * dist);
+          const cx = Math.floor(tx / 16);
+          const cz = Math.floor(tz / 16);
+          const chunk = useChunkStore.getState().chunks[`${cx},${cz}`];
+          if (chunk && chunk.buffer) {
+            const lx = ((tx % 16) + 16) % 16;
+            const lz = ((tz % 16) + 16) % 16;
+            for (let ly = Math.floor(hitPos.y + 5); ly >= Math.floor(hitPos.y - 5); ly--) {
+              if (ly < -32 || ly > 255) continue;
+              const idx1 = (ly + 32) * 256 + lz * 16 + lx;
+              const idx2 = (ly + 31) * 256 + lz * 16 + lx;
+              if (chunk.buffer[idx1] === 0 && chunk.buffer[idx2] > 0) {
+                const targetRb = typeof physicsRef.current?.at === 'function' ? physicsRef.current.at(closestId) : physicsRef.current?.[closestId];
+                if (targetRb) {
+                  targetRb.setTranslation({ x: tx + 0.5, y: ly + cfg.yOffset, z: tz + 0.5 }, true);
+                  p.visualX[closestId] = tx + 0.5;
+                  p.visualY[closestId] = ly + cfg.yOffset;
+                  p.visualZ[closestId] = tz + 0.5;
+                  p.teleportCooldown[closestId] = now + 500;
+                  teleported = true;
+                  break;
+                }
+              }
+            }
+          }
+        }
+
         if (cfg.attackDamage === 0) {
           p.mode[closestId] = MODE_FLEE;
           p.timer[closestId] = Date.now() + 5000; // Flee for 5 seconds
@@ -1012,7 +1102,13 @@ export const SwarmManager = ({ type, max }) => {
         />
       </instancedMesh>
 
-      {cfg.isHumanoid && (
+      {cfg.hasRedEyes && eyeGeo && (
+          <>
+            <instancedMesh ref={eyeLRef} args={[eyeGeo, eyeMat, max]} frustumCulled={false} />
+            <instancedMesh ref={eyeRRef} args={[eyeGeo, eyeMat, max]} frustumCulled={false} />
+          </>
+        )}
+        {cfg.isHumanoid && (
         <>
           <instancedMesh
             ref={armLRef}

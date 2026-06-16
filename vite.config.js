@@ -8,4 +8,8 @@ export default defineConfig({
   esbuild: {
     drop: ['console', 'debugger'],
   },
+  test: {
+    exclude: ['e2e/*', 'node_modules/*'],
+    setupFiles: ['./tests/setup.js'],
+  },
 });

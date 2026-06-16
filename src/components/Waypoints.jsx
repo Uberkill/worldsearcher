@@ -2,9 +2,13 @@ import { useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Billboard, Text } from '@react-three/drei';
 import { useSyncStore } from '../stores/syncSlice';
+import { useStore } from '../stores/useStore';
+import { shipTransforms } from '../globals';
 
 export const Waypoints = () => {
   const waypoints = useSyncStore((state) => state.waypoints);
+  // Re-render when region changes
+  const shipRegion = useStore((state) => state.shipRegion);
   const [activeWaypoints, setActiveWaypoints] = useState([]);
   const { camera } = useThree();
 
@@ -38,6 +42,7 @@ export const Waypoints = () => {
           camera={camera}
         />
       ))}
+      {shipTransforms.has('default') && <ShipWaypointMarker camera={camera} />}
     </group>
   );
 };
@@ -93,6 +98,56 @@ const WaypointMarker = ({ waypoint, camera }) => {
         depthTest={false}
         fillOpacity={opacity}
         outlineOpacity={opacity}
+      >
+        {distance}m
+      </Text>
+    </Billboard>
+  );
+};
+
+const ShipWaypointMarker = ({ camera }) => {
+  const meshRef = useRef();
+  const [distance, setDistance] = useState(0);
+
+  useFrame(() => {
+    if (meshRef.current) {
+      const shipTransform = shipTransforms.get('default');
+      if (shipTransform) {
+        meshRef.current.position.set(shipTransform.position.x, shipTransform.position.y + 5, shipTransform.position.z);
+      }
+      const dist = camera.position.distanceTo(meshRef.current.position);
+      setDistance(Math.round(dist));
+      const scale = Math.max(1, dist / 15);
+      meshRef.current.scale.set(scale, scale, scale);
+    }
+  });
+
+  return (
+    <Billboard
+      ref={meshRef}
+      position={[0, -10000, 0]}
+    >
+      <Text
+        position={[0, 0.4, 0]}
+        fontSize={0.5}
+        color="#00ffff"
+        outlineWidth={0.05}
+        outlineColor="black"
+        anchorX="center"
+        anchorY="middle"
+        depthTest={false}
+      >
+        ⚓
+      </Text>
+      <Text
+        position={[0, -0.1, 0]}
+        fontSize={0.25}
+        color="#00ffff"
+        outlineWidth={0.03}
+        outlineColor="black"
+        anchorX="center"
+        anchorY="middle"
+        depthTest={false}
       >
         {distance}m
       </Text>

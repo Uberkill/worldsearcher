@@ -7,7 +7,7 @@ export const createChunkMaterial = (textureAtlas, isTransparent = false) => {
         map: textureAtlas,
         transparent: true,
         alphaTest: 0.1, // Discard fully transparent pixels
-        depthWrite: false,
+        depthWrite: true, // MUST be true for blocky voxel alpha-tested leaves to occlude properly
         vertexColors: false, // We explicitly use standard vertex colors for geometry binding
       })
     : new THREE.MeshLambertMaterial({

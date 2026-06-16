@@ -36,7 +36,7 @@ export const Scoreboard = ({ isVisible }) => {
   });
 
   // Add others
-  Object.entries(players).forEach(([id, p]) => {
+  Object.entries(players || {}).forEach(([id, p]) => {
     // Determine if this player is the host
     // If I am guest, and this id matches the host ID (which is ws-game-ROOMCODE)...
     // wait, the host's ID is stored as hostId in WELCOME.

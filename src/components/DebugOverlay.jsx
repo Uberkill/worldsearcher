@@ -235,10 +235,27 @@ export const DebugOverlay = () => {
       const activeBullets = state.bullets?.length || 0;
       const activeItems = useInventoryStore.getState().droppedItems?.length || 0;
       const activeTombstones = useInventoryStore.getState().tombstones?.length || 0;
+      const activePhysicsChunks = useChunkStore.getState().activePhysicsChunks?.length || 0;
+      const activeFluids = state.activeFluids?.length || 0;
+      
       write('dbg-ai-paths', activePaths, activePaths > 100 ? '#ffaa00' : '#ffffff');
       write('dbg-bullets', activeBullets, activeBullets > 50 ? '#ffaa00' : '#ffffff');
       write('dbg-dropped-items', activeItems, activeItems > 200 ? '#ff5555' : '#ffffff');
       write('dbg-tombstones', activeTombstones);
+      write('dbg-physics-chunks', activePhysicsChunks);
+      write('dbg-fluids', activeFluids, activeFluids > 2000 ? '#ef4444' : activeFluids > 500 ? '#fbbf24' : '#ffffff');
+
+      // V8 Memory Tracking (Chrome only)
+      if (performance.memory) {
+        const usedJS = (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1);
+        const totalJS = (performance.memory.totalJSHeapSize / 1024 / 1024).toFixed(1);
+        const limitJS = (performance.memory.jsHeapSizeLimit / 1024 / 1024).toFixed(1);
+        const pct = (performance.memory.usedJSHeapSize / performance.memory.jsHeapSizeLimit) * 100;
+        
+        write('dbg-ram', `${usedJS} MB / ${totalJS} MB (Limit: ${limitJS} MB)`, pct > 80 ? '#ef4444' : '#55ff55');
+      } else {
+        write('dbg-ram', 'N/A (Chrome Only)', '#555555');
+      }
 
       // DB metrics
       const dbPending = window.__DB_PENDING_REQUESTS__ ? window.__DB_PENDING_REQUESTS__.size : 0;
@@ -432,7 +449,7 @@ export const DebugOverlay = () => {
       const mountQueue = useChunkStore.getState().pendingMeshMounts?.length || 0;
       const batched = 0;
       const visualCount = useChunkStore.getState().overflowChunks?.length || 0;
-      const pendUnloads = stats.pendingUnloads || 0;
+      const pendUnloads = Object.keys(state.pendingUnloadList || {}).length;
       const failed = stats.failedChunks || 0;
       const netReqs = stats.netRequests || 0;
       const asyncDeltas = stats.processingDeltas || 0;
@@ -607,6 +624,7 @@ export const DebugOverlay = () => {
             <div className="text-cyan-300 text-sm font-bold mb-3 border-b border-white/10 pb-1">
               PERFORMANCE
             </div>
+            <StatRow label="RAM Usage [Chrome]" valueId="dbg-ram" />
             <StatRow label="TPS (Logic)" valueId="dbg-tps" />
             <StatRow label="MSPT (Logic Time)" valueId="dbg-mspt" />
             <StatRow label="FPS (Visual)" valueId="dbg-fps" />
@@ -637,6 +655,8 @@ export const DebugOverlay = () => {
             <StatRow label="Chunks Total" valueId="dbg-chunks-tot" />
             <StatRow label="Chunks Rendered" valueId="dbg-chunks-rnd" />
             <StatRow label="Flora Chunks" valueId="dbg-flora" />
+            <StatRow label="Active Physics" valueId="dbg-physics-chunks" />
+            <StatRow label="Active Fluids" valueId="dbg-fluids" />
             <StatRow label="Entities Total" valueId="dbg-ents-tot" />
             <StatRow label="Entities Rendered" valueId="dbg-ents-rnd" />
             <StatRow label="AI Paths Cached" valueId="dbg-ai-paths" />

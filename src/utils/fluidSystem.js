@@ -8,7 +8,7 @@ import {
   CHUNK_Y_MAX,
 } from './chunkData';
 
-export const FLUID_MAX_LEVEL = 15;
+const FLUID_MAX_LEVEL = 15;
 const TICK_BUDGET = 200; // max fluids to process per frame
 
 const getFluidMaxSpread = (texId) => {

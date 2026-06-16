@@ -23,10 +23,14 @@ export const initItemDropSystem = () => {
       y + 0.5 + (Math.random() - 0.5) * 0.4,
       z + 0.5 + (Math.random() - 0.5) * 0.4
     ];
-    newDrops.push({ key: dropKey, pos: dropPos, texture: texName });
+    let dropTexture = texName;
+    if (texName === 'spark_node') dropTexture = 'spark_crystal';
+    
+    newDrops.push({ key: dropKey, pos: dropPos, texture: dropTexture });
 
     // 2. Chest Content Drops
-    if (texName === 'chest' && chestItems) {
+    const isContainer = texName === 'chest' || texName === 'furnace' || texName === 'ship_furnace';
+    if (isContainer && chestItems) {
       chestItems.forEach(item => {
         if (item) {
           newDrops.push({
@@ -40,8 +44,11 @@ export const initItemDropSystem = () => {
       // Delete chest from state
       useInventoryStore.setState(prev => {
         const nextChests = { ...prev.chests };
-        delete nextChests[`${x},${y},${z}`];
-        return { chests: nextChests };
+        const nextMachines = { ...prev.machines };
+        const chestKey = payload.containerId || `${x},${y},${z}`;
+        delete nextChests[chestKey];
+        delete nextMachines[chestKey];
+        return { chests: nextChests, machines: nextMachines };
       });
     }
 
@@ -75,7 +82,9 @@ export const initItemDropSystem = () => {
     let dropCentroid = [0, 0, 0];
 
     blocks.forEach(b => {
-      consolidatedDrops.set(b.texName, (consolidatedDrops.get(b.texName) || 0) + 1);
+      let dropTexture = b.texName;
+      if (b.texName === 'spark_node') dropTexture = 'spark_crystal';
+      consolidatedDrops.set(dropTexture, (consolidatedDrops.get(dropTexture) || 0) + 1);
       dropCentroid[0] += b.x;
       dropCentroid[1] += b.y;
       dropCentroid[2] += b.z;

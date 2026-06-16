@@ -34,6 +34,9 @@ import { Lantern } from './components/Flashlight';
 import { Flares } from './components/Flares';
 import { BlockInteraction } from './components/BlockInteraction';
 import { MultiplayerManager } from './components/MultiplayerManager';
+import { TransitManager } from './components/TransitManager';
+import { ShipPhysics } from './components/ShipPhysics';
+import { ShipyardHologram } from './components/ShipyardHologram';
 import { useStore } from './stores/useStore';
 import { DebugOverlay } from './components/DebugOverlay';
 import { DebugTracker } from './components/DebugTracker';
@@ -93,6 +96,7 @@ export default function GameEngine() {
   const isWorldReady = useStore((state) => state.isWorldReady);
   const hasLoadedState = useStore((state) => state.hasLoadedState);
   const loadPlayerState = useStore((state) => state.loadPlayerState);
+  const loadShipState = useStore((state) => state.loadShipState);
   const loadAchievements = useStore((state) => state.loadAchievements);
   const initializeQuests = useStore((state) => state.initializeQuests);
   const renderDistance = useStore((state) => state.renderDistance);
@@ -105,8 +109,12 @@ export default function GameEngine() {
     if (!initRef.current) {
       initRef.current = true;
       loadPlayerState();
+      loadShipState();
       loadAchievements();
       initializeQuests();
+      import('./systems/MachineTickSystem').then(({ initMachineTickSystem }) => {
+        initMachineTickSystem();
+      });
       window.__DEBUG_STORE__ = useStore;
     }
     
@@ -199,12 +207,15 @@ export default function GameEngine() {
                   <Tombstones />
                   <HostCombat />
                   <MultiplayerManager />
+                  <TransitManager />
+                  <ShipPhysics />
+                  <BlockInteraction />
                 </Physics>
                 {/* {liveTracking.current && <EnvironmentMap />} */}
               </Suspense>
-              <BlockInteraction />
               <ViewModel />
               <GhostBlock />
+              <ShipyardHologram />
               <Flares />
               <Waypoints />
               <Lantern />

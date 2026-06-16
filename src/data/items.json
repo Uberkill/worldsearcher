@@ -81,5 +81,36 @@
     "isTransparent": true,
     "lightLevel": 14,
     "type": "tool"
+  },
+  "repair_tool": {
+    "id": 29,
+    "name": "Nanite Welder",
+    "color": "#8b5cf6",
+    "isTransparent": false,
+    "lightLevel": 0,
+    "type": "tool",
+    "combat": {
+      "type": "hitscan",
+      "damage": 0,
+      "range": 4,
+      "cooldownMs": 250,
+      "raycastRadius": 0.5
+    }
+  },
+  "spark_crystal": {
+    "id": 30,
+    "name": "Spark Crystal",
+    "color": "#facc15",
+    "isTransparent": false,
+    "lightLevel": 10,
+    "type": "item"
+  },
+  "void_canister": {
+    "id": 31,
+    "name": "Void Canister",
+    "color": "#10b981",
+    "isTransparent": true,
+    "lightLevel": 5,
+    "type": "item"
   }
 }

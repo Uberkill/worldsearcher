@@ -4,7 +4,7 @@ import { useInventoryStore } from './inventorySlice';
 import { useChunkStore } from './chunkSlice';
 
 let pathfinderWorker = null;
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && typeof window.Worker !== 'undefined') {
   pathfinderWorker = new Worker(
     new URL('../workers/pathfinderWorker.js', import.meta.url),
     { type: 'module' }
@@ -96,6 +96,12 @@ export const createEntitySlice = (set, get) => {
         droppedItems: (prev.droppedItems || []).filter((item) => item.key !== id),
       }));
     },
+    batchDespawnLoot: (keys) => {
+      const keysSet = new Set(keys);
+      useInventoryStore.setState((prev) => ({
+        droppedItems: (prev.droppedItems || []).filter((item) => !keysSet.has(item.key)),
+      }));
+    },
     updateLootAmount: (id, newCount) => {
       useInventoryStore.setState((prev) => ({
         droppedItems: (prev.droppedItems || []).map((item) =>
@@ -115,7 +121,15 @@ export const createEntitySlice = (set, get) => {
       set((prev) => ({
         directDamageQueue: prev.directDamageQueue.filter((q) => q.id !== id),
       })),
+    shiftDirectDamageQueueBulk: (ids) =>
+      set((prev) => {
+        const idSet = new Set(ids);
+        return {
+          directDamageQueue: prev.directDamageQueue.filter((q) => !idSet.has(q.id)),
+        };
+      }),
     hoverTarget: null,
+    hoverBlockInfo: null,
 
     resolvedPaths: {}, // { [entityId]: { sequenceID, pathBuffer, length } }
 
@@ -131,7 +145,7 @@ export const createEntitySlice = (set, get) => {
       });
     },
 
-    setHoverTarget: (pos) => set({ hoverTarget: pos }),
+    setHoverTarget: (pos, info = null) => set({ hoverTarget: pos, hoverBlockInfo: info }),
 
     collectDroppedItem: (key, texture, count = 1) => {
       const inv = get().inventory;
@@ -206,6 +220,13 @@ export const createEntitySlice = (set, get) => {
       set((prev) => ({
         spawnQueue: prev.spawnQueue.filter((q) => q.id !== id),
       })),
+    shiftSpawnQueueBulk: (ids) =>
+      set((prev) => {
+        const idSet = new Set(ids);
+        return {
+          spawnQueue: prev.spawnQueue.filter((q) => !idSet.has(q.id)),
+        };
+      }),
 
     requestAreaDamage: (pos, radius, amount, sourceId = null) => {
       const id = uuidV4();

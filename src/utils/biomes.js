@@ -1,7 +1,7 @@
 import biomesConfig from '../data/biomes.json';
 
 // Constants
-export const BIOME_SCALE = 0.004; // Roughly 250 blocks per biome to prevent patchiness
+const BIOME_SCALE = 0.004; // Roughly 250 blocks per biome to prevent patchiness
 
 export function spatialHash(seed, x, y) {
   let h = seed | 0;
@@ -33,34 +33,19 @@ export const getBiomeAt = (
   worldZ,
   tempNoiseFunc,
   moistNoiseFunc,
-  worldSeed = 12345
+  regionContexts
 ) => {
   // 1. REGION GRAPH OVERRIDES (Jigsaw Modules & Story Beats)
-  // Divide world into massive regions (e.g., 2000x2000 blocks)
-  const regionSize = 2000;
-  const regionX = Math.floor(worldX / regionSize);
-  const regionZ = Math.floor(worldZ / regionSize);
-
-  const storyBeat = getRegionStoryBeat(regionX, regionZ, worldSeed);
-
-  if (storyBeat) {
-    // If this region has a story beat, we pick an exact coordinate for the Jigsaw center
-    const hx = spatialHash(worldSeed, regionX, regionZ);
-    const hz = spatialHash(worldSeed + 1, regionX, regionZ);
-
-    const anchorX = regionX * regionSize + hx * regionSize;
-    const anchorZ = regionZ * regionSize + hz * regionSize;
-
-    // Check if we are inside the Jigsaw bounds
-    const distSq =
-      (worldX - anchorX) * (worldX - anchorX) +
-      (worldZ - anchorZ) * (worldZ - anchorZ);
-
-    if (storyBeat === 'starting_village' && distSq < 150 * 150)
-      return 'village_biome';
-    if (storyBeat === 'ancient_ruins' && distSq < 200 * 200)
-      return 'ruins_biome';
-    if (storyBeat === 'boss_arena' && distSq < 100 * 100) return 'boss_arena';
+  if (regionContexts) {
+    for (let i = 0; i < regionContexts.length; i++) {
+      const rc = regionContexts[i];
+      if (rc.storyBeat) {
+        const distSq = (worldX - rc.anchorX) * (worldX - rc.anchorX) + (worldZ - rc.anchorZ) * (worldZ - rc.anchorZ);
+        if (rc.storyBeat === 'starting_village' && distSq < 150 * 150) return 'village_biome';
+        if (rc.storyBeat === 'ancient_ruins' && distSq < 200 * 200) return 'ruins_biome';
+        if (rc.storyBeat === 'boss_arena' && distSq < 100 * 100) return 'boss_arena';
+      }
+    }
   }
 
   // 2. NATURAL NOISE BIOMES (2D Matrix)

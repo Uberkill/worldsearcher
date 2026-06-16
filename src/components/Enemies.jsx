@@ -149,7 +149,8 @@ export const Enemies = () => {
         const possibleSpawns = [];
 
         if (isDark) {
-          let type = Math.random() > 0.5 ? 'shadowman' : 'creeper';
+          const r = Math.random();
+          let type = r < 0.33 ? 'shadowman' : r < 0.66 ? 'bloop' : 'android';
           if (Math.random() < 0.15 && lastBeastDay.current !== days)
             type = 'beast';
           possibleSpawns.push(type);
@@ -167,10 +168,7 @@ export const Enemies = () => {
         if (!spawnType) continue;
 
         const maxForType =
-          spawnType === 'shadowman'
-            ? 40
-            : spawnType === 'creeper'
-              ? 30
+          spawnType === 'shadowman' ? 40 : spawnType === 'android' ? 30 : spawnType === 'bloop' ? 30
               : spawnType === 'beast'
                 ? 1
                 : 10;
@@ -182,7 +180,8 @@ export const Enemies = () => {
         // Hostiles don't spawn near flares
         if (
           spawnType === 'shadowman' ||
-          spawnType === 'creeper' ||
+          spawnType === 'bloop' ||
+          spawnType === 'android' ||
           spawnType === 'beast'
         ) {
           const flareStoreState = useFlareStore.getState();
@@ -197,7 +196,9 @@ export const Enemies = () => {
           }
 
           if (isValidSpawn) {
-            if (effectiveLight > 2) {
+            if (!isNight && isSurface) {
+              isValidSpawn = false; // Failsafe against lighting engine bugs
+            } else if (effectiveLight > 2) {
               isValidSpawn = false;
             }
           }
@@ -283,7 +284,7 @@ export const Enemies = () => {
   return (
     <>
       <SwarmManager type="shadowman" max={40} />
-      <SwarmManager type="creeper" max={30} />
+      <SwarmManager type="bloop" max={30} />
       <SwarmManager type="beast" max={1} />
       <SwarmManager type="muck-pig" max={10} />
       <SwarmManager type="wooly-grazer" max={10} />

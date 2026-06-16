@@ -1,0 +1,143 @@
+--- src/stores/worldActions.js
++++ src/stores/worldActions.js
+@@ -1,4 +1,5 @@
+ import { getNetworkStore } from './storeLinker';
++import { useSyncStore } from './syncSlice';
+ import { useEnvironmentStore } from './environmentSlice';
+ import { useFlareStore } from './flareSlice';
+ import { useChunkStore } from './chunkSlice';
+@@ -269,6 +242,41 @@
+         }
+       })();
+     },
++      softResetWorld: async () => {
++        if (get().isResetting) return;
++        rawSet({ isResetting: true });
++
++        const useSyncStore = await import('./syncSlice').then(m => m.useSyncStore);
++        if (useSyncStore) {
++          useSyncStore.setState(prev => ({ worldEpoch: (prev.worldEpoch || 0) + 1 }));
++        }
++
++        useChunkStore.setState({
++          chunks: {},
++          pendingMeshMounts: [],
++          overflowChunks: [],
++          activePhysicsChunks: []
++        });
++
++        chunkWorkerPool._queue = [];
++        inFlightChunks.clear();
++        cancelledChunks.clear();
++        pass1Cache.clear();
++        processingNetworkDeltas.clear();
++        dirtyChunkSet.clear();
++        inFlightRebuildSet.clear();
++
++        await clearDB(); 
++
++        rawSet({
++          isResetting: false,
++          pendingDeltas: {}
++        });
++        useInventoryStore.setState({
++          debris: [],
++          droppedItems: []
++        });
++      },
+     resetWorld: async () => {
+       if (get().isResetting) return;
+       rawSet({
+@@ -463,7 +471,7 @@
+                     }
+                   })();
+                   let chunkData;
+-                  chunkData = await loadChunkFromDB(chunkKey);
++                  chunkData = await loadChunkFromDB(chunkKey, getSeed());
+                   if (!chunkData) {
+                     const [cx, cz] = chunkKey.split(',');
+                     chunkData = await chunkWorkerPool.generatePass1(parseInt(cx), parseInt(cz), getSeed());
+@@ -475,7 +483,7 @@
+                     }
+                     chunkData.buffer = buffer;
+                     chunkData.isModified = true;
+-                    await saveChunkToDB(chunkKey, chunkData);
++                    await saveChunkToDB(chunkKey, chunkData, getSeed());
+                   }
+                 } catch (e) {
+                   console.error('Silent delta save failed', e);
+@@ -1371,6 +1379,7 @@
+       cancelledChunks.delete(chunkKey);
+       let chunkData = null;
+       let chunkSeed = getSeed();
++        const startEpoch = useSyncStore.getState().worldEpoch || 0;
+       try {
+         if (cancelledChunks.has(chunkKey)) {
+           inFlightChunks.delete(chunkKey);
+@@ -1395,7 +1404,7 @@
+           }
+         }
+         if (!chunkData && !skipDB) {
+-          const cachedBuffer = await loadChunkFromDB(chunkKey);
++          const cachedBuffer = await loadChunkFromDB(chunkKey, getSeed());
+           // SELF-HEALING PROTOCOL:
+           // Detect heavily corrupted or 0-byte chunks from previous database bugs
+           // and fall back to procedural generation to patch the void.
+@@ -1425,6 +1434,10 @@
+ 
+         // If NOT in DB/Network, generate Pass 1!
+         const pass1Data = await chunkWorkerPool.generatePass1(cx, cz, chunkSeed);
++        if (useSyncStore.getState().worldEpoch !== startEpoch) {
++            inFlightChunks.delete(chunkKey);
++            return 'CANCELLED';
++        }
+         if (cancelledChunks.has(chunkKey) || pass1Data?.error) {
+           inFlightChunks.delete(chunkKey);
+           return 'CANCELLED';
+@@ -1497,6 +1510,7 @@
+       cancelledChunks.delete(chunkKey);
+       try {
+         const chunkSeed = getSeed();
++        const startEpoch = useSyncStore.getState().worldEpoch || 0;
+         let chunkData;
+         if (pass1Data.isFromDB) {
+           // Gather neighbors
+@@ -1534,6 +1548,11 @@
+           // Overflow from DB rebuild is usually just lights. Could process them if needed.
+         } else {
+           chunkData = await chunkWorkerPool.generatePass2(cx, cz, pass1Data.buffer, pass1Data.getSurfaceHeightMap, chunkSeed);
++          if (useSyncStore.getState().worldEpoch !== startEpoch) {
++              inFlightChunks.delete(chunkKey);
++              pass1Cache.delete(chunkKey);
++              return false;
++          }
+           if (chunkData?.error) {
+             inFlightChunks.delete(chunkKey);
+             if (chunkData.error === 'CANCELLED') {
+@@ -1881,7 +1900,7 @@
+         }
+       })();
+       if (chunkData.isModified) {
+-        await saveChunkToDB(chunkKey, chunkData);
++        await saveChunkToDB(chunkKey, chunkData, getSeed());
+       }
+     },
+     addCube: (x, y, z) => {
+@@ -2865,7 +2884,7 @@
+       })();
+ 
+       // 1. Gather all modified chunks and their CURRENT rebuildId
+-      for (const [key, data] of Object.entries(chunks)) {
++      for (const [key, data] of Object.entries(chunks || {})) {
+         if (data.isModified) {
+           chunksToSave.push({
+             key,
+@@ -2877,7 +2896,7 @@
+       if (chunksToSave.length === 0) return;
+ 
+       // 2. Perform async IndexedDB saves
+-      await Promise.all(chunksToSave.map(c => saveChunkToDB(c.key, c.data)));
++      await Promise.all(chunksToSave.map(c => saveChunkToDB(c.key, c.data, getSeed())));
+ 
+       // Force WAL to flush immediately so that saveWorld is truly atomic and waits for completion
+       await flushWAL();

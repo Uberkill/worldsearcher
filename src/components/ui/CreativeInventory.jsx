@@ -7,8 +7,25 @@ import { X, Search } from 'lucide-react';
 
 export const CreativeInventory = ({ active, onClose }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('All'); // 'All', 'Blocks', 'Tools'
   
-  const allItems = Object.keys(GlobalRegistry).filter(k => k.toLowerCase().includes(searchTerm.toLowerCase()));
+  const allItems = Object.keys(GlobalRegistry || {}).filter(k => {
+     const reg = GlobalRegistry[k];
+     const name = reg?.name?.toLowerCase() || '';
+     const search = searchTerm.toLowerCase();
+     
+     // 1. Search Filter
+     const matchesSearch = k.toLowerCase().includes(search) || name.includes(search);
+     if (!matchesSearch) return false;
+     
+     // 2. Tab Filter
+     if (activeTab === 'Tools') {
+        return reg?.type === 'tool';
+     } else if (activeTab === 'Blocks') {
+        return reg?.type !== 'tool';
+     }
+     return true; // 'All'
+  });
 
   return (
     <BaseOverlay active={active} onClose={onClose} containerClassName="flex flex-row items-center justify-center gap-8">
@@ -36,12 +53,36 @@ export const CreativeInventory = ({ active, onClose }) => {
           />
         </div>
 
+        {/* Category Tabs */}
+        <div className="flex gap-2 mb-4">
+          {['All', 'Blocks', 'Tools'].map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-1.5 font-bold font-mono text-sm rounded transition-colors ${
+                activeTab === tab 
+                  ? 'bg-cyan-500 text-black border border-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.5)]' 
+                  : 'bg-neutral-800 text-neutral-400 border border-neutral-700 hover:bg-neutral-700 hover:text-white'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
         <div className="flex-1 overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#22d3ee transparent' }}>
           <div className="grid grid-cols-10 gap-2">
             {allItems.map(texture => {
               const reg = GlobalRegistry[texture];
               const tooltipName = reg ? (reg.name || texture) : texture;
               const fallbackColor = reg?.color || '#333333';
+              
+              let imgSrc = `/textures/items/${texture}.png`;
+              if (reg?.texture) {
+                imgSrc = `/textures/blocks/${reg.texture}`;
+              } else if (reg?.textures) {
+                imgSrc = `/textures/blocks/${reg.textures.side || reg.textures.top}`;
+              }
               
               return (
               <div 
@@ -53,22 +94,26 @@ export const CreativeInventory = ({ active, onClose }) => {
                    e.stopPropagation();
                    const state = useStore.getState();
                    if (!state.heldItem) {
-                      state.setHeldItem({ texture, count: 64, sourceLoc: { type: 'creative', texture } });
+                      const maxStack = reg.type === 'tool' ? 1 : (reg.maxStack || 64);
+                      state.setHeldItem({ texture, count: maxStack, sourceLoc: { type: 'creative', texture } });
                    } else {
                       // Delete item if clicking creative grid while holding it
+                      if (state.heldItem.sourceLoc.type !== 'creative') {
+                        state.executeLocalTransaction(state.heldItem.sourceLoc, null, 'CONSUME', state.heldItem.count);
+                      }
                       state.setHeldItem(null);
                    }
                 }}
               >
                 <img 
-                  src={`/textures/blocks/${texture}.png`} 
+                  src={imgSrc} 
                   onError={(e) => { 
-                    e.target.onerror = null; // prevent infinite loops
-                    e.target.src = `/textures/items/${texture}.png`; // fallback to item texture
+                    e.target.style.display = 'none'; // fallback to solid background
                   }}
                   onLoad={(e) => {
                     // Only show image if it actually loads successfully, otherwise rely on fallback background
                     e.target.style.opacity = 1;
+                    e.target.style.display = '';
                   }}
                   style={{ opacity: 0 }}
                   className="w-8 h-8 object-contain pixelated group-hover:scale-110 transition-transform"

@@ -8,7 +8,6 @@ import {
   getTextureId,
   getIsHidden,
   getBlockLight,
-  getSunlight,
   getGlobalBlockLight,
 } from './chunkData.js';
 import { BlockById, FaceMappings } from '../registry/BlockRegistry.js';
@@ -51,7 +50,7 @@ const pIdxBuffer = new Uint32Array(MAX_FACES * 6);
 const floraMatricesBuffer = new Float32Array(MAX_FACES * 16);
 const floraPackedBuffer = new Float32Array(MAX_FACES);
 
-export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBufferPool = []) => {
+export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBufferBuckets = null) => {
   const result = {
     solid: [],
     transparent: [],
@@ -70,29 +69,37 @@ export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBuffe
   let minX = Infinity, minY = Infinity, minZ = Infinity;
   let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
 
-  let lastFaces = {
-    solid: { top: null, bottom: null, front: null, back: null },
-    transparent: { top: null, bottom: null, front: null, back: null }
+  const createFaceNode = () => ({ active: false, x: 0, y: 0, z: 0, w: 0, p0: 0, texId: 0, isAnimated: false, isPassable: false, posIndex: 0, uvIndex: 0, pPosIndex: 0 });
+  const lastFaces = {
+    solid: { top: createFaceNode(), bottom: createFaceNode(), front: createFaceNode(), back: createFaceNode() },
+    transparent: { top: createFaceNode(), bottom: createFaceNode(), front: createFaceNode(), back: createFaceNode() }
   };
   const resetLastFaces = () => {
-    lastFaces.solid.top = null; lastFaces.solid.bottom = null; lastFaces.solid.front = null; lastFaces.solid.back = null;
-    lastFaces.transparent.top = null; lastFaces.transparent.bottom = null; lastFaces.transparent.front = null; lastFaces.transparent.back = null;
+    lastFaces.solid.top.active = false; lastFaces.solid.bottom.active = false; lastFaces.solid.front.active = false; lastFaces.solid.back.active = false;
+    lastFaces.transparent.top.active = false; lastFaces.transparent.bottom.active = false; lastFaces.transparent.front.active = false; lastFaces.transparent.back.active = false;
   };
 
   const copyToBuffer = (staticArray, count, TypedArrayClass) => {
-    const sizeBytes = count * staticArray.BYTES_PER_ELEMENT;
+    const bytesNeeded = count * TypedArrayClass.BYTES_PER_ELEMENT;
     if (count === 0) return new TypedArrayClass(0);
     
+    let sizeBytes = 256;
+    while (sizeBytes < bytesNeeded) sizeBytes <<= 1;
+    
     let buf = null;
-    if (recycledBufferPool && recycledBufferPool.length > 0) {
-      for (let i = 0; i < recycledBufferPool.length; i++) {
-        if (recycledBufferPool[i].byteLength >= sizeBytes) {
-          buf = recycledBufferPool[i];
-          recycledBufferPool.splice(i, 1);
-          break;
-        }
-      }
+    if (recycledBufferBuckets) {
+       let pow = 256;
+       while (pow < sizeBytes) pow <<= 1;
+       
+       while (pow <= 16777216) {
+          if (recycledBufferBuckets[pow] && recycledBufferBuckets[pow].length > 0) {
+             buf = recycledBufferBuckets[pow].pop();
+             break;
+          }
+          pow <<= 1;
+       }
     }
+    
     if (!buf) buf = new ArrayBuffer(sizeBytes);
     
     const view = new TypedArrayClass(buf, 0, count);
@@ -210,7 +217,7 @@ export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBuffe
 
     if (isMergeable && faceKey) {
       const prev = arrayGroup[faceKey];
-      if (prev && prev.y === wy && prev.z === wz && prev.x + prev.w === wx && prev.p0 === p0 && prev.texId === texId && prev.isAnimated === isAnimated && prev.isPassable === isPassable) {
+      if (prev.active && prev.y === wy && prev.z === wz && prev.x + prev.w === wx && prev.p0 === p0 && prev.texId === texId && prev.isAnimated === isAnimated && prev.isPassable === isPassable) {
         // MATCH! Extend the quad along X
         prev.w += 1;
         const w = prev.w;
@@ -227,8 +234,13 @@ export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBuffe
           sPosBuf[prev.posIndex + 9] = wx + 1;
         }
         
-        sUvBuf[prev.uvIndex + 2] = w;
-        sUvBuf[prev.uvIndex + 4] = w;
+        if (ny === 1 || ny === -1 || nz === 1) {
+          sUvBuf[prev.uvIndex + 2] = w;
+          sUvBuf[prev.uvIndex + 4] = w;
+        } else if (nz === -1) {
+          sUvBuf[prev.uvIndex + 0] = 1 - w;
+          sUvBuf[prev.uvIndex + 6] = 1 - w;
+        }
         
         if (!isPassable && prev.pPosIndex !== -1) {
           if (ny === 1 || ny === -1 || nz === 1) {
@@ -462,14 +474,21 @@ export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBuffe
 
     // --- STRICT GREEDY MESHING (Cache update) ---
     if (isMergeable && faceKey) {
-      arrayGroup[faceKey] = {
-        x: wx, y: wy, z: wz, w: 1, p0, texId, isAnimated, isPassable,
-        posIndex: isTrans ? tPosIndex - 12 : sPosIndex - 12,
-        uvIndex: isTrans ? tUvIndex - 8 : sUvIndex - 8,
-        pPosIndex: !isPassable ? pPosIndex - 12 : -1
-      };
+      const prev = arrayGroup[faceKey];
+      prev.active = true;
+      prev.x = wx;
+      prev.y = wy;
+      prev.z = wz;
+      prev.w = 1;
+      prev.p0 = p0;
+      prev.texId = texId;
+      prev.isAnimated = isAnimated;
+      prev.isPassable = isPassable;
+      prev.posIndex = isTrans ? tPosIndex - 12 : sPosIndex - 12;
+      prev.uvIndex = isTrans ? tUvIndex - 8 : sUvIndex - 8;
+      prev.pPosIndex = !isPassable ? pPosIndex - 12 : -1;
     } else if (faceKey) {
-      arrayGroup[faceKey] = null;
+      arrayGroup[faceKey].active = false;
     }
   };
 
@@ -561,11 +580,11 @@ export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBuffe
 
   // Naive Meshing for now
   for (let y = CHUNK_Y_MIN; y <= CHUNK_Y_MAX; y++) {
-    // Only flush if we are dangerously close to MAX_FACES to avoid unnecessary draw calls
-    if (sPosIndex > (MAX_FACES - 1000) * 12 || tPosIndex > (MAX_FACES - 1000) * 12 || pPosIndex > (MAX_FACES - 1000) * 12) {
-      flushBuffers();
-    }
     for (let z = 0; z < CHUNK_SIZE_Z; z++) {
+      // Flush with a 200 face margin inside the Z loop to prevent buffer overflow (which causes missing chunk holes)
+      if (sPosIndex > (MAX_FACES - 200) * 12 || tPosIndex > (MAX_FACES - 200) * 12 || pPosIndex > (MAX_FACES - 200) * 12) {
+        flushBuffers();
+      }
       resetLastFaces();
       for (let x = 0; x < CHUNK_SIZE_X; x++) {
         const idx = getIndex(x, y, z);

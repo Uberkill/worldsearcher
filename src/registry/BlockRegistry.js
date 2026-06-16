@@ -2,8 +2,6 @@ import blocksConfig from '../data/blocks.json';
 
 export const BlockRegistry = blocksConfig;
 
-export const getBlockKeys = () => Object.keys(BlockRegistry);
-
 export const BlockIds = {};
 export const BlockById = {};
 export const BlockKeyById = {};
@@ -18,7 +16,7 @@ Object.keys(BlockRegistry).forEach((key) => {
 
 // --- Texture Atlas Mapping ---
 export const TextureRegistry = [];
-export const TextureIdByName = {};
+const TextureIdByName = {};
 
 const registerTexture = (filename) => {
   if (!filename) return 0;

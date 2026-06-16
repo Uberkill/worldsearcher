@@ -1,0 +1,23 @@
+{
+  "description": "Worldsearchyou Master Context Index. AI agents MUST read this file to determine which specific sub-documentation to load before starting a task.",
+  "categories": {
+    "core": {
+      "AI_AGENT_WARNINGS.md": "CRITICAL rules for AI agents modifying the codebase, including Canary instructions.",
+      "AGENTS.md": "Guidelines on autonomous agent behavior within the game or for development.",
+      "GRAPHIFY_INSIGHTS.md": "Graph knowledge insights for the project.",
+      "MEMORY.md": "Details on the game's memory fog and client state management.",
+      "current_state.md": "Current progress, roadmap, and tech debt."
+    },
+    "architecture": {
+      "architecture.md": "High-level overview of the 20Hz Tick rate, Hybrid Server architecture, and snapshot buffering.",
+      "design_system.md": "Details on the ECS (Entity Component System) and 32-bit packing format.",
+      "design.md": "General design philosophy and vibe."
+    },
+    "systems": {
+      "shipdesign.md": "The Drivable Voxel Vehicle (Ship) mechanics, Flight System, Warp Drive, and Astrolabe UI.",
+      "COMBAT.md": "Host-authoritative hitscans, enemy AI, and damage calculation.",
+      "GAME_MODES.md": "Information about different game modes.",
+      "COMMANDS.md": "Host server admin commands and debugging."
+    }
+  }
+}

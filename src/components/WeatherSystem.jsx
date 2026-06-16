@@ -134,6 +134,7 @@ export function WeatherSystem() {
           const wx = gx < 0 ? gx + 512 : gx;
           const wz = gz < 0 ? gz + 512 : gz;
 
+          // eslint-disable-next-line react-hooks/immutability
           arr[wz * 512 + wx] = hMap[lz * 16 + lx];
         }
       }
@@ -141,6 +142,7 @@ export function WeatherSystem() {
     }
 
     if (needsUpload) {
+      // eslint-disable-next-line react-hooks/immutability
       heightmapTex.needsUpdate = true;
     }
   }, [clearVisualMeshArrays, heightmapTex]);

@@ -74,9 +74,10 @@ export const Hotbar = () => {
 
   const activeItem = hotbarItems[activeHotbarIndex];
   const activeReg = activeItem ? GlobalRegistry[activeItem.texture] : null;
+  const isSeated = useStore((state) => state.isSeated);
 
-  // Hide hotbar completely during menus and death screen
-  if (isInventoryOpen || isMenuOpen || isSettingsOpen || isDead) return null;
+  // Hide hotbar completely during menus, death screen, or steering ship
+  if (isInventoryOpen || isMenuOpen || isSettingsOpen || isDead || isSeated) return null;
 
   return (
     <div className="hotbar-wrapper">
