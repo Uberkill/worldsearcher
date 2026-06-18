@@ -1,10 +1,11 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../../stores/useStore';
+import { useUIStore } from '../../stores/useUIStore';
 import questsData from '../../registry/quests.json';
 import { networkActions } from '../../stores/networkActions';
 
 export const QuestJournal = () => {
-  const isQuestJournalOpen = useStore((state) => state.isQuestJournalOpen);
+  const isQuestJournalOpen = useUIStore((state) => state.activeModal === 'QUEST_JOURNAL');
   const toggleQuestJournal = useStore((state) => state.toggleQuestJournal);
   const mainQuestProgress = useStore((state) => state.mainQuestProgress);
   const sideQuests = useStore((state) => state.sideQuests);

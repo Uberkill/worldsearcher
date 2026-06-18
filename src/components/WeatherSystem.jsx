@@ -52,7 +52,7 @@ void main() {
     vec2 heightmapUV = mod(worldPos.xz, 512.0) / 512.0;
 
     // Read the raw Y height from the Float DataTexture
-    float roofY = texture2D(tDepth, heightmapUV).r;
+    float roofY = texture2D(tDepth, heightmapUV).r * 255.0;
 
     // Default visibility multiplier based on global rain fade
     float visibility = uRainIntensity;
@@ -98,9 +98,9 @@ export function WeatherSystem() {
 
   // Cyclical 512x512 DataTexture for O(1) WebGL heightmap lookups
   const [heightmapTex] = useState(() => {
-    const arr = new Float32Array(512 * 512);
-    arr.fill(-999);
-    const tex = new THREE.DataTexture(arr, 512, 512, THREE.RedFormat, THREE.FloatType);
+    const arr = new Uint8Array(512 * 512);
+    arr.fill(0);
+    const tex = new THREE.DataTexture(arr, 512, 512, THREE.RedFormat, THREE.UnsignedByteType);
     tex.magFilter = THREE.NearestFilter;
     tex.minFilter = THREE.NearestFilter;
     tex.wrapS = THREE.RepeatWrapping;

@@ -113,9 +113,9 @@ export const Scoreboard = ({ isVisible }) => {
 
         {/* Player List */}
         <div className="p-4 space-y-2 relative z-10">
-          {allPlayers.map((p) => (
+          {allPlayers.map((p, index) => (
             <div
-              key={p.id}
+              key={p.id || `fallback-${index}`}
               className={`grid grid-cols-12 gap-4 px-4 py-3 rounded-xl items-center transition-colors border ${
                 p.isMe
                   ? 'bg-cyan-900/30 border-cyan-500/50 shadow-[inset_0_0_20px_rgba(34,211,238,0.1)]'

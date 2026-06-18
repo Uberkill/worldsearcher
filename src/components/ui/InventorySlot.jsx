@@ -60,104 +60,7 @@ export const InventorySlot = memo(({ index, containerId }) => {
     }
   }
 
-  const handleMouseDown = (e) => {
-    e.stopPropagation(); // Halt event propagation to prevent Click-Through bug!
 
-    // Right click for SPLIT, Left click for MOVE/SWAP
-    const isRightClick = e.button === 2;
-    const isShiftClick = e.shiftKey;
-
-    const sourceLoc = {
-      type: containerId === 'player' ? 'player' : (containerId === 'table' || containerId === 'tableResult') ? containerId : 'container',
-      id: containerId,
-      slot: index,
-    };
-
-    if (containerId === 'tableResult') {
-      if (!displayItem) return;
-      if (heldItem) {
-         if (isRightClick) return;
-         if (heldItem.texture !== displayItem.texture) return;
-         if (heldItem.count + displayItem.count > 64) return;
-         executeLocalTransaction(sourceLoc, null, 'CRAFT_EXTRACT', 1);
-         setHeldItem({ ...heldItem, count: heldItem.count + displayItem.count });
-         EventBus.emit('audio', { sound: 'click', source: 'local' });
-         return;
-      }
-      if (isRightClick) return; // Cannot split from result
-      if (isShiftClick) {
-         executeLocalTransaction(sourceLoc, null, 'CRAFT_EXTRACT', 'QUICK');
-         EventBus.emit('audio', { sound: 'click', source: 'local' });
-         return;
-      }
-      // Standard click (pick up 1 craft yield)
-      setHeldItem({ ...displayItem, sourceLoc });
-      executeLocalTransaction(sourceLoc, null, 'CRAFT_EXTRACT', 1);
-      EventBus.emit('audio', { sound: 'click', source: 'local' });
-      return;
-    }
-
-    if (!heldItem && displayItem) {
-      // Pick up item (use displayItem!)
-      if (isShiftClick) {
-        executeLocalTransaction(sourceLoc, null, 'QUICK_MOVE');
-        EventBus.emit('audio', { sound: 'click', source: 'local' });
-        return;
-      }
-      
-      if (isRightClick && displayItem.count > 1) {
-        const half = Math.floor(displayItem.count / 2);
-        setHeldItem({ ...displayItem, count: half, sourceLoc });
-        executeLocalTransaction(sourceLoc, null, 'SPLIT');
-      } else {
-        setHeldItem({ ...displayItem, sourceLoc });
-        // Optimistically empty the slot visually
-        executeLocalTransaction(sourceLoc, null, 'MOVE_START');
-      }
-      EventBus.emit('audio', { sound: 'click', source: 'local' });
-    } else if (heldItem) {
-      // Place item or swap
-      if (
-        isRightClick &&
-        (!displayItem ||
-          (displayItem.texture === heldItem.texture && displayItem.count < 64))
-      ) {
-        // Drop 1 item
-        const dropAmount = 1;
-        executeLocalTransaction(
-          heldItem.sourceLoc,
-          sourceLoc,
-          'MOVE',
-          dropAmount
-        );
-        if (heldItem.count - 1 <= 0) {
-          setHeldItem(null);
-        } else {
-          setHeldItem({ ...heldItem, count: heldItem.count - 1 });
-        }
-      } else {
-        // Drop stack or swap
-        executeLocalTransaction(heldItem.sourceLoc, sourceLoc, 'MOVE');
-
-        if (displayItem && displayItem.texture !== heldItem.texture) {
-          // We swapped! The old item goes to the cursor
-          // FIX: Maintain the heldItem's original sourceLoc so the server knows where to move it!
-          setHeldItem({ ...displayItem, sourceLoc: heldItem.sourceLoc });
-        } else if (displayItem && displayItem.texture === heldItem.texture) {
-          // We merged stacks! Did we exceed 64?
-          const total = displayItem.count + heldItem.count;
-          if (total > 64) {
-            setHeldItem({ ...heldItem, count: total - 64 });
-          } else {
-            setHeldItem(null);
-          }
-        } else {
-          setHeldItem(null);
-        }
-      }
-      EventBus.emit('audio', { sound: 'click', source: 'local' });
-    }
-  };
 
   const handleContextMenu = (e) => e.preventDefault();
 
@@ -181,7 +84,7 @@ export const InventorySlot = memo(({ index, containerId }) => {
   return (
     <div
       className="w-12 h-12 bg-black/40 border-2 border-white/20 hover:border-yellow-400/80 transition-colors relative group"
-      onMouseDown={handleMouseDown}
+      onMouseDown={(e) => processInventoryClick(e, { containerId, index, displayItem, heldItem, setHeldItem, executeLocalTransaction })}
       onContextMenu={handleContextMenu}
       data-tooltip={displayItem ? tooltipName : null}
     >
@@ -220,3 +123,124 @@ export const InventorySlot = memo(({ index, containerId }) => {
     </div>
   );
 });
+
+function buildSourceLoc(containerId, index) {
+  return {
+    type: containerId === 'player' ? 'player' : (containerId === 'table' || containerId === 'tableResult') ? containerId : 'container',
+    id: containerId,
+    slot: index,
+  };
+}
+
+function handleCraftingResultClick(e, params) {
+  const { displayItem, heldItem, setHeldItem, executeLocalTransaction, sourceLoc } = params;
+  const isRightClick = e.button === 2;
+  const isShiftClick = e.shiftKey;
+
+  if (!displayItem) return;
+  if (heldItem) {
+     if (isRightClick) return;
+     if (heldItem.texture !== displayItem.texture) return;
+     if (heldItem.count + displayItem.count > 64) return;
+     executeLocalTransaction(sourceLoc, null, 'CRAFT_EXTRACT', 1);
+     setHeldItem({ ...heldItem, count: heldItem.count + displayItem.count });
+     EventBus.emit('audio', { sound: 'click', source: 'local' });
+     return;
+  }
+  if (isRightClick) return; // Cannot split from result
+  if (isShiftClick) {
+     executeLocalTransaction(sourceLoc, null, 'CRAFT_EXTRACT', 'QUICK');
+     EventBus.emit('audio', { sound: 'click', source: 'local' });
+     return;
+  }
+  // Standard click (pick up 1 craft yield)
+  setHeldItem({ ...displayItem, sourceLoc });
+  executeLocalTransaction(sourceLoc, null, 'CRAFT_EXTRACT', 1);
+  EventBus.emit('audio', { sound: 'click', source: 'local' });
+}
+
+function handleEmptySlotClick(e, params) {
+  const { displayItem, setHeldItem, executeLocalTransaction, sourceLoc } = params;
+  const isRightClick = e.button === 2;
+  const isShiftClick = e.shiftKey;
+
+  if (isShiftClick) {
+    executeLocalTransaction(sourceLoc, null, 'QUICK_MOVE');
+    EventBus.emit('audio', { sound: 'click', source: 'local' });
+    return;
+  }
+  
+  if (isRightClick && displayItem.count > 1) {
+    const half = Math.floor(displayItem.count / 2);
+    setHeldItem({ ...displayItem, count: half, sourceLoc });
+    executeLocalTransaction(sourceLoc, null, 'SPLIT');
+  } else {
+    setHeldItem({ ...displayItem, sourceLoc });
+    // Optimistically empty the slot visually
+    executeLocalTransaction(sourceLoc, null, 'MOVE_START');
+  }
+  EventBus.emit('audio', { sound: 'click', source: 'local' });
+}
+
+function handleOccupiedSlotClick(e, params) {
+  const { displayItem, heldItem, setHeldItem, executeLocalTransaction, sourceLoc } = params;
+  const isRightClick = e.button === 2;
+
+  if (
+    isRightClick &&
+    (!displayItem ||
+      (displayItem.texture === heldItem.texture && displayItem.count < 64))
+  ) {
+    // Drop 1 item
+    const dropAmount = 1;
+    executeLocalTransaction(
+      heldItem.sourceLoc,
+      sourceLoc,
+      'MOVE',
+      dropAmount
+    );
+    if (heldItem.count - 1 <= 0) {
+      setHeldItem(null);
+    } else {
+      setHeldItem({ ...heldItem, count: heldItem.count - 1 });
+    }
+  } else {
+    // Drop stack or swap
+    executeLocalTransaction(heldItem.sourceLoc, sourceLoc, 'MOVE');
+
+    if (displayItem && displayItem.texture !== heldItem.texture) {
+      // We swapped! The old item goes to the cursor
+      // FIX: Maintain the heldItem's original sourceLoc so the server knows where to move it!
+      setHeldItem({ ...displayItem, sourceLoc: heldItem.sourceLoc });
+    } else if (displayItem && displayItem.texture === heldItem.texture) {
+      // We merged stacks! Did we exceed 64?
+      const total = displayItem.count + heldItem.count;
+      if (total > 64) {
+        setHeldItem({ ...heldItem, count: total - 64 });
+      } else {
+        setHeldItem(null);
+      }
+    } else {
+      setHeldItem(null);
+    }
+  }
+  EventBus.emit('audio', { sound: 'click', source: 'local' });
+}
+
+function processInventoryClick(e, params) {
+  e.stopPropagation(); // Halt event propagation to prevent Click-Through bug!
+  
+  params.sourceLoc = buildSourceLoc(params.containerId, params.index);
+
+  if (params.containerId === 'tableResult') {
+      handleCraftingResultClick(e, params);
+      return;
+  }
+
+  if (!params.heldItem && params.displayItem) {
+      handleEmptySlotClick(e, params);
+  } else if (params.heldItem) {
+      handleOccupiedSlotClick(e, params);
+  }
+}
+

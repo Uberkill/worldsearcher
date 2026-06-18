@@ -26,7 +26,8 @@ function* chunkSweep(
   renderDistance,
   knownChunks,
   failedChunks,
-  chunksToCheck
+  chunksToCheck,
+  pendingUnloadsMap
 ) {
   const desiredChunks = new Set();
   const toLoad = [];
@@ -50,27 +51,37 @@ function* chunkSweep(
     }
   }
 
+  // Step 2: Schedule UNLOAD for out-of-bounds chunks (Prioritized to free memory!)
+  // Apply 15-second hysteresis to prevent DB thrashing
+  const now = Date.now();
+  for (const key of chunksToCheck) {
+    if (!desiredChunks.has(key)) {
+      if (!pendingUnloadsMap.has(key)) {
+        pendingUnloadsMap.set(key, now);
+      } else if (now - pendingUnloadsMap.get(key) > UNLOAD_GRACE_MS) {
+        yield { type: 'UNLOAD', chunkKey: key };
+        pendingUnloadsMap.delete(key);
+      }
+    } else {
+      pendingUnloadsMap.delete(key); // Cancel pending unload if player walks back
+    }
+  }
+
   // Sort by distance
   toLoad.sort((a, b) => a.dist - b.dist);
 
-  // Step 2: Issue Load Requests
+  // Step 3: Issue Load Requests
   for (const item of toLoad) {
     yield { type: 'LOAD', ...item };
-  }
-
-  // Step 3: Schedule IMMEDIATE forget for out-of-bounds chunks
-  for (const key of chunksToCheck) {
-    if (!desiredChunks.has(key)) {
-      yield { type: 'UNLOAD', chunkKey: key };
-    }
   }
 
   yield { type: 'DONE', desiredChunks };
 }
 
+const _sharedPhysicsSet = new Set();
+
 export const ChunkManager = () => {
   const loadChunkAsync = useStore((state) => state.loadChunkAsync);
-  const unloadChunk = useStore((state) => state.unloadChunk);
   const setPlayerChunk = useStore((state) => state.setPlayerChunk);
   const setWorldReady = useStore((state) => state.setWorldReady);
   const setLoadingProgress = useStore((state) => state.setLoadingProgress);
@@ -79,6 +90,7 @@ export const ChunkManager = () => {
   const pass1Chunks = useRef(new Set());
   const pass2Chunks = useRef(new Set());
   const failedChunks = useRef(new Map());
+  const pendingUnloadsMap = useRef(new Map());
   const lastPlayerCx = useRef(null);
   const lastPlayerCz = useRef(null);
   const booted = useRef(false);
@@ -89,202 +101,33 @@ export const ChunkManager = () => {
   const gateFrameSkip = useRef(0); // Throttle checkPass2Gate to every 3 frames
 
   const worldEpoch = useSyncStore((state) => state.worldEpoch);
-  useEffect(() => {
-    knownChunks.current.clear();
-    pass1Chunks.current.clear();
-    pass2Chunks.current.clear();
-    failedChunks.current.clear();
-    lastPlayerCx.current = null;
-    lastPlayerCz.current = null;
-    booted.current = false;
-    sweepGen.current = null;
-    liveTracking.current = false;
-  }, [worldEpoch]);
 
   useEffect(() => {
-    let isMounted = true;
-    if (booted.current) return;
-    booted.current = true;
-
-    const BOOT_DISTANCE = 2; // Progressive boot: only load immediate vicinity (5x5 grid)
-    // Max concurrent worker jobs during boot. Restored to 25 to allow all boot chunks to fetch
-    // from the host/DB simultaneously, significantly speeding up the initial load screen!
-    const BOOT_CONCURRENCY = 25;
-
-    const initialPos = [playerPosition.x, playerPosition.y, playerPosition.z];
-    const SPAWN_CX = Math.floor(initialPos[0] / 16);
-    const SPAWN_CZ = Math.floor(initialPos[2] / 16);
-
-    const bootOffsets = buildOffsets(BOOT_DISTANCE);
-    const total = bootOffsets.length;
-    let confirmed = 0;
-
-    // Phase 1 — Load boot chunks in concurrency-limited batches.
-    // Firing all 25 at once fills the worker queue and makes the loading
-    // screen stall at 0% while the JS microtask queue drains.
-    const runBootChunk = ({ x, z }) => {
-      const cx = SPAWN_CX + x;
-      const cz = SPAWN_CZ + z;
-      const chunkKey = `${cx},${cz}`;
-
-      knownChunks.current.add(chunkKey);
-      return loadChunkAsync(cx, cz)
-        .then((success) => {
-          if (success === 'CANCELLED' || success === false) {
-            knownChunks.current.delete(chunkKey);
-          } else if (success === 'DECORATED') {
-            pass2Chunks.current.add(chunkKey);
-          } else if (success === 'PRISTINE' || success === true) {
-            pass1Chunks.current.add(chunkKey);
-          } else {
-            console.error(`[ChunkManager] Chunk ${chunkKey} failed to load! success=`, success);
-            knownChunks.current.delete(chunkKey);
-            useStore.getState().unloadChunk(chunkKey);
-            const fails = failedChunks.current.get(chunkKey) || 0;
-            failedChunks.current.set(chunkKey, fails + 1);
-            const cooldown = fails + 1 < 3 ? 5000 : 30000;
-            setTimeout(() => {
-              failedChunks.current.delete(chunkKey);
-            }, cooldown);
-          }
-          confirmed++;
-          if (isMounted && (confirmed % 3 === 0 || confirmed === total)) {
-            setLoadingProgress(Math.floor((confirmed / total) * 100));
-          }
-        })
-        .catch((err) => {
-          console.error(`Chunk load failed during boot for ${chunkKey}:`, err);
-          knownChunks.current.delete(chunkKey);
-          useStore.getState().unloadChunk(chunkKey);
-          const fails = failedChunks.current.get(chunkKey) || 0;
-          failedChunks.current.set(chunkKey, fails + 1);
-          const cooldown = fails + 1 < 3 ? 5000 : 30000;
-          setTimeout(() => {
-            failedChunks.current.delete(chunkKey);
-          }, cooldown);
-          confirmed++;
-          if (isMounted && (confirmed % 3 === 0 || confirmed === total)) {
-            setLoadingProgress(Math.floor((confirmed / total) * 100));
-          }
-        });
-    };
-
-    // Semaphore: run at most BOOT_CONCURRENCY loads at a time
-    const bootQueue = [...bootOffsets];
-    const bootPromises = [];
-    const runNext = () => {
-      if (bootQueue.length === 0) return Promise.resolve();
-      const item = bootQueue.shift();
-      return runBootChunk(item).then(runNext);
-    };
-    for (let i = 0; i < Math.min(BOOT_CONCURRENCY, bootOffsets.length); i++) {
-      bootPromises.push(runNext());
+    if (typeof window !== 'undefined') {
+      window.__DEBUG_KNOWN_CHUNKS__ = knownChunks.current;
+      window.__DEBUG_PASS1_CHUNKS__ = pass1Chunks.current;
+      window.__DEBUG_PASS2_CHUNKS__ = pass2Chunks.current;
+      window.__DEBUG_FAILED_CHUNKS__ = failedChunks.current;
     }
+  });
 
-    // Phase 2 — Wait until every chunk key is confirmed in Zustand state
-    Promise.all(bootPromises).then(async () => {
-      if (!isMounted) return;
-      setLoadingProgress(100);
-      setPlayerChunk(SPAWN_CX, SPAWN_CZ);
-      // Let React mount all Chunk components + physics colliders
-      await new Promise((r) => setTimeout(r, 1500));
-      if (!isMounted) return;
-      setWorldReady();
-      liveTracking.current = true;
-    }).catch(err => {
-      console.error("[ChunkManager] Boot sequence failed:", err);
-      if (!isMounted) return;
-      setLoadingProgress(100);
-      setWorldReady();
-      liveTracking.current = true;
-    });
-
-    const p1 = pass1Chunks.current;
-    const p2 = pass2Chunks.current;
-
-    return () => {
-      isMounted = false;
-      booted.current = false;
-
-
-      // Unload ALL known chunks to prevent memory leaks when switching worlds/disconnecting!
-      const store = useStore.getState();
-      for (const chunkKey of knownChunks.current) {
-        store.unloadChunk(chunkKey);
-      }
-      knownChunks.current.clear();
-      p1.clear();
-      p2.clear();
-    };
-    
-    }, [worldEpoch]);
-
-  const updatePhysicsGrid = (currentCx, currentCz) => {
-    const physicsSet = new Set();
-    const addGrid = (cx, cz) => {
-      for (let x = -3; x <= 3; x++) {
-        for (let z = -3; z <= 3; z++) {
-          physicsSet.add(`${cx + x},${cz + z}`);
-        }
-      }
-    };
-
-    addGrid(currentCx, currentCz);
-
-    const networkState = networkActions.getState();
-    if (networkState.players) {
-      for (const pId in networkState.players) {
-        const p = networkState.players[pId];
-        if (p && p.pos) {
-          addGrid(Math.floor(p.pos[0] / 16), Math.floor(p.pos[2] / 16));
-        }
-      }
+  const checkPass2Gate = (force = false) => {
+    if (!force) {
+      gateFrameSkip.current++;
+      if (gateFrameSkip.current < 3) return;
+      gateFrameSkip.current = 0;
     }
-
-    const storeState = useStore.getState();
-    if (storeState.enemies) {
-      for (const eId in storeState.enemies) {
-        const e = storeState.enemies[eId];
-        if (e && e.position) {
-          addGrid(
-            Math.floor(e.position[0] / 16),
-            Math.floor(e.position[2] / 16)
-          );
-        }
-      }
-    }
-
-    const activePhysicsChunks = Array.from(physicsSet);
-    const prevPhysics = useChunkStore.getState().activePhysicsChunks || [];
-    let physicsChanged = false;
-    if (prevPhysics.length !== activePhysicsChunks.length) {
-      physicsChanged = true;
-    } else {
-      for (let i = 0; i < activePhysicsChunks.length; i++) {
-        if (activePhysicsChunks[i] !== prevPhysics[i]) {
-          physicsChanged = true;
-          break;
-        }
-      }
-    }
-    if (physicsChanged) {
-      useChunkStore.getState().shadowSetActivePhysics(activePhysicsChunks);
-    }
-  };
-
-  const checkPass2Gate = () => {
-    // Throttle: run only every 3 frames. Pass2 gate is not time-critical
-    // and 200-chunk sets produce ~1600 Set.has() calls per frame without this.
-    gateFrameSkip.current++;
-    if (gateFrameSkip.current < 3) return;
-    gateFrameSkip.current = 0;
 
     // Cache these outside the loop — was calling getState() once per chunk (O(n) store reads)
     const R = useStore.getState().renderDistance;
     const playerCx = lastPlayerCx.current;
     const playerCz = lastPlayerCz.current;
 
+    let dispatchedThisFrame = 0;
+    const MAX_PASS2_PER_FRAME = 2;
+
     for (const chunkKey of pass1Chunks.current) {
+      if (dispatchedThisFrame >= MAX_PASS2_PER_FRAME) break;
       if (pass2Chunks.current.has(chunkKey)) continue; // Already DECORATED
 
       const [sCx, sCz] = chunkKey.split(',');
@@ -320,6 +163,7 @@ export const ChunkManager = () => {
       }
 
       if (neighborsReady) {
+        dispatchedThisFrame++;
         pass2Chunks.current.add(chunkKey);
         pass1Chunks.current.delete(chunkKey);
         useStore
@@ -382,6 +226,255 @@ export const ChunkManager = () => {
     }
   };
 
+  useEffect(() => {
+    console.log('[ChunkManager] MOUNTED! Starting chunk generation...');
+  }, []);
+
+  useEffect(() => {
+    knownChunks.current.clear();
+    pass1Chunks.current.clear();
+    pass2Chunks.current.clear();
+    failedChunks.current.clear();
+    lastPlayerCx.current = null;
+    lastPlayerCz.current = null;
+    booted.current = false;
+    sweepGen.current = null;
+    liveTracking.current = false;
+  }, [worldEpoch]);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (booted.current) return;
+    booted.current = true;
+
+    const BOOT_DISTANCE = 2; // Progressive boot: only load immediate vicinity (5x5 grid)
+    // Max concurrent worker jobs during boot. Restored to 25 to allow all boot chunks to fetch
+    // from the host/DB simultaneously, significantly speeding up the initial load screen!
+    const BOOT_CONCURRENCY = 25;
+
+    const initialPos = [playerPosition.x, playerPosition.y, playerPosition.z];
+    const SPAWN_CX = Math.floor(initialPos[0] / 16);
+    const SPAWN_CZ = Math.floor(initialPos[2] / 16);
+
+    const bootOffsets = buildOffsets(BOOT_DISTANCE);
+    const total = bootOffsets.length;
+    let confirmed = 0;
+
+    // Phase 1 — Load boot chunks in concurrency-limited batches.
+    // Firing all 25 at once fills the worker queue and makes the loading
+    // screen stall at 0% while the JS microtask queue drains.
+    const runBootChunk = ({ x, z }) => {
+      const cx = SPAWN_CX + x;
+      const cz = SPAWN_CZ + z;
+      const chunkKey = `${cx},${cz}`;
+
+      if (!isMounted) return Promise.resolve('CANCELLED');
+
+      knownChunks.current.add(chunkKey);
+      return loadChunkAsync(cx, cz)
+        .then((success) => {
+          if (!isMounted) return 'CANCELLED';
+          if (success === 'CANCELLED' || success === false) {
+            knownChunks.current.delete(chunkKey);
+            failedChunks.current.set(chunkKey, (failedChunks.current.get(chunkKey) || 0) + 1);
+            if (failedChunks.current.get(chunkKey) < 3) {
+              return new Promise(resolve => setTimeout(() => resolve(runBootChunk({ x, z })), 500));
+            }
+          } else if (success === 'DECORATED') {
+            pass2Chunks.current.add(chunkKey);
+          } else if (success === 'PRISTINE' || success === true) {
+            pass1Chunks.current.add(chunkKey);
+          } else {
+            console.error(`[ChunkManager] Chunk ${chunkKey} failed to load! success=`, success);
+            knownChunks.current.delete(chunkKey);
+            useStore.getState().unloadChunk(chunkKey);
+            const fails = failedChunks.current.get(chunkKey) || 0;
+            failedChunks.current.set(chunkKey, fails + 1);
+            const cooldown = fails + 1 < 3 ? 5000 : 30000;
+            if (fails + 1 < 3 && isMounted) {
+              setTimeout(() => {
+                if (!isMounted) return;
+                lastPlayerCx.current = null; // Force sweep retry after cooldown!
+              }, cooldown);
+            }
+          }
+          confirmed++;
+          if (isMounted && (confirmed % 3 === 0 || confirmed === total)) {
+            setLoadingProgress(Math.floor((confirmed / total) * 100));
+          }
+        })
+        .catch((err) => {
+          console.error(`Chunk load failed during boot for ${chunkKey}:`, err);
+          knownChunks.current.delete(chunkKey);
+          useStore.getState().unloadChunk(chunkKey);
+          const fails = failedChunks.current.get(chunkKey) || 0;
+          failedChunks.current.set(chunkKey, fails + 1);
+          const cooldown = fails + 1 < 3 ? 5000 : 30000;
+          setTimeout(() => {
+            failedChunks.current.delete(chunkKey);
+          }, cooldown);
+          confirmed++;
+          if (isMounted && (confirmed % 3 === 0 || confirmed === total)) {
+            setLoadingProgress(Math.floor((confirmed / total) * 100));
+          }
+        });
+    };
+
+    // Semaphore: run at most BOOT_CONCURRENCY loads at a time
+    const bootQueue = [...bootOffsets];
+    const bootPromises = [];
+    const runNext = () => {
+      if (bootQueue.length === 0) return Promise.resolve();
+      const item = bootQueue.shift();
+      return runBootChunk(item).then(runNext);
+    };
+    for (let i = 0; i < Math.min(BOOT_CONCURRENCY, bootOffsets.length); i++) {
+      bootPromises.push(runNext());
+    }
+
+    // Phase 2 — Wait until every chunk key is confirmed in Zustand state, and physically mounted
+    Promise.all(bootPromises).then(() => {
+      if (!isMounted) return;
+      setLoadingProgress(100);
+      setPlayerChunk(SPAWN_CX, SPAWN_CZ);
+      
+      const verifyOffsets = buildOffsets(BOOT_DISTANCE - 1);
+      const keysToVerify = verifyOffsets.map(({ x: dx, z: dz }) => `${SPAWN_CX + dx},${SPAWN_CZ + dz}`);
+      
+      let verifyCount = 0;
+      const verifyVisuals = () => {
+        if (!isMounted) return;
+
+        // Force Pass 2 processing during the boot sequence
+        checkPass2Gate(true);
+
+        const chunkState = useChunkStore.getState();
+        const chunks = chunkState.chunks;
+        verifyCount++;
+        const missingChunks = [];
+        
+        const allMounted = keysToVerify.every(k => {
+          const c = chunks[k];
+          if (failedChunks.current.get(k) >= 3) return true;
+          const mounted = c && c.meshArrays && c.meshArrays._isMounted === true;
+          if (!mounted) missingChunks.push({
+             key: k,
+             hasC: !!c,
+             inPass1: pass1Chunks.current.has(k),
+             inPass2: pass2Chunks.current.has(k),
+             inFlight: useChunkStore.getState().inFlightChunks?.has(k) || false,
+             failedCount: failedChunks.current.get(k) || 0
+          });
+          return mounted;
+        });
+
+        if (!allMounted && verifyCount % 20 === 0) {
+          console.log('[DEBUG] Missing:', JSON.stringify(missingChunks));
+          console.log('[DEBUG] Queue states: inFlight:', useChunkStore.getState().inFlightChunks?.size);
+        }
+
+        if (allMounted) {
+          // Wait for WASM physics BVH ingestion (approx 3 frames at 60fps ~ 50ms)
+          setTimeout(() => {
+            if (!isMounted) return;
+            setWorldReady();
+            liveTracking.current = true;
+          }, 100);
+        } else {
+          setTimeout(verifyVisuals, 50);
+        }
+      };
+      
+      verifyVisuals();
+    }).catch(err => {
+      console.error("[ChunkManager] Boot sequence failed:", err);
+      if (!isMounted) return;
+      setLoadingProgress(100);
+      setWorldReady();
+      liveTracking.current = true;
+    });
+
+    const p1 = pass1Chunks.current;
+    const p2 = pass2Chunks.current;
+
+    return () => {
+      isMounted = false;
+      booted.current = false;
+
+
+      // Unload ALL known chunks to prevent memory leaks when switching worlds/disconnecting!
+      const store = useStore.getState();
+      for (const chunkKey of knownChunks.current) {
+        store.unloadChunk(chunkKey);
+      }
+      knownChunks.current.clear();
+      p1.clear();
+      p2.clear();
+    };
+    
+    }, [worldEpoch]);
+
+  const updatePhysicsGrid = (currentCx, currentCz) => {
+    _sharedPhysicsSet.clear();
+    const addGrid = (cx, cz) => {
+      if (!Number.isFinite(cx) || !Number.isFinite(cz)) return;
+      for (let x = -2; x <= 2; x++) {
+        for (let z = -2; z <= 2; z++) {
+          _sharedPhysicsSet.add(`${cx + x},${cz + z}`);
+        }
+      }
+    };
+
+    addGrid(currentCx, currentCz);
+
+    const networkState = networkActions.getState();
+    if (networkState.players) {
+      for (const pId in networkState.players) {
+        const p = networkState.players[pId];
+        if (p && p.pos) {
+          const px = p.pos[0];
+          const pz = p.pos[2];
+          if (Number.isFinite(px) && Number.isFinite(pz)) {
+            addGrid(Math.floor(px / 16), Math.floor(pz / 16));
+          }
+        }
+      }
+    }
+
+    const storeState = useStore.getState();
+    if (storeState.enemies) {
+      for (const eId in storeState.enemies) {
+        const e = storeState.enemies[eId];
+        if (e && e.position) {
+          const ex = e.position[0];
+          const ez = e.position[2];
+          if (Number.isFinite(ex) && Number.isFinite(ez)) {
+            addGrid(Math.floor(ex / 16), Math.floor(ez / 16));
+          }
+        }
+      }
+    }
+
+    const activePhysicsChunks = Array.from(_sharedPhysicsSet).sort();
+    const prevPhysics = useChunkStore.getState().activePhysicsChunks || [];
+    let physicsChanged = false;
+    if (prevPhysics.length !== activePhysicsChunks.length) {
+      physicsChanged = true;
+    } else {
+      for (let i = 0; i < activePhysicsChunks.length; i++) {
+        if (activePhysicsChunks[i] !== prevPhysics[i]) {
+          physicsChanged = true;
+          break;
+        }
+      }
+    }
+    if (physicsChanged) {
+      useChunkStore.getState().shadowSetActivePhysics(activePhysicsChunks);
+    }
+  };
+
+  // checkPass2Gate has been moved above the useEffect hook to be in scope for verifyVisuals
+
   const renderDistance = useStore((state) => state.renderDistance);
   useEffect(() => {
     // Force a new sweep immediately if the user changes Render Distance in settings
@@ -431,7 +524,8 @@ export const ChunkManager = () => {
         useStore.getState().renderDistance,
         knownChunks.current,
         failedChunks.current,
-        chunksToCheck
+        chunksToCheck,
+        pendingUnloadsMap.current
       );
     }
 

@@ -86,8 +86,8 @@ export const Cubes = memo(() => {
       {fallingStructures.map((s) => (
         <FallingStructure key={s.id} structure={s} />
       ))}
-      {debris.map((d) => (
-        <DynamicCube key={d.key} block={d} />
+      {debris.map((d, i) => (
+        <DynamicCube key={d.key || d.id || `debris_${i}`} block={d} />
       ))}
     </>
   );

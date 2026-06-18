@@ -57,16 +57,13 @@ export const Astrolabe = ({ active, onClose }) => {
     const ctx = canvas.getContext('2d');
     
     let frameId;
-    const euler = new Euler(0, 0, 0, 'YXZ');
-    
     const draw = () => {
       ctx.clearRect(0, 0, 600, 600);
       
       const px = playerPosition.x;
       const pz = playerPosition.z;
       
-      euler.setFromQuaternion(playerRotation);
-      const yaw = euler.y;
+      const yaw = playerRotation.y;
       
       const centerX = 300;
       const centerY = 300;
@@ -198,9 +195,7 @@ export const Astrolabe = ({ active, onClose }) => {
     
     const px = playerPosition.x;
     const pz = playerPosition.z;
-    const euler = new Euler(0, 0, 0, 'YXZ');
-    euler.setFromQuaternion(playerRotation);
-    const yaw = euler.y;
+    const yaw = playerRotation.y;
     const scale = 0.18;
     const centerX = 300;
     const centerY = 300;

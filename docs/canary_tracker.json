@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "last_updated_by": "Antigravity Agent",
-  "reason": "Applied Multi-Agent Architecture Audit fixes: Decoupled useSettingsStore to resolve GameAudio -> useStore circular dependencies."
+  "reason": "Applied Multi-Agent Architecture Audit fixes: Cleaned up unused variables and fixed React Hooks purity and state initialization violations."
 }

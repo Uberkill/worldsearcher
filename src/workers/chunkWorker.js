@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /**
  * chunkWorker.js — Off-thread chunk generation + greedy mesh worker.
  *
@@ -23,7 +24,6 @@ import {
   generateChunkPass2,
 } from '../utils/chunkGenerator.js';
 import { CHUNK_VOLUME, getIndex } from '../utils/chunkData.js';
-import { BlockById } from '../registry/BlockRegistry.js';
 import { buildGreedyArrays } from '../utils/greedyMesh.js';
 import {
   generateSunlight,
@@ -41,33 +41,34 @@ for (let i = 8; i <= 24; i++) recycledBufferBuckets[1 << i] = [];
   };
 const MAX_POOL_SIZE = 1500;
 
+let SolidLookup = null;
+let FluidLookup = null;
+let TextureLookup = null;
+let FloraLookup = null;
+let TransparentLookup = null;
+let isReady = false;
+
   const computeHeightmap = (buffer) => {
-    let buf = null;
-    let pow = 1024; // 256 * 4 bytes
-    while (pow <= 16777216) {
-       if (recycledBufferBuckets[pow] && recycledBufferBuckets[pow].length > 0) {
-          buf = recycledBufferBuckets[pow].pop();
-          break;
-       }
-       pow <<= 1;
-    }
-    if (!buf) buf = new ArrayBuffer(1024);
-    const heightmap = new Float32Array(buf, 0, 256);
-    for (let lx = 0; lx < 16; lx++) {
+    const heightmap = new Float32Array(256);
+    let hIdx = 0;
     for (let lz = 0; lz < 16; lz++) {
-      let highest = -999;
-      for (let y = 255; y >= -32; y--) {
-        const tex = buffer[getIndex(lx, y, lz)] & 0x7F;
-        if (tex !== 0 && !BlockById[tex]?.isTransparent) {
-          highest = y;
-          break;
+      for (let lx = 0; lx < 16; lx++) {
+        let highest = -999;
+        let idx = getIndex(lx, 255, lz);
+        
+        for (let y = 255; y >= -32; y--) {
+          const tex = buffer[idx] & 0xFF;
+          if (tex !== 0 && SolidLookup[tex] === 1) {
+            highest = y;
+            break;
+          }
+          idx -= 256;
         }
+        heightmap[hIdx++] = highest;
       }
-      heightmap[lz * 16 + lx] = highest;
     }
-  }
-  return heightmap;
-};
+    return heightmap;
+  };
 
 const extractTransfers = (meshArrays) => {
   const uniqueTransfers = new Set();
@@ -101,6 +102,16 @@ const extractTransfers = (meshArrays) => {
 };
 
 self.onmessage = async ({ data }) => {
+  if (data.type === 'INIT_REGISTRY') {
+    SolidLookup = new Uint8Array(data.solidBuffer);
+    FluidLookup = new Uint8Array(data.fluidBuffer);
+    TextureLookup = new Uint16Array(data.textureBuffer);
+    FloraLookup = new Uint8Array(data.floraBuffer);
+    TransparentLookup = new Uint8Array(data.transparentBuffer);
+    isReady = true;
+    return;
+  }
+
   if (data.type === 'PING') {
     self.postMessage({ type: 'PONG' });
     return;
@@ -121,6 +132,16 @@ self.onmessage = async ({ data }) => {
         }
       }
     }
+    return;
+  }
+
+  if (!isReady) {
+    self.postMessage({
+      type: 'error',
+      message: 'Worker received generation task before registry initialization.',
+      cx: data?.cx,
+      cz: data?.cz,
+    });
     return;
   }
 
@@ -162,7 +183,7 @@ self.onmessage = async ({ data }) => {
       );
       const lightOverflow = [...sunOverflow, ...blockOverflow];
 
-      const meshArrays = buildGreedyArrays(newBuffer, cx, cz, neighborBuffers, recycledBufferBuckets);
+      const meshArrays = buildGreedyArrays(newBuffer, cx, cz, neighborBuffers, recycledBufferBuckets, SolidLookup, FluidLookup, TextureLookup, FloraLookup, TransparentLookup);
       if (!meshArrays.__meta) meshArrays.__meta = {};
       meshArrays.__meta.heightmap = computeHeightmap(newBuffer);
 
@@ -230,7 +251,7 @@ self.onmessage = async ({ data }) => {
       const sunOverflow = generateSunlight(buffer, cx, cz, neighborBuffers);
       const blockOverflow = generateBlockLight(buffer, cx, cz, neighborBuffers);
       const lightOverflow = [...removedLightOverflow, ...sunOverflow, ...blockOverflow];
-      const meshArrays = buildGreedyArrays(buffer, cx, cz, neighborBuffers, recycledBufferBuckets);
+      const meshArrays = buildGreedyArrays(buffer, cx, cz, neighborBuffers, recycledBufferBuckets, SolidLookup, FluidLookup, TextureLookup, FloraLookup, TransparentLookup);
       if (!meshArrays.__meta) meshArrays.__meta = {};
       meshArrays.__meta.heightmap = computeHeightmap(buffer);
 

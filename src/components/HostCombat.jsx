@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { useRef, useState, useEffect } from 'react';
 import { useRapier, RigidBody, BallCollider, useBeforePhysicsStep } from '@react-three/rapier';
 import * as THREE from 'three';
@@ -19,12 +20,12 @@ export function HostCombat() {
   const maxProjectiles = 100;
 
   const accumulator = useRef(0);
-   
-  const lastTickTime = useRef(performance.now());
+  const lastTickTime = useRef(null);
 
   useBeforePhysicsStep(() => {
     if (!isHost) return;
     const now = performance.now();
+    if (lastTickTime.current === null) lastTickTime.current = now;
     const delta = now - lastTickTime.current;
     lastTickTime.current = now;
     
@@ -40,7 +41,7 @@ export function HostCombat() {
     if (ticksThisFrame >= 10) accumulator.current = 0;
   });
 
-  const runFixedTick = () => {
+  function runFixedTick() {
     if (!isHost) return;
     // 1. Process pending attacks
     const pendingAttacks = networkActions.getState().popPendingAttacks();

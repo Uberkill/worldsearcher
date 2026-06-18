@@ -23,11 +23,11 @@ const runMeshing = (shipId, buffer, bounds, jobId) => {
            if (visited[idx]) continue;
            
            const val = buffer[idx];
-           if (val === 0) continue; // Skip air
+           if ((val & 0xFF) === 0) continue; // Skip air
            
            // Expand along X
            let w = 1;
-           while (x + w < endX && buffer[getIdx(x + w, y, z)] !== 0 && !visited[getIdx(x + w, y, z)]) {
+           while (x + w < endX && (buffer[getIdx(x + w, y, z)] & 0xFF) !== 0 && !visited[getIdx(x + w, y, z)]) {
               w++;
            }
            
@@ -36,7 +36,7 @@ const runMeshing = (shipId, buffer, bounds, jobId) => {
            let canExtendZ = true;
            while (z + d < endZ && canExtendZ) {
               for (let i = 0; i < w; i++) {
-                 if (buffer[getIdx(x + i, y, z + d)] === 0 || visited[getIdx(x + i, y, z + d)]) {
+                 if ((buffer[getIdx(x + i, y, z + d)] & 0xFF) === 0 || visited[getIdx(x + i, y, z + d)]) {
                     canExtendZ = false;
                     break;
                  }
@@ -50,7 +50,7 @@ const runMeshing = (shipId, buffer, bounds, jobId) => {
            while (y + h < endY && canExtendY) {
               for (let j = 0; j < d; j++) {
                  for (let i = 0; i < w; i++) {
-                    if (buffer[getIdx(x + i, y + h, z + j)] === 0 || visited[getIdx(x + i, y + h, z + j)]) {
+                    if ((buffer[getIdx(x + i, y + h, z + j)] & 0xFF) === 0 || visited[getIdx(x + i, y + h, z + j)]) {
                        canExtendY = false;
                        break;
                     }

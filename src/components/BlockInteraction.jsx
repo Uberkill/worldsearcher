@@ -65,6 +65,71 @@ const _shipLocalDir = new THREE.Vector3();
 
 const SHIP_SIZE_X = 32, SHIP_SIZE_Y = 32, SHIP_SIZE_Z = 32;
 
+const _worldPos = new THREE.Vector3();
+
+// ── Generic Digital Differential Analysis (DDA) Voxel Traverser ──
+function traverseDDA(origin, dir, maxDist, checkVoxel) {
+  const dx = dir.x, dy = dir.y, dz = dir.z;
+  const EPSILON = 1e-6;
+  const ox = origin.x + dx * EPSILON;
+  const oy = origin.y + dy * EPSILON;
+  const oz = origin.z + dz * EPSILON;
+
+  let ix = Math.floor(ox);
+  let iy = Math.floor(oy);
+  let iz = Math.floor(oz);
+
+  const stepX = dx >= 0 ? 1 : -1;
+  const stepY = dy >= 0 ? 1 : -1;
+  const stepZ = dz >= 0 ? 1 : -1;
+
+  const tDX = dx !== 0 ? Math.abs(1 / dx) : Infinity;
+  const tDY = dy !== 0 ? Math.abs(1 / dy) : Infinity;
+  const tDZ = dz !== 0 ? Math.abs(1 / dz) : Infinity;
+
+  let tmX = dx > 0 ? (ix + 1 - ox) * tDX : dx < 0 ? (ox - ix) * tDX : Infinity;
+  let tmY = dy > 0 ? (iy + 1 - oy) * tDY : dy < 0 ? (oy - iy) * tDY : Infinity;
+  let tmZ = dz > 0 ? (iz + 1 - oz) * tDZ : dz < 0 ? (oz - iz) * tDZ : Infinity;
+
+  let face = [0, 0, 0];
+  const maxSteps = Math.ceil(maxDist) * 3 + 10;
+
+  for (let step = 0; step < maxSteps; step++) {
+    const res = checkVoxel(ix, iy, iz, face);
+    if (res !== null && res !== undefined) {
+      return res;
+    }
+
+    if (tmX < tmY) {
+      if (tmX < tmZ) {
+        if (tmX > maxDist) return null;
+        ix += stepX;
+        tmX += tDX;
+        face = [-stepX, 0, 0];
+      } else {
+        if (tmZ > maxDist) return null;
+        iz += stepZ;
+        tmZ += tDZ;
+        face = [0, 0, -stepZ];
+      }
+    } else {
+      if (tmY < tmZ) {
+        if (tmY > maxDist) return null;
+        iy += stepY;
+        tmY += tDY;
+        face = [0, -stepY, 0];
+      } else {
+        if (tmZ > maxDist) return null;
+        iz += stepZ;
+        tmZ += tDZ;
+        face = [0, 0, -stepZ];
+      }
+    }
+  }
+
+  return null;
+}
+
 function castRayShip(origin, dir, maxDist, shipBuffer, shipTransform) {
   if (!shipBuffer || !shipTransform) return null;
 
@@ -83,49 +148,20 @@ function castRayShip(origin, dir, maxDist, shipBuffer, shipTransform) {
   }
   
   _shipPos.set(px, py, pz);
-  
   _shipMat.compose(_shipPos, _quat, _shipScale);
-  
   _invShipMat.copy(_shipMat).invert();
   
   _shipLocalOrigin.copy(origin).applyMatrix4(_invShipMat);
   _target.copy(origin).add(dir).applyMatrix4(_invShipMat);
   _shipLocalDir.copy(_target).sub(_shipLocalOrigin).normalize();
-    const dx = _shipLocalDir.x;
-    const dy = _shipLocalDir.y;
-    const dz = _shipLocalDir.z;
+  
+  _shipLocalOrigin.x += SHIP_CENTER_X + 0.5;
+  _shipLocalOrigin.y += SHIP_CENTER_Y + 0.5;
+  _shipLocalOrigin.z += SHIP_CENTER_Z + 0.5;
 
-    const EPSILON = 1e-6;
-    const ox = _shipLocalOrigin.x + SHIP_CENTER_X + 0.5 + dx * EPSILON;
-    const oy = _shipLocalOrigin.y + SHIP_CENTER_Y + 0.5 + dy * EPSILON;
-    const oz = _shipLocalOrigin.z + SHIP_CENTER_Z + 0.5 + dz * EPSILON;
-
-  let ix = Math.floor(ox);
-  let iy = Math.floor(oy);
-  let iz = Math.floor(oz);
-
-  const stepX = dx >= 0 ? 1 : -1;
-  const stepY = dy >= 0 ? 1 : -1;
-  const stepZ = dz >= 0 ? 1 : -1;
-
-  const tDX = dx !== 0 ? Math.abs(1 / dx) : Infinity;
-  const tDY = dy !== 0 ? Math.abs(1 / dy) : Infinity;
-  const tDZ = dz !== 0 ? Math.abs(1 / dz) : Infinity;
-
-  let tmX = dx > 0 ? (ix + 1 - ox) * tDX : dx < 0 ? (ox - ix) * tDX : Infinity;
-  let tmY = dy > 0 ? (iy + 1 - oy) * tDY : dy < 0 ? (oy - iy) * tDY : Infinity;
-  let tmZ = dz > 0 ? (iz + 1 - oz) * tDZ : dz < 0 ? (oz - iz) * tDZ : Infinity;
-
-  let face = [0, 0, 0];
-  const maxSteps = Math.ceil(maxDist) * 3 + 10;
-
-  for (let step = 0; step < maxSteps; step++) {
-    const bx = ix;
-    const by = iy;
-    const bz = iz;
-
+  return traverseDDA(_shipLocalOrigin, _shipLocalDir, maxDist, (bx, by, bz, face) => {
     if (bx >= 0 && bx < SHIP_SIZE_X && by >= 0 && by < SHIP_SIZE_Y && bz >= 0 && bz < SHIP_SIZE_Z) {
-      const bufferIdx = bx + (iz * SHIP_SIZE_X) + (iy * SHIP_SIZE_X * SHIP_SIZE_Z);
+      const bufferIdx = bx + (bz * SHIP_SIZE_X) + (by * SHIP_SIZE_X * SHIP_SIZE_Z);
       const val = shipBuffer[bufferIdx];
       if (val !== undefined && val !== 0) {
         const tex = val & 0xff; // getTextureId equivalent
@@ -133,95 +169,19 @@ function castRayShip(origin, dir, maxDist, shipBuffer, shipTransform) {
           const blockDef = BlockById[tex];
           if (!blockDef?.isFlora && !blockDef?.isLiquid) {
             const block = { texture: BlockKeyById[tex], pos: [bx, by, bz], isShip: true, sx: bx, sy: by, sz: bz };
-            return { block, bx, by, bz, face, isShip: true };
+            _worldPos.set(bx - SHIP_CENTER_X, by - SHIP_CENTER_Y, bz - SHIP_CENTER_Z).applyMatrix4(_shipMat);
+            const dist = origin.distanceTo(_worldPos);
+            return { block, bx, by, bz, face, isShip: true, dist };
           }
         }
       }
     }
-
-    if (tmX < tmY) {
-      if (tmX < tmZ) {
-        if (tmX > maxDist) return null;
-        ix += stepX;
-        tmX += tDX;
-        face = [-stepX, 0, 0];
-      } else {
-        if (tmZ > maxDist) return null;
-        iz += stepZ;
-        tmZ += tDZ;
-        face = [0, 0, -stepZ];
-      }
-    } else {
-      if (tmY < tmZ) {
-        if (tmY > maxDist) return null;
-        iy += stepY;
-        tmY += tDY;
-        face = [0, -stepY, 0];
-      } else {
-        if (tmZ > maxDist) return null;
-        iz += stepZ;
-        tmZ += tDZ;
-        face = [0, 0, -stepZ];
-      }
-    }
-  }
-
-  return null;
+    return null;
+  });
 }
 
-// ── Amanatides-Woo Fast Voxel Traversal ──────────────────────────────────────
-/**
- * @param {THREE.Vector3} origin   — ray start (camera world position)
- * @param {THREE.Vector3} dir      — unit direction vector
- * @param {number}        maxDist  — maximum distance in blocks
- * @param {Object}        chunks   — Zustand chunks map (chunkKey → {blocks})
- * @returns {{ block, bx, by, bz, face:[nx,ny,nz] } | null}
- *   block = the block data object that was hit
- *   bx/by/bz = block-centre world coords
- *   face = outward face normal of the hit face (the face the ray entered from)
- */
 function castRayDDA(origin, dir, maxDist, chunks) {
-  // ── Transform to DDA space ────────────────────────────────────────────────
-  // No shifts needed. Block (ix,iy,iz) occupies [ix, ix+1].
-  const dx = dir.x, dy = dir.y, dz = dir.z;
-  const EPSILON = 1e-6;
-  const ox = origin.x + dx * EPSILON;
-  const oy = origin.y + dy * EPSILON;
-  const oz = origin.z + dz * EPSILON;
-
-  // Starting block index
-  let ix = Math.floor(ox);
-  let iy = Math.floor(oy);
-  let iz = Math.floor(oz);
-
-  // Step direction (±1 per axis)
-  const stepX = dx >= 0 ? 1 : -1;
-  const stepY = dy >= 0 ? 1 : -1;
-  const stepZ = dz >= 0 ? 1 : -1;
-
-  // tDelta: ray length to cross one full block in each axis
-  const tDX = dx !== 0 ? Math.abs(1 / dx) : Infinity;
-  const tDY = dy !== 0 ? Math.abs(1 / dy) : Infinity;
-  const tDZ = dz !== 0 ? Math.abs(1 / dz) : Infinity;
-
-  // tMax: initial distance to the next boundary in each axis
-  let tmX = dx > 0 ? (ix + 1 - ox) * tDX : dx < 0 ? (ox - ix) * tDX : Infinity;
-  let tmY = dy > 0 ? (iy + 1 - oy) * tDY : dy < 0 ? (oy - iy) * tDY : Infinity;
-  let tmZ = dz > 0 ? (iz + 1 - oz) * tDZ : dz < 0 ? (oz - iz) * tDZ : Infinity;
-
-  // The face normal we entered the CURRENT block through (outward from the block)
-  // Starts as "no face" — the camera's starting block is checked first.
-  let face = [0, 0, 0];
-
-  // Maximum iterations guard (prevents infinite loop; maxDist+3 is more than enough)
-  const maxSteps = Math.ceil(maxDist) * 3 + 10;
-
-  for (let step = 0; step < maxSteps; step++) {
-    // ── Look up block at current DDA cell ───────────────────────────────────
-    const bx = ix; // block centre X  (integer)
-    const by = iy; // block centre Y  (integer)
-    const bz = iz; // block centre Z  (integer)
-
+  return traverseDDA(origin, dir, maxDist, (bx, by, bz, face) => {
     const cx = Math.floor(bx / 16);
     const cz = Math.floor(bz / 16);
     const chunk = chunks[`${cx},${cz}`];
@@ -239,45 +199,17 @@ function castRayDDA(origin, dir, maxDist, chunks) {
           const tex = getTextureId(val);
           if (tex !== 0) {
             const blockDef = BlockById[tex];
-            // Skip flora (invisible crossed-quads) and liquids — they are not
-            // solid interactable blocks. The ray continues through them so the
-            // player can click on the solid ground/block underneath.
             if (!blockDef?.isFlora && !blockDef?.isLiquid) {
               const block = { texture: BlockKeyById[tex], pos: [bx, by, bz] };
-              return { block, bx, by, bz, face };
+              const dist = Math.hypot((bx + 0.5) - origin.x, (by + 0.5) - origin.y, (bz + 0.5) - origin.z);
+              return { block, bx, by, bz, face, dist };
             }
           }
         }
       }
     }
-    if (tmX < tmY) {
-      if (tmX < tmZ) {
-        if (tmX > maxDist) return null;
-        ix += stepX;
-        tmX += tDX;
-        face = [-stepX, 0, 0];
-      } else {
-        if (tmZ > maxDist) return null;
-        iz += stepZ;
-        tmZ += tDZ;
-        face = [0, 0, -stepZ];
-      }
-    } else {
-      if (tmY < tmZ) {
-        if (tmY > maxDist) return null;
-        iy += stepY;
-        tmY += tDY;
-        face = [0, -stepY, 0];
-      } else {
-        if (tmZ > maxDist) return null;
-        iz += stepZ;
-        tmZ += tDZ;
-        face = [0, 0, -stepZ];
-      }
-    }
-  }
-
-  return null;
+    return null;
+  });
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -290,8 +222,7 @@ export const BlockInteraction = () => {
   const setHoverTarget = useStore((state) => state.setHoverTarget);
   const damageBlock = useStore((state) => state.damageBlock);
   const addCube = useStore((state) => state.addCube);
-  const shapeHitbox = useMemo(() => rapier ? new rapier.Cuboid(0.4, 0.4, 0.4) : null, [rapier]);
-
+  
   // Last DDA result — updated every frame, consumed by mousedown handler
   const hitRef = useRef(null);
   const prevTargetKey = useRef(null); // "bx,by,bz" string — avoids calling setHoverTarget 60×/s
@@ -303,13 +234,18 @@ export const BlockInteraction = () => {
       const storeState = useStore.getState();
       const chunks = useChunkStore.getState().chunks;
       
-      let hit = castRayShip(camera.position, _dir, MAX_REACH, storeState.shipBuffer, shipTransforms.get('default'));
-      if (!hit) {
-        hit = castRayDDA(camera.position, _dir, MAX_REACH, chunks);
+      const hitShip = castRayShip(camera.position, _dir, MAX_REACH, storeState.shipBuffer, shipTransforms.get('default'));
+      const hitWorld = castRayDDA(camera.position, _dir, MAX_REACH, chunks);
+      
+      let hit = null;
+      if (hitShip && hitWorld) {
+          hit = hitShip.dist < hitWorld.dist ? hitShip : hitWorld;
+      } else {
+          hit = hitShip || hitWorld;
       }
       
       hitRef.current = hit;
-
+      
       // Only call setHoverTarget when the targeted block CHANGES — not every frame.
       const key = hit ? `${hit.bx},${hit.by},${hit.bz},${hit.isShip ? 'ship' : 'world'}` : null;
       if (key !== prevTargetKey.current) {
@@ -335,23 +271,31 @@ export const BlockInteraction = () => {
         if (state.isUIActive && state.isUIActive()) return;
 
         const origin = camera.position;
-        camera.getWorldDirection(_dir);
-        const raycaster = new THREE.Raycaster(origin, _dir);
+        const clickDir = new THREE.Vector3();
+        camera.getWorldDirection(clickDir);
+        const raycaster = new THREE.Raycaster(origin, clickDir);
 
         let hitFlareId = null;
         let hitFlareDist = Infinity;
         const flares = useFlareStore.getState().placedFlares || [];
         const currentTransform = shipTransforms.get('default');
 
+        const clickEuler = new THREE.Euler();
+        const clickQuat = new THREE.Quaternion();
+        const clickShipPos = new THREE.Vector3();
+        const clickShipMat = new THREE.Matrix4();
+        const clickInvShipMat = new THREE.Matrix4();
+        const clickShipScale = new THREE.Vector3(1, 1, 1);
+
         if (currentTransform) {
-          _euler.set(currentTransform.rotation.x, currentTransform.rotation.y, currentTransform.rotation.z, 'XYZ');
-          _quat.setFromEuler(_euler);
-          _shipPos.set(
+          clickEuler.set(currentTransform.rotation.x, currentTransform.rotation.y, currentTransform.rotation.z, 'XYZ');
+          clickQuat.setFromEuler(clickEuler);
+          clickShipPos.set(
               currentTransform.actualPosition ? currentTransform.actualPosition.x : currentTransform.position.x, 
               currentTransform.actualPosition ? currentTransform.actualPosition.y : currentTransform.position.y, 
               currentTransform.actualPosition ? currentTransform.actualPosition.z : currentTransform.position.z
           );
-          _shipMat.compose(_shipPos, _quat, _shipScale);
+          clickShipMat.compose(clickShipPos, clickQuat, clickShipScale);
         }
 
         // Check if we hit a flare (Left click only)
@@ -360,7 +304,7 @@ export const BlockInteraction = () => {
                let worldPos;
                if (flare.isShip && currentTransform) {
                    const localVec = new THREE.Vector3(flare.pos[0] - (SHIP_CENTER_X + 0.5), flare.pos[1] - (SHIP_CENTER_Y + 0.5), flare.pos[2] - (SHIP_CENTER_Z + 0.5));
-                   localVec.applyMatrix4(_shipMat);
+                   localVec.applyMatrix4(clickShipMat);
                    worldPos = localVec;
                } else {
                    worldPos = new THREE.Vector3(flare.pos[0], flare.pos[1], flare.pos[2]);
@@ -370,7 +314,7 @@ export const BlockInteraction = () => {
                if (distToRay < 0.36) { 
                    const actualDist = origin.distanceTo(worldPos);
                    const toPoint = worldPos.clone().sub(origin);
-                   if (toPoint.dot(_dir) > 0 && actualDist < MAX_REACH && actualDist < hitFlareDist) {
+                   if (toPoint.dot(clickDir) > 0 && actualDist < MAX_REACH && actualDist < hitFlareDist) {
                        hitFlareDist = actualDist;
                        hitFlareId = flare.id;
                    }
@@ -493,7 +437,7 @@ export const BlockInteraction = () => {
             if (hit.isShip) {
                 const currentTransform = shipTransforms.get('default');
                 if (currentTransform) {
-                    _shipPos.set(
+                    clickShipPos.set(
                         currentTransform.actualPosition ? currentTransform.actualPosition.x : currentTransform.position.x, 
                         currentTransform.actualPosition ? currentTransform.actualPosition.y : currentTransform.position.y, 
                         currentTransform.actualPosition ? currentTransform.actualPosition.z : currentTransform.position.z
@@ -501,12 +445,12 @@ export const BlockInteraction = () => {
                     const rx = currentTransform.actualRotation ? currentTransform.actualRotation.x : currentTransform.rotation.x;
                     const ry = currentTransform.actualRotation ? currentTransform.actualRotation.y : currentTransform.rotation.y;
                     const rz = currentTransform.actualRotation ? currentTransform.actualRotation.z : currentTransform.rotation.z;
-                    _euler.set(rx, ry, rz, 'XYZ');
-                    _quat.setFromEuler(_euler);
-                    _shipMat.compose(_shipPos, _quat, _shipScale);
-                    _invShipMat.copy(_shipMat).invert();
+                    clickEuler.set(rx, ry, rz, 'XYZ');
+                    clickQuat.setFromEuler(clickEuler);
+                    clickShipMat.compose(clickShipPos, clickQuat, clickShipScale);
+                    clickInvShipMat.copy(clickShipMat).invert();
                     
-                    const pLocal = new THREE.Vector3(pPos[0], pPos[1], pPos[2]).applyMatrix4(_invShipMat);
+                    const pLocal = new THREE.Vector3(pPos[0], pPos[1], pPos[2]).applyMatrix4(clickInvShipMat);
                     const pLocalGridX = pLocal.x + SHIP_CENTER_X + 0.5;
                     const pLocalGridY = pLocal.y + SHIP_CENTER_Y + 0.5;
                     const pLocalGridZ = pLocal.z + SHIP_CENTER_Z + 0.5;
@@ -532,7 +476,7 @@ export const BlockInteraction = () => {
                  if (hasItem) {
                      const newTexId = BlockIds[activeTexture];
                      if (newTexId) {
-                         applyShipVoxelChange(px, py, pz, newTexId);
+                         applyShipVoxelChange(px, py, pz, (100 << 8) | newTexId);
                          EventBus.emit('audio', { sound: 'place', source: 'local' });
                          if (!isCreative) state.consumeActiveItem();
                      }
@@ -565,13 +509,23 @@ export const BlockInteraction = () => {
         return;
       }
 
+      if (state.gameMode?.toLowerCase() === 'creative') {
+        if (hit.isShip) {
+           applyShipVoxelChange(bx, by, bz, 0);
+        } else {
+           state.removeCube(bx, by, bz);
+        }
+        EventBus.emit('audio', { sound: 'break', source: 'local' });
+        return;
+      }
+
       if (e.altKey || activeTexture === 'pickaxe') {
         // Force-break (alt key) or pickaxe - high damage
         if (hit.isShip) {
            if (isShipProtected) state.damageShip(100);
            else applyShipVoxelChange(bx, by, bz, 0);
         } else {
-           damageBlock(bx, by, bz, 100);
+           damageBlock(bx, by, bz, 500);
         }
         EventBus.emit('audio', { sound: 'break', source: 'local' });
         if (blockKey === 'log') {
@@ -583,7 +537,7 @@ export const BlockInteraction = () => {
            if (isShipProtected) state.damageShip(35);
            else applyShipVoxelChange(bx, by, bz, 0);
         } else {
-           damageBlock(bx, by, bz, 35);
+           damageBlock(bx, by, bz, 200);
         }
         EventBus.emit('audio', { sound: 'break', source: 'local' });
       } else {
@@ -592,7 +546,7 @@ export const BlockInteraction = () => {
            if (isShipProtected) state.damageShip(20);
            else applyShipVoxelChange(bx, by, bz, 0);
         } else {
-           damageBlock(bx, by, bz, 20);
+           damageBlock(bx, by, bz, 100);
         }
         EventBus.emit('audio', { sound: 'break', source: 'local' });
         if (blockKey === 'log') {
@@ -606,7 +560,7 @@ export const BlockInteraction = () => {
 
     window.addEventListener('mousedown', onMouseDown);
     return () => window.removeEventListener('mousedown', onMouseDown);
-  }, [damageBlock, addCube]);
+  }, [damageBlock, addCube, camera]);
 
   return null; // purely logical — renders nothing
 };

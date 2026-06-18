@@ -39,6 +39,10 @@ export const checkStructuralIntegrity = (get, sx, sy, sz) => {
     return null;
   if (BlockRegistry[tex].isPassable) return null;
 
+  // Trees are isolated structures that don't bleed into terrain, so they can have a massive search depth
+  const isSourceTree = tex === 'wood' || tex === 'leaves';
+  const effectiveMaxDepth = isSourceTree ? 200 : MAX_SEARCH_DEPTH;
+
   // BFS Queue
   const queue = [{ x: sx, y: sy, z: sz, depth: 0, tex }];
   const visited = new Set([`${sx},${sy},${sz}`]);
@@ -55,11 +59,12 @@ export const checkStructuralIntegrity = (get, sx, sy, sz) => {
     [0, 1, 0],
   ];
 
-  while (queue.length > 0) {
-    const { x, y, z, depth, tex: curTex } = queue.shift();
+  let qi = 0;
+  while (qi < queue.length) {
+    const { x, y, z, depth, tex: curTex } = queue[qi++];
     cluster.push({ x, y, z, texture: curTex });
 
-    if (depth >= MAX_SEARCH_DEPTH) {
+    if (depth >= effectiveMaxDepth) {
       isAnchored = true; // Assume anchored if it stretches beyond max depth (e.g. a large mountain)
       break;
     }

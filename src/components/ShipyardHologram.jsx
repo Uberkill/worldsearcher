@@ -1,8 +1,9 @@
 import React from 'react';
 import { useStore } from '../stores/useStore';
+import { useUIStore } from '../stores/useUIStore';
 
 export const ShipyardHologram = () => {
-  const isShipyardUIOpen = useStore((state) => state.isShipyardUIOpen);
+  const isShipyardUIOpen = useUIStore((state) => state.activeModal === 'SHIPYARD');
   const corePos = useStore((state) => state.shipyardCorePos);
 
   if (!isShipyardUIOpen || !corePos) return null;

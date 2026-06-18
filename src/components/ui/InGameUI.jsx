@@ -20,6 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../../stores/useStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { networkActions } from '../../stores/networkActions';
+import { getGuestSyncData } from '../../utils/syncState';
 import { useSyncStore } from '../../stores/syncSlice';
 import { useConnectionStore } from '../../stores/connectionSlice';
 import { clearDB, flushWAL, setSkipAutoSave } from '../../utils/db';
@@ -44,7 +45,7 @@ import { Astrolabe } from './Astrolabe';
 import { WarpDriveUI } from './WarpDriveUI';
 import { MusicPlayerWidget } from './MusicPlayerWidget';
 import { ShipHUD } from './ShipHUD';
-import { UI_MODALS } from '../../stores/useUIStore';
+// Removed dead UI_MODALS import
 import FurnaceOverlay from './FurnaceOverlay';
 
 // Reusable Key UI
@@ -139,15 +140,15 @@ const PickupFeedItem = ({ item, onRemove }) => {
 };
 
 export default function InGameUI() {
-  const menuOpen = useStore((state) => state.isMenuOpen);
-  const inventoryOpen = useStore((state) => state.isInventoryOpen);
+  const menuOpen = useUIStore((state) => state.activeModal === 'MENU');
+  const inventoryOpen = useUIStore((state) => state.activeModal === 'INVENTORY');
   const settingsOpen = useStore((state) => state.isSettingsOpen);
-  const shopOpen = useStore((state) => state.isShopOpen);
-  const craftingOpen = useStore((state) => state.isCraftingTableOpen);
-  const skillTreeOpen = useStore((state) => state.isSkillTreeOpen);
-  const questJournalOpen = useStore((state) => state.isQuestJournalOpen);
-  const isHeartCoreOpen = useStore((state) => state.isHeartCoreOpen);
-  const isLunarAnchorOpen = useStore((state) => state.isLunarAnchorOpen);
+  const shopOpen = useUIStore((state) => state.activeModal === 'SHOP');
+  const craftingOpen = useUIStore((state) => state.activeModal === 'CRAFTING');
+  const skillTreeOpen = useUIStore((state) => state.activeModal === 'SKILL_TREE');
+  const questJournalOpen = useUIStore((state) => state.activeModal === 'QUEST_JOURNAL');
+  const isHeartCoreOpen = useUIStore((state) => state.activeModal === 'HEART_CORE');
+  const isLunarAnchorOpen = useUIStore((state) => state.activeModal === 'LUNAR_ANCHOR');
   const activeChestId = useStore((state) => state.activeChestId);
 
   const activeModal = useUIStore((state) => state.activeModal);
@@ -180,8 +181,8 @@ export default function InGameUI() {
   const playerXP = useStore((state) => state.playerData);
   const isDead = useStore((state) => state.isDead);
   const isWorldReady = useStore((state) => state.isWorldReady);
-  const isAstrolabeOpen = useStore((state) => state.isAstrolabeOpen);
-  const isWarpDriveUIOpen = useStore((state) => state.isWarpDriveUIOpen);
+  const isAstrolabeOpen = useUIStore((state) => state.activeModal === 'ASTROLABE');
+  const isWarpDriveUIOpen = useUIStore((state) => state.activeModal === 'WARP_DRIVE');
   const isSeated = useStore((state) => state.isSeated);
   
   const pickupFeed = useStore((state) => state.pickupFeed);
@@ -283,7 +284,7 @@ export default function InGameUI() {
       }
 
       const { activeModal, closeModal, getAnyUIOpen, toggleModal } = useUIStore.getState();
-      const anyMenuOpen = st.isMenuOpen || settingsOpen || getAnyUIOpen();
+      const anyMenuOpen = settingsOpen || getAnyUIOpen();
 
       if (e.key === 'Enter' || e.key.toLowerCase() === 't') {
         if (!anyMenuOpen) {
@@ -337,7 +338,7 @@ export default function InGameUI() {
       }
 
       if (e.key.toLowerCase() === 'e') {
-        if (!st.isMenuOpen && !settingsOpen && activeModal !== 'SHOP') {
+        if (!settingsOpen && activeModal !== 'SHOP' && activeModal !== 'MENU') {
           if (activeModal === 'CRAFTING') toggleModal('CRAFTING');
           else if (activeModal === 'CHEST') st.closeChest();
           else toggleModal('INVENTORY');
@@ -417,23 +418,8 @@ export default function InGameUI() {
         playerRotation.x,
         playerRotation.y,
         playerRotation.z,
-        playerRotation.w,
       ];
-      const dataToSave = {
-        version: state.version || 1,
-        inventory: state.inventory,
-        activeHotbarIndex: state.activeHotbarIndex,
-        texture: state.texture,
-        coins: state.coins,
-        playerHealth: state.playerHealth,
-        playerMaxHealth: state.playerMaxHealth,
-        playerDamageMult: state.playerDamageMult,
-        playerJumpMult: state.playerJumpMult,
-        playerPos: pos,
-        playerRot: rot,
-        isDead: state.isDead,
-        playtime: state.playtime || 0,
-      };
+      const dataToSave = getGuestSyncData(state, pos, rot);
       networkActions.getState().syncGuestStateToHost(dataToSave);
 
       // Artificial delay to guarantee WebRTC packet fires before browser tears down connection
@@ -649,10 +635,10 @@ export default function InGameUI() {
       <CraftingOverlay active={activeModal === 'CRAFTING'} onClose={() => toggleModal('CRAFTING')} />
       <SkillTreeOverlay active={activeModal === 'SKILL_TREE'} onClose={() => toggleModal('SKILL_TREE')} />
       <QuestJournal active={activeModal === 'QUEST_JOURNAL'} onClose={() => toggleModal('QUEST_JOURNAL')} />
-      <HeartCoreOverlay active={activeModal === 'HEART_CORE'} onClose={() => toggleModal('HEART_CORE')} />
-      <LunarAnchorOverlay active={activeModal === 'LUNAR_ANCHOR'} onClose={() => toggleModal('LUNAR_ANCHOR')} />
-      <Astrolabe active={activeModal === 'ASTROLABE'} onClose={() => toggleModal('ASTROLABE')} />
-      <WarpDriveUI active={activeModal === 'WARP_DRIVE'} onClose={() => toggleModal('WARP_DRIVE')} />
+      <HeartCoreOverlay active={isHeartCoreOpen || activeModal === 'HEART_CORE'} onClose={() => useStore.getState().toggleHeartCore()} />
+      <LunarAnchorOverlay active={isLunarAnchorOpen || activeModal === 'LUNAR_ANCHOR'} onClose={() => useStore.getState().toggleLunarAnchor()} />
+      <Astrolabe active={isAstrolabeOpen || activeModal === 'ASTROLABE'} onClose={() => useStore.getState().toggleAstrolabe()} />
+      <WarpDriveUI active={isWarpDriveUIOpen || activeModal === 'WARP_DRIVE'} onClose={() => useStore.getState().toggleWarpDrive()} />
       <ShipyardUI active={activeModal === 'SHIPYARD'} onClose={() => toggleModal('SHIPYARD')} />
       <ChestOverlay chestId={activeChestId} onClose={closeChest} />
       {activeModal === 'FURNACE' && <FurnaceOverlay />}

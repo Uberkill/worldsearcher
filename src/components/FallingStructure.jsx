@@ -78,6 +78,7 @@ export const FallingStructure = ({ structure }) => {
 
       return {
         ...block,
+        key: `${structure.id}-${block.x}-${block.y}-${block.z}-${Math.random()}`,
         pos: [worldPos.x, worldPos.y, worldPos.z],
         isDebris: true,
         createdAt: Date.now(),

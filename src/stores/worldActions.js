@@ -17,6 +17,7 @@ import { EventBus } from '../utils/EventBus';
 // Module-level guard: prevents two concurrent async calls from double-generating
 // the same chunk (race condition when the player moves fast).
 const inFlightChunks = new Set();
+const inFlightPromises = new Map();
 const cancelledChunks = new Set();
 const processingNetworkDeltas = new Set();
 // --- Dirty-set rebuild batching (replaces per-chunk setTimeout debounce) ---
@@ -1439,16 +1440,18 @@ export const worldActions = (rawSet, rawGet) => {
           }
         }
       },
-    loadChunkAsync: async (cx, cz, skipDB = false) => {
+    loadChunkAsync: (cx, cz, skipDB = false) => {
       const chunkKey = `${cx},${cz}`;
-      if (useChunkStore.getState().chunks[chunkKey]) return 'DECORATED';
+      if (useChunkStore.getState().chunks[chunkKey]) return Promise.resolve('DECORATED');
 
-      if (inFlightChunks.has(chunkKey)) {
+      if (inFlightPromises.has(chunkKey)) {
         cancelledChunks.delete(chunkKey);
-        return 'PRISTINE';
+        return inFlightPromises.get(chunkKey);
       }
-      inFlightChunks.add(chunkKey);
-      cancelledChunks.delete(chunkKey);
+
+      const promise = (async () => {
+        inFlightChunks.add(chunkKey);
+        cancelledChunks.delete(chunkKey);
       let chunkData = null;
       let chunkSeed = getSeed();
       try {
@@ -1504,11 +1507,20 @@ export const worldActions = (rawSet, rawGet) => {
         }
 
         // If NOT in DB/Network, generate Pass 1!
+        if (chunkKey === '0,0') console.log(`[0,0] Calling generatePass1`);
         const pass1Data = await chunkWorkerPool.generatePass1(cx, cz, chunkSeed);
-        if (cancelledChunks.has(chunkKey) || pass1Data?.error) {
+        if (chunkKey === '0,0') console.log(`[0,0] generatePass1 returned:`, pass1Data?.error ? pass1Data.error : 'SUCCESS', 'cancelledChunks.has:', cancelledChunks.has(chunkKey));
+        if (cancelledChunks.has(chunkKey)) {
+          if (chunkKey === '0,0') console.log(`[0,0] Returning CANCELLED because it was in cancelledChunks`);
           inFlightChunks.delete(chunkKey);
           return 'CANCELLED';
         }
+        if (pass1Data?.error) {
+          console.error('[loadChunkAsync] Worker failed Pass1 for', chunkKey, 'with error:', pass1Data.error);
+          inFlightChunks.delete(chunkKey);
+          return 'CANCELLED';
+        }
+        if (chunkKey === '0,0') console.log(`[0,0] Setting pass1Cache`);
         pass1Cache.set(chunkKey, pass1Data);
         inFlightChunks.delete(chunkKey);
         cancelledChunks.delete(chunkKey);
@@ -1531,6 +1543,14 @@ export const worldActions = (rawSet, rawGet) => {
         // Return "CANCELLED" to let ChunkManager seamlessly queue it for loading again next frame!
         return 'CANCELLED';
       }
+      })();
+      inFlightPromises.set(chunkKey, promise);
+      promise.finally(() => {
+        if (inFlightPromises.get(chunkKey) === promise) {
+          inFlightPromises.delete(chunkKey);
+        }
+      });
+      return promise;
     },
     loadChunkPass2Async: async (cx, cz) => {
       const chunkKey = `${cx},${cz}`;
@@ -1571,7 +1591,7 @@ export const worldActions = (rawSet, rawGet) => {
 
       if (inFlightChunks.has(chunkKey)) {
         cancelledChunks.delete(chunkKey);
-        return;
+        return 'CANCELLED';
       }
       inFlightChunks.add(chunkKey);
       cancelledChunks.delete(chunkKey);

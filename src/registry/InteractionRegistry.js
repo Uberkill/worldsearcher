@@ -39,9 +39,9 @@ export const InteractionRegistry = {
             const req = { type: 'RELEASE_HELM', playerId: netState.playerId };
             if (netState.isHost) netState.handleNetworkData(req);
             else netState.broadcastEvent(req);
-        } else if (!state.shipHelmPlayerId) {
-            useStore.setState({ seatOffset: [bx - SHIP_CENTER_X, by - SHIP_CENTER_Y, bz - SHIP_CENTER_Z] });
-            const req = { type: 'REQUEST_HELM', playerId: netState.playerId };
+        } else {
+            useStore.setState({ seatOffset: [bx - SHIP_CENTER_X, by - SHIP_CENTER_Y, bz - SHIP_CENTER_Z], isSeated: true });
+            const req = { type: 'REQUEST_HELM', playerId: netState.playerId, force: true };
             if (netState.isHost) netState.handleNetworkData(req);
             else netState.broadcastEvent(req);
         }

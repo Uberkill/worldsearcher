@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { ShipStructure } from '../utils/structures';
 import { BlockIds } from '../registry/BlockRegistry';
 import { shipTransforms } from '../globals';
+import { NetworkEventBus } from '../utils/NetworkEventBus';
 
 export const SHIP_SIZE_X = 32;
 export const SHIP_SIZE_Y = 32;
@@ -45,33 +46,16 @@ export const createShipSlice = (set, get) => ({
       
       if (newHealth <= 0 && state.shipCorePower > 0) {
          newState.shipCorePower = 0; // Trigger Limp Mode
-         import('./networkActions').then(({ networkActions }) => {
-             networkActions.getState().addChatMessage('> CRITICAL ALERT: SHIP HULL BREACHED. ENGINES OFFLINE.', 'system', 'System');
-             networkActions.getState().broadcastEvent({ type: 'CHAT_MESSAGE', message: '> CRITICAL ALERT: SHIP HULL BREACHED. ENGINES OFFLINE.', author: 'System' });
-         });
+         NetworkEventBus.emit('OUTBOUND_SHIP_CRITICAL_ALERT', { message: '> CRITICAL ALERT: SHIP HULL BREACHED. ENGINES OFFLINE.' });
       }
   
-      import('./networkActions').then(({ networkActions }) => {
-         const net = networkActions.getState();
-         if (net.isHost) {
-             net.broadcastEvent({ type: 'SHIP_HEALTH_UPDATE', health: newHealth });
-         } else {
-             net.connections[0]?.send({ type: 'SHIP_DAMAGE_INTENT', amount });
-         }
-      });
+      NetworkEventBus.emit('OUTBOUND_SHIP_DAMAGE', { amount, newHealth });
       
       return newState;
     }),
     healShip: (amount) => set((state) => {
       const newHealth = Math.min(state.shipMaxHealth, state.shipHealth + amount);
-      import('./networkActions').then(({ networkActions }) => {
-         const net = networkActions.getState();
-         if (net.isHost) {
-             net.broadcastEvent({ type: 'SHIP_HEALTH_UPDATE', health: newHealth });
-         } else {
-             net.connections[0]?.send({ type: 'SHIP_HEAL_INTENT', amount });
-         }
-      });
+      NetworkEventBus.emit('OUTBOUND_SHIP_HEAL', { amount, newHealth });
       return { shipHealth: newHealth };
     }),
 
@@ -106,7 +90,7 @@ export const createShipSlice = (set, get) => ({
   // Ship Transform Data (Decoupled UI from 60fps Physics)
   shipRegion: { x: 0, z: 0 },
   setShipRegion: (x, z) => set({ shipRegion: { x, z } }),
-  setShipTransform: (shipId, position, rotation) => {
+  setShipTransform: (shipId, position, rotation, forceTeleport = false) => {
     // Legacy support for networkActions calling this. Just mutate global.
     if (!shipTransforms.has(shipId)) {
        shipTransforms.set(shipId, { 
@@ -119,6 +103,7 @@ export const createShipSlice = (set, get) => ({
     const transform = shipTransforms.get(shipId);
     if (position) transform.position.set(position[0], position[1], position[2]);
     if (rotation) transform.rotation.set(rotation[0], rotation[1], rotation[2], 'XYZ');
+    if (forceTeleport) transform.forceTeleport = true;
   },
   
   shipSteerIntents: {},
@@ -127,11 +112,9 @@ export const createShipSlice = (set, get) => ({
   })),
 
   deconstructShip: () => {
-      import('./networkActions').then(({ networkActions }) => {
-          if (get().shipHelmPlayerId) {
-             networkActions.getState().handleNetworkData({ type: 'RELEASE_HELM', playerId: get().shipHelmPlayerId });
-          }
-      });
+      if (get().shipHelmPlayerId) {
+          NetworkEventBus.emit('OUTBOUND_SHIP_DECONSTRUCT', { helmPlayerId: get().shipHelmPlayerId });
+      }
       set((state) => ({
           shipBuffer: new Uint32Array(SHIP_VOLUME),
           isShipActive: false,
@@ -177,7 +160,7 @@ export const createShipSlice = (set, get) => ({
       if (x >= 0 && x < SHIP_SIZE_X && y >= 0 && y < SHIP_SIZE_Y && z >= 0 && z < SHIP_SIZE_Z) {
         const id = BlockIds[block.texture];
         if (id !== undefined) {
-          buffer[getShipIndex(x, y, z)] = id;
+          buffer[getShipIndex(x, y, z)] = (100 << 8) | id;
         }
       }
     });
@@ -187,25 +170,24 @@ export const createShipSlice = (set, get) => ({
         shipRebuildId: state.shipRebuildId + 1, 
         shipFullRebuildId: state.shipFullRebuildId + 1, 
         isShipActive: true, 
-        shipCorePower: 100, 
+        shipCorePower: 10000, 
         shipHealth: 1000 
     }));
     // Recalculate hardware
-    import('./useStore').then(({ useStore }) => {
-        useStore.getState().recalculateShipHardware(buffer);
-    });
+    get().recalculateShipHardware(buffer);
   },
 
   loadShipState: async () => {
      const { loadShipFromDB } = await import('../utils/db');
-     const buffer = await loadShipFromDB();
-     if (buffer) {
-        set({ shipBuffer: buffer, shipRebuildId: 1, shipFullRebuildId: 1, isShipActive: true });
-        // Need to require useStore lazily or call from the state
-        import('./useStore').then(({ useStore }) => {
-            useStore.getState().recalculateShipHardware(buffer);
-        });
+     let buffer = await loadShipFromDB();
+     
+     // Fallback if loading an old save from before the ship existed
+     if (!buffer) {
+        buffer = new Uint32Array(32768);
      }
+     
+     set({ shipBuffer: buffer, shipRebuildId: 1, shipFullRebuildId: 1, isShipActive: true });
+     get().recalculateShipHardware(buffer);
   },
 
   setShipBufferRaw: (buffer) => {
@@ -216,21 +198,19 @@ export const createShipSlice = (set, get) => ({
           lastShipVoxelChange: null,
           isShipActive: true
       }));
-      import('./useStore').then(({ useStore }) => {
-          const store = useStore.getState();
-          store.recalculateShipHardware(buffer);
-          
-          if (store.isSeated && store.seatOffset) {
-             const cx = store.seatOffset[0] + SHIP_CENTER_X;
-             const cy = store.seatOffset[1] + SHIP_CENTER_Y;
-             const cz = store.seatOffset[2] + SHIP_CENTER_Z;
-             const idx = getShipIndex(cx, cy, cz);
-             const val = buffer[idx] & 0xff;
-             if (val === 0) {
-                 store.releaseHelm(store.playerId);
-             }
-          }
-      });
+      const store = get();
+      store.recalculateShipHardware(buffer);
+      
+      if (store.isSeated && store.seatOffset) {
+         const cx = store.seatOffset[0] + SHIP_CENTER_X;
+         const cy = store.seatOffset[1] + SHIP_CENTER_Y;
+         const cz = store.seatOffset[2] + SHIP_CENTER_Z;
+         const idx = getShipIndex(cx, cy, cz);
+         const val = buffer[idx] & 0xff;
+         if (val === 0) {
+             store.releaseHelm(store.playerId);
+         }
+      }
   },
 
   setShipVoxel: (x, y, z, val) => {
@@ -260,19 +240,7 @@ export const createShipSlice = (set, get) => ({
           
           // Container Placement Initialization
           if (newVal === 19 || newVal === 28 || newVal === 38) {
-              import('./inventorySlice').then(({ useInventoryStore }) => {
-                 const invStore = useInventoryStore.getState();
-                 // VERY IMPORTANT: Use 'ship_x_y_z' prefix to differentiate from world containers!
-                 const chestKey = `ship_${x}_${y}_${z}`;
-                 if (!invStore.chests[chestKey]) {
-                     const nextChests = { ...invStore.chests, [chestKey]: new Array(27).fill(null) };
-                     const nextMachines = { ...invStore.machines };
-                     if (newVal === 28 || newVal === 38) {
-                         nextMachines[chestKey] = { cookProgress: 0, currentCookMax: 100, burnTimeLeft: 0, currentFuelMax: 100 };
-                     }
-                     useInventoryStore.setState({ chests: nextChests, machines: nextMachines });
-                 }
-              });
+              NetworkEventBus.emit('OUTBOUND_SHIP_CONTAINER_PLACED', { x, y, z, newVal });
           }
       } else if (oldVal !== 0 && newVal === 0) {
           newMaxHealth = Math.max(100, newMaxHealth - 50);
@@ -283,14 +251,7 @@ export const createShipSlice = (set, get) => ({
       const seat = currentState.seatOffset;
       if (currentState.isSeated && seat && seat[0] === x - SHIP_CENTER_X && seat[1] === y - SHIP_CENTER_Y && seat[2] === z - SHIP_CENTER_Z) {
           set({ isSeated: false, seatOffset: null });
-          import('./networkActions').then(({ networkActions }) => {
-                  const net = networkActions.getState();
-                  if (currentState.shipHelmPlayerId === net.playerId) {
-                      const intent = { type: 'RELEASE_HELM', playerId: net.playerId };
-                      net.broadcastEvent(intent);
-                      if (net.isHost) net.handleNetworkData(intent);
-                  }
-              });
+          NetworkEventBus.emit('OUTBOUND_SHIP_SEAT_DESTROYED', { helmPlayerId: currentState.shipHelmPlayerId });
       }
       
       const nextJobId = (state.shipJobId || 0) + 1;
@@ -317,14 +278,6 @@ export const createShipSlice = (set, get) => ({
   },
   
   triggerShortWarp: (x, z) => {
-     import('./networkActions').then(({ networkActions }) => {
-         const net = networkActions.getState();
-         const intent = { type: 'SHORT_WARP_INTENT', x, z };
-         if (net.isHost) {
-             net.handleNetworkData(intent, { peer: 'local' });
-         } else {
-             net.connections[0]?.send(intent);
-         }
-     });
+     NetworkEventBus.emit('OUTBOUND_SHORT_WARP_INTENT', { x, z });
   }
 });

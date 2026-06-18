@@ -118,7 +118,7 @@ self.onmessage = function (e) {
     const blockIndex = ly * 256 + lz * 16 + lx;
     const blockVal = chunkBuffer[blockIndex];
 
-    return blockVal > 0;
+    return (blockVal & 0xFF) > 0;
   };
 
   // 26-way neighbors (3D)

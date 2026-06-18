@@ -1027,7 +1027,7 @@ export const SwarmManager = ({ type, max }) => {
               if (ly < -32 || ly > 255) continue;
               const idx1 = (ly + 32) * 256 + lz * 16 + lx;
               const idx2 = (ly + 31) * 256 + lz * 16 + lx;
-              if (chunk.buffer[idx1] === 0 && chunk.buffer[idx2] > 0) {
+              if ((chunk.buffer[idx1] & 0xFF) === 0 && (chunk.buffer[idx2] & 0xFF) > 0) {
                 const targetRb = typeof physicsRef.current?.at === 'function' ? physicsRef.current.at(closestId) : physicsRef.current?.[closestId];
                 if (targetRb) {
                   targetRb.setTranslation({ x: tx + 0.5, y: ly + cfg.yOffset, z: tz + 0.5 }, true);

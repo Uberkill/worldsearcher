@@ -207,10 +207,11 @@ export const TransitManager = () => {
                     for (let zOffset = -16; zOffset <= 16; zOffset += 4) {
                         const checkX = pxRef.current + xOffset;
                         const checkZ = pzRef.current + zOffset;
-                        const highestForColumn = useStore.getState().findSafeSpawnY(checkX, checkZ);
-                        // findSafeSpawnY returns 400 if it can't find a block
-                        if (highestForColumn !== 400 && highestForColumn > surfaceY) {
-                            surfaceY = highestForColumn;
+                        const safeSpot = useStore.getState().findSafeFlatSpawn
+                          ? useStore.getState().findSafeFlatSpawn(checkX, checkZ)
+                          : null;
+                        if (safeSpot && safeSpot.y > surfaceY) {
+                            surfaceY = safeSpot.y;
                         }
                     }
                 }

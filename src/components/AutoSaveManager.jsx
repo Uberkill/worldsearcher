@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useStore } from '../stores/useStore';
 import { playerPosition, playerRotation } from '../globals';
 import { networkActions } from '../stores/networkActions';
+import { getGuestSyncData } from '../utils/syncState';
 
 const AUTOSAVE_INTERVAL_MS = 15000; // 15 seconds
 let isHalted = false;
@@ -21,26 +22,11 @@ export const AutoSaveManager = () => {
         playerRotation.x,
         playerRotation.y,
         playerRotation.z,
-        playerRotation.w,
       ];
 
       if (isGuest) {
         // Guests just stream their state to the Host instead of saving locally!
-        const dataToSave = {
-          version: state.version || 1,
-          inventory: state.inventory,
-          activeHotbarIndex: state.activeHotbarIndex,
-          texture: state.texture,
-          coins: state.coins,
-          playerHealth: state.playerHealth,
-          playerMaxHealth: state.playerMaxHealth,
-          playerDamageMult: state.playerDamageMult,
-          playerJumpMult: state.playerJumpMult,
-          playerPos: pos,
-          playerRot: rot,
-          isDead: state.isDead,
-          playtime: state.playtime || 0,
-        };
+        const dataToSave = getGuestSyncData(state, pos, rot);
         networkActions.getState().syncGuestStateToHost(dataToSave);
         return;
       }

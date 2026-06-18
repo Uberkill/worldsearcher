@@ -1,4 +1,5 @@
 import { useStore } from '../stores/useStore';
+import { useUIStore } from '../stores/useUIStore';
 import { BlockKeyById } from '../registry/BlockRegistry';
 
 const INTERACTABLE_BLOCKS = {
@@ -9,7 +10,7 @@ const INTERACTABLE_BLOCKS = {
   'astrolabe': '[Right Click] Astrolabe',
   'charging_station': '[Right Click] Charging Station',
   'ship_seat': '[Right Click] Helm Seat',
-  'ship_helm': '[Right Click] Captain\'s Helm',
+  'ship_helm': "[Right Click] Captain's Helm",
   'ship_core': '[Right Click] Shipyard Console',
   'warp_drive_engine': '[Right Click] Warp Drive Engine',
   'warp_capacitor': 'Warp Capacitor [Passive]',
@@ -17,8 +18,8 @@ const INTERACTABLE_BLOCKS = {
 
 export const Crosshair = () => {
   const hoverBlockInfo = useStore((state) => state.hoverBlockInfo);
-  const isMenuOpen = useStore((state) => state.isMenuOpen);
-  const isInventoryOpen = useStore((state) => state.isInventoryOpen);
+  const isMenuOpen = useUIStore((state) => state.activeModal === 'MENU');
+  const isInventoryOpen = useUIStore((state) => state.activeModal === 'INVENTORY');
   const isSettingsOpen = useStore((state) => state.isSettingsOpen);
   const isDead = useStore((state) => state.isDead);
   const isSeated = useStore((state) => state.isSeated);

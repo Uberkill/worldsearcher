@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useStore } from '../stores/useStore';
+import { useUIStore } from '../stores/useUIStore';
 import { useKeyboard } from '../hooks/useKeyboard';
 import { GlobalRegistry } from '../registry/Registry';
 
@@ -8,9 +9,8 @@ export const Hotbar = () => {
   const activeHotbarIndex = useStore((state) => state.activeHotbarIndex);
   const setActiveHotbarIndex = useStore((state) => state.setActiveHotbarIndex);
   const coins = useStore((state) => state.coins);
-  const keys = useKeyboard();
-  const isInventoryOpen = useStore((state) => state.isInventoryOpen);
-  const isMenuOpen = useStore((state) => state.isMenuOpen);
+  const isInventoryOpen = useUIStore((state) => state.activeModal === 'INVENTORY');
+  const isMenuOpen = useUIStore((state) => state.activeModal === 'MENU');
   const isSettingsOpen = useStore((state) => state.isSettingsOpen);
   const isDead = useStore((state) => state.isDead);
 
@@ -23,19 +23,17 @@ export const Hotbar = () => {
   // We will conditionally return null after all hooks
 
   useEffect(() => {
-    if (useStore.getState().isInventoryOpen) return;
-
-    // Keyboard 1-9
-    if (keys.slot1) setActiveHotbarIndex(0);
-    if (keys.slot2) setActiveHotbarIndex(1);
-    if (keys.slot3) setActiveHotbarIndex(2);
-    if (keys.slot4) setActiveHotbarIndex(3);
-    if (keys.slot5) setActiveHotbarIndex(4);
-    if (keys.slot6) setActiveHotbarIndex(5);
-    if (keys.slot7) setActiveHotbarIndex(6);
-    if (keys.slot8) setActiveHotbarIndex(7);
-    if (keys.slot9) setActiveHotbarIndex(8);
-  }, [keys, setActiveHotbarIndex]);
+    const handleKeyDown = (e) => {
+      if (!document.pointerLockElement) return;
+      if (useUIStore.getState().activeModal) return;
+      if (e.code.startsWith('Digit')) {
+        const slot = parseInt(e.code.replace('Digit', ''), 10) - 1;
+        if (slot >= 0 && slot < 9) setActiveHotbarIndex(slot);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setActiveHotbarIndex]);
 
   const activeIdxRef = useRef(activeHotbarIndex);
   useEffect(() => {

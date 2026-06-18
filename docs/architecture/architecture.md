@@ -34,25 +34,35 @@ Instead of utilizing heavy 3D rendering passes for environmental occlusion (like
 /src
 ├── components/         # React Components (UI and 3D Scene Elements)
 │   ├── ui/             # 2D DOM Overlays (TitleScreen, Inventory, HUD, SpectorModal)
-│   ├── Player.jsx      # Rapier Kinematic Character Controller
+│   ├── Player.jsx      # Thin presentation wrapper around Player position
 │   ├── ChunkRenderer.jsx # Native Three.js Imperative Render Pipeline (Bypasses React for extreme performance)
 │   ├── ChunkPhysics.jsx  # Invisible physics colliders for chunk geometry
 │   ├── Enemies.jsx     # Spawner and SwarmManager for entities
 │   ├── HostCombat.jsx  # Host-authoritative hitscan & projectile logic
 │   ├── Tombstones.jsx  # Death system dropped items
 │   └── Tether.jsx      # Grapple Gun physics line
+├── hooks/              # Custom React hooks containing decoupled systems
+│   ├── usePlayerPhysics.js # Decoupled fixed physics accumulator loop (30Hz)
+│   ├── useWorldLighting.js # Decoupled lighting updates for DynamicSky.jsx
+│   ├── useDebugOverlayUpdate.js # Decoupled debug stats updates (F3 menu)
+│   └── useKeyboard.js  # Zero-render keyboard input hook (Ref-based)
 ├── stores/             # Zustand State Management (Modular Slices)
 │   ├── useStore.js     # Main store aggregator
 │   ├── createWorldSlice.js   # Chunk generation, meshing, and modification state
 │   ├── createEntitySlice.js  # Enemy/Mob logic and swarms
 │   ├── createPlayerSlice.js  # Inventory, Health, Position, and Game Modes (Survival/Creative)
-│   └── useNetworkStore.js    # PeerJS WebRTC networking and Host Commands (/kick, /time)
+│   ├── networkActions.js # Split main network action hooks
+│   └── useNetworkStore.js    # PeerJS WebRTC networking and Host Commands (/tp, /kick)
+├── systems/            # Logic tick sub-systems
+│   ├── network/        # Decoupled network system slices (Chat, Inventory, PlayerSync, etc.)
+│   └── MachineTickSystem.js # Crafting machine update loops
 ├── utils/              # Pure Functions, Math, and Web Workers
 │   ├── chunkData.js    # 32-bit ECS bitpacking logic (Memory optimization)
 │   ├── chunkGenerator.js # Procedural generation (Simplex Noise)
 │   ├── greedyMesh.js   # Custom Naive/Greedy meshing with embedded AO/Lighting
 │   ├── workerPool.js   # Web Worker management and queueing
-│   └── db.js           # Async Proxy to the IndexedDB Web Worker
+│   ├── db.js           # Async Proxy to the IndexedDB Web Worker
+│   └── NetworkEventBus.js # Event bus for handling decoupled network payloads
 ├── workers/            # Off-thread Web Workers (DO NOT BLOCK THE MAIN THREAD)
 │   ├── chunkWorker.js  # Heavy terrain generation and meshing
 │   └── dbWorker.js     # IndexedDB I/O and RLE Array Decompression
@@ -103,7 +113,8 @@ Our architecture relies heavily on Web Workers (`chunkWorker.js`) to generate te
 
 Therefore, we use the browser's native **Structured Clone Algorithm** combined with **Transferable Objects** (`ArrayBuffer`). This requires strict adherence to the following rules to prevent silent failures and memory crashes:
 
-1. **Detached Buffers:** When an `ArrayBuffer` is transferred via `postMessage`, it becomes "detached" (neutered) in the originating thread. Its `.byteLength` becomes 0. You **must not** transfer a buffer if it is actively being cached or referenced by other chunk generations (e.g., neighbor boundary checks). In those cases, rely on the fast native structured clone instead of explicit transferring.
+1. **Network Data Constraints (PeerJS):** WebRTC Data Channels (via PeerJS) will crash the connection if you attempt to send massive strings. You **MUST NOT** use `JSON.stringify` on massive arrays (like chunk diffs, RLE buffers, or ship buffers) before transmitting. Always use `Array.from()` to serialize typed arrays into native JavaScript arrays before network transmission to bypass string memory limits.
+2. **Detached Buffers:** When an `ArrayBuffer` is transferred via `postMessage`, it becomes "detached" (neutered) in the originating thread. Its `.byteLength` becomes 0. You **must not** transfer a buffer if it is actively being cached or referenced by other chunk generations (e.g., neighbor boundary checks). In those cases, rely on the fast native structured clone instead of explicit transferring.
 2. **Caching Transferred Buffers:** If a WebWorker maintains a cache (like `walCache`), it MUST explicitly `.slice(0)` or clone the `ArrayBuffer` *before* adding it to the `postMessage` transfer list. Otherwise, the cache will instantly become a 0-byte ghost trap, silently destroying any subsequent reads.
 3. **Receiving TypedArrays on the Main Thread:** When catching data from a Web Worker (e.g., `meshArrays` in `createWorldSlice.js`), the main thread must safely copy it to avoid React rendering bugs during garbage collection.
 3. **The `for...in` Trap (The Flora Bug):** If a payload contains a raw `TypedArray` (e.g., `meshArrays.__flora: Float32Array`), you **MUST NOT** use a `for...in` loop to deep-copy its contents. A `for...in` loop on a `TypedArray` iterates over numerical string indices (`"0"`, `"1"`...). Attempting to call `.slice()` on these raw numbers will throw exceptions.

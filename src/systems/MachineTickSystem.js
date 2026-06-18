@@ -1,9 +1,11 @@
 import { useInventoryStore } from '../stores/inventorySlice';
 import { networkActions } from '../stores/networkActions';
 import { SmeltingRecipes, FuelRegistry } from '../registry/SmeltingRegistry';
+/* eslint-disable no-unused-vars */
+import { getGameStore } from '../stores/storeLinker';
 import { getNetworkStore } from '../stores/storeLinker';
 
-export const initializeMachineState = (machineId, type = 'furnace') => {
+const initializeMachineState = (machineId, type = 'furnace') => {
   if (type !== 'furnace' && type !== 'ship_furnace') return;
   useInventoryStore.setState(prev => {
     if (prev.machines[machineId]) return prev;

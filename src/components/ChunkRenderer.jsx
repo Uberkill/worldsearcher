@@ -176,6 +176,17 @@ export const ChunkRenderer = () => {
         if (group.userData.disposeGeometries) group.userData.disposeGeometries();
       }
       activeMeshes.current.clear();
+
+      // JS Heap Leak Correction: Recycle orphaned pending meshes that arrived late
+      const pending = useChunkStore.getState().pendingMeshMounts;
+      if (pending && Array.isArray(pending)) {
+        for (const mount of pending) {
+          if (mount && mount.meshArrays) {
+             useStore.getState().recycleChunkDataInternal({ meshArrays: mount.meshArrays });
+          }
+        }
+      }
+      useChunkStore.setState({ pendingMeshMounts: [] });
     };
   }, []);
 
@@ -184,20 +195,9 @@ export const ChunkRenderer = () => {
     const useStoreState = useStore.getState();
     const shadowsEnabled = useStoreState.shadowQuality === 'visual';
 
-    const overflow = store.overflowChunks;
-
-    // Update the Set only when the overflow array reference changes
-    if (overflow !== lastOverflowRef.current) {
-      overflowSetRef.current.clear();
-      for (let i = 0; i < overflow.length; i++) {
-        overflowSetRef.current.add(overflow[i]);
-      }
-      lastOverflowRef.current = overflow;
-    }
-
-    // 1. Unmount chunks no longer in overflowChunks
+    // 1. Unmount chunks no longer in state
     for (const [key, group] of activeMeshes.current.entries()) {
-      if (!overflowSetRef.current.has(key)) {
+      if (!store.chunks[key]) {
         if (rootRef.current) rootRef.current.remove(group);
         if (group.userData.disposeGeometries) group.userData.disposeGeometries();
         activeMeshes.current.delete(key);
@@ -208,7 +208,7 @@ export const ChunkRenderer = () => {
     let builtThisFrame = 0;
     const MAX_BUILDS_PER_FRAME = 2; // Keep at 2 to minimize framerate drops during load
 
-    for (const key of overflow) {
+    for (const key in store.chunks) {
       const chunkData = store.chunks[key];
       if (!chunkData || !chunkData.meshArrays) continue;
 
@@ -224,13 +224,19 @@ export const ChunkRenderer = () => {
           if (existingGroup.userData.disposeGeometries) existingGroup.userData.disposeGeometries();
         }
 
-        const newGroup = buildGeometryNatively(chunkData.meshArrays, key, shadowsEnabled);
-        newGroup.userData.meshArrays = chunkData.meshArrays;
-        chunkData.meshArrays._isMounted = true;
-        newGroup.userData.clearVersion = useStoreState.clearVisualMeshArrays;
-        
-        if (rootRef.current) rootRef.current.add(newGroup);
-        activeMeshes.current.set(key, newGroup);
+          let newGroup;
+          try {
+            newGroup = buildGeometryNatively(chunkData.meshArrays, key, shadowsEnabled);
+            newGroup.userData.meshArrays = chunkData.meshArrays;
+            chunkData.meshArrays._isMounted = true;
+            newGroup.userData.clearVersion = useStoreState.clearVisualMeshArrays;
+            
+            if (rootRef.current) rootRef.current.add(newGroup);
+            activeMeshes.current.set(key, newGroup);
+          } catch (e) {
+            console.error('[ChunkRenderer] buildGeometryNatively failed for chunk', key, e);
+            chunkData.meshArrays._isMounted = true; // Mark as mounted to prevent infinite retry loop
+          }
       }
     }
     if (window.__DEBUG_STATS__) {

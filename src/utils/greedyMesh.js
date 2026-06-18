@@ -10,7 +10,6 @@ import {
   getBlockLight,
   getGlobalBlockLight,
 } from './chunkData.js';
-import { BlockById, FaceMappings } from '../registry/BlockRegistry.js';
 
 const NEIGHBORS = [
   { nx: 0, ny: 1, nz: 0 },
@@ -50,7 +49,7 @@ const pIdxBuffer = new Uint32Array(MAX_FACES * 6);
 const floraMatricesBuffer = new Float32Array(MAX_FACES * 16);
 const floraPackedBuffer = new Float32Array(MAX_FACES);
 
-export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBufferBuckets = null) => {
+export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBufferBuckets = null, SolidLookup, FluidLookup, TextureLookup, FloraLookup, TransparentLookup) => {
   const result = {
     solid: [],
     transparent: [],
@@ -135,7 +134,14 @@ export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBuffe
       });
       pPosIndex = 0; pIdxIndex = 0; pIndexOffset = 0;
     }
+    
+    const keys = ['top', 'bottom', 'front', 'back'];
+    for (let i = 0; i < keys.length; i++) {
+      lastFaces.solid[keys[i]].active = false;
+      lastFaces.transparent[keys[i]].active = false;
+    }
   };
+
 
   /**
    * [ARCHITECTURAL CONSTRAINT: DO NOT TOUCH]
@@ -522,21 +528,18 @@ export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBuffe
       const v = buffer[idx + dy * 256 + dz * 16 + dx];
       const id = v & 0xff;
       if (id === 0) return 0;
-      const d = BlockById[id];
-      return d && !d.isTransparent ? 1 : 0;
+      return SolidLookup[id];
     }
     const v = getGlobalBlockVal(cx, cz, buffer, neighborBuffers, cx * 16 + nx, ny, cz * 16 + nz);
     const id = v & 0xff;
     if (id === 0) return 0;
-    const d = BlockById[id];
-    return d && !d.isTransparent ? 1 : 0;
+    return SolidLookup[id];
   };
 
   const getFluidLevel = (x, y, z) => {
     const val = getBlock(x, y, z);
     const id = getTextureId(val);
-    const def = BlockById[id];
-    if (id === 0 || !def?.isLiquid) return -1;
+    if (id === 0 || FluidLookup[id] === 0) return -1;
     return (val >> 17) & 0xf;
   };
 
@@ -598,9 +601,7 @@ export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBuffe
 
         getBlockLight(val);
 
-        const blockDef = BlockById[blockId];
-
-        if (blockDef?.isFlora) {
+        if (FloraLookup[blockId] === 1) {
           // InstancedMesh Flora extraction: own block light
           const globalLight = val;
           const nSun = (globalLight >> 26) & 0xf;
@@ -643,8 +644,7 @@ export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBuffe
             floraMatricesBuffer[floraMatricesIndex++] = tz;
             floraMatricesBuffer[floraMatricesIndex++] = 1;
 
-            let texId = blockId;
-            if (FaceMappings[blockId]) texId = FaceMappings[blockId].top;
+            let texId = TextureLookup[blockId * 3 + 0];
             const ao = 3;
             const isAnimated = 0;
             const pd =
@@ -659,25 +659,23 @@ export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBuffe
           continue;
         }
 
-        const isTrans = blockDef ? !!blockDef.isTransparent : false;
-        const isLiquid = blockDef ? !!blockDef.isLiquid : false;
+        const isTrans = TransparentLookup[blockId] === 1;
+        const isLiquid = FluidLookup[blockId] === 1;
 
         // Custom Fluid Top Face Generation (Sloped)
         if (isLiquid) {
           // Check if there is fluid ABOVE us. If there is, we don't render a top face!
           const aboveVal = getBlock(x, y + 1, z);
           const aboveId = getTextureId(aboveVal);
-          const aboveDef = BlockById[aboveId];
           
-          if (!aboveDef?.isLiquid) {
+          if (FluidLookup[aboveId] === 0) {
             // Draw custom sloped top face
             const y0 = calcFluidCorner(x, y, z, -1, 1);
             const y1 = calcFluidCorner(x, y, z, 1, 1);
             const y2 = calcFluidCorner(x, y, z, 1, -1);
             const y3 = calcFluidCorner(x, y, z, -1, -1);
 
-            let faceTexId = blockId;
-            if (FaceMappings[blockId]) faceTexId = FaceMappings[blockId].top;
+            let faceTexId = TextureLookup[blockId * 3 + 0];
 
             // Lighting for top face: local-first lookup
             let globalLight;
@@ -731,8 +729,7 @@ export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBuffe
           let drawFace = false;
           if (nBlockId === 0) drawFace = true;
           else {
-            const nBlockDef = BlockById[nBlockId];
-            const nIsTrans = nBlockDef ? !!nBlockDef.isTransparent : false;
+            const nIsTrans = TransparentLookup[nBlockId] === 1;
             if (nIsTrans && !isTrans) drawFace = true;
             else if (isTrans && nIsTrans && blockId !== nBlockId)
               drawFace = true;
@@ -740,12 +737,11 @@ export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBuffe
 
           if (drawFace) {
 
+            // eslint-disable-next-line no-useless-assignment
             let faceTexId = blockId;
-            if (FaceMappings[blockId]) {
-              if (n.ny === 1) faceTexId = FaceMappings[blockId].top;
-              else if (n.ny === -1) faceTexId = FaceMappings[blockId].bottom;
-              else faceTexId = FaceMappings[blockId].side;
-            }
+            if (n.ny === 1) faceTexId = TextureLookup[blockId * 3 + 0];
+            else if (n.ny === -1) faceTexId = TextureLookup[blockId * 3 + 1];
+            else faceTexId = TextureLookup[blockId * 3 + 2];
 
             // Get lighting for the block IN FRONT of the face
             const gx = cx * CHUNK_SIZE_X + nlx;
@@ -771,15 +767,14 @@ export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBuffe
             let faceBlk = (globalLight >> 22) & 0xf;
 
             // If neighbor is fully opaque, we use OUR light so it's not pitch black (failsafe)
-            const nDef = BlockById[nBlockId];
-            if (nBlockId !== 0 && nDef && !nDef.isTransparent) {
+            if (nBlockId !== 0 && TransparentLookup[nBlockId] === 0) {
               const selfLight = buffer[idx];
               faceSun = (selfLight >> 26) & 0xf;
               faceBlk = (selfLight >> 22) & 0xf;
             }
 
             const isAnimated = blockId === 18 || blockId === 19; // Water (18) and Lava (19)
-            const isPassable = blockDef ? !!blockDef.isPassable : false;
+            const isPassable = SolidLookup[blockId] === 0;
 
             let ao0 = 3,
               ao1 = 3,

@@ -26,12 +26,20 @@ export const createPlayerSlice = (set, get) => ({
   texture: 'sword',
   activeHotbarIndex: 0,
   coins: 0,
-  isMenuOpen: false,
   isInventoryOpen: false,
   isShopOpen: false,
   isCraftingTableOpen: false,
   isSkillTreeOpen: false,
   isQuestJournalOpen: false,
+  isHeartCoreOpen: false,
+  isLunarAnchorOpen: false,
+  isAstrolabeOpen: false,
+  isWarpDriveUIOpen: false,
+  toggleHeartCore: () => set(state => ({ isHeartCoreOpen: !state.isHeartCoreOpen, isLunarAnchorOpen: false, isAstrolabeOpen: false, isWarpDriveUIOpen: false })),
+  toggleLunarAnchor: () => set(state => ({ isLunarAnchorOpen: !state.isLunarAnchorOpen, isHeartCoreOpen: false, isAstrolabeOpen: false, isWarpDriveUIOpen: false })),
+  toggleAstrolabe: () => set(state => ({ isAstrolabeOpen: !state.isAstrolabeOpen, isLunarAnchorOpen: false, isHeartCoreOpen: false, isWarpDriveUIOpen: false })),
+  toggleWarpDrive: () => set(state => ({ isWarpDriveUIOpen: !state.isWarpDriveUIOpen, isAstrolabeOpen: false, isLunarAnchorOpen: false, isHeartCoreOpen: false })),
+
   activeChestId: null,
   activeFurnaceId: null,
 
@@ -44,19 +52,20 @@ export const createPlayerSlice = (set, get) => ({
     useUIStore.getState().toggleModal('SHIPYARD', pos);
   },
 
-  isAstrolabeOpen: false,
-  isHeartCoreOpen: false,
-  isWarpDriveUIOpen: false,
-  isLunarAnchorOpen: false,
-
-  toggleAstrolabe: () => { useUIStore.getState().toggleModal('ASTROLABE'); },
-  toggleHeartCore: () => { useUIStore.getState().toggleModal('HEART_CORE'); },
-  toggleWarpDrive: () => { useUIStore.getState().toggleModal('WARP_DRIVE'); },
-  toggleLunarAnchor: () => { useUIStore.getState().toggleModal('LUNAR_ANCHOR'); },
-
   isUIActive: () => {
-    const state = get();
-    return state.isMenuOpen || useUIStore.getState().getAnyUIOpen() || useChatStore.getState().isTyping;
+      const state = get();
+      return useUIStore.getState().getAnyUIOpen() || 
+             useChatStore.getState().isTyping ||
+             state.isInventoryOpen ||
+             state.isShopOpen ||
+             state.isCraftingTableOpen ||
+             state.isSkillTreeOpen ||
+             state.isQuestJournalOpen ||
+             state.isHeartCoreOpen ||
+             state.isLunarAnchorOpen ||
+             state.isAstrolabeOpen ||
+             state.isWarpDriveUIOpen ||
+             state.isShipyardUIOpen;
   },
 
   openChest: (x, y, z, isShip = false) => {
@@ -805,11 +814,11 @@ export const createPlayerSlice = (set, get) => ({
     }, 150);
   },
 
-  toggleMenu: () =>
-    set((state) => {
-      if (state.isDead) return {};
-      return { isMenuOpen: !state.isMenuOpen };
-    }),
+  toggleMenu: () => {
+    const state = get();
+    if (state.isDead) return;
+    useUIStore.getState().toggleModal('MENU');
+  },
 
   toggleSkillTree: () => {
     const state = get();
@@ -1332,10 +1341,10 @@ export const createPlayerSlice = (set, get) => ({
 
         // Spawn slightly above ground to prevent mesh clipping
         let spawnY = py;
-        if (typeof get().findSafeSpawnY === 'function') {
-          const groundY = get().findSafeSpawnY(px, pz);
-          if (groundY !== 400 && groundY > 0) {
-            spawnY = groundY - 0.5; // Centers the 1.0 height tombstone on top of the block
+        if (typeof get().findSafeFlatSpawn === 'function') {
+          const safeSpot = get().findSafeFlatSpawn(px, pz);
+          if (safeSpot && safeSpot.y > 0) {
+            spawnY = safeSpot.y - 0.5; // Centers the 1.0 height tombstone on top of the block
           }
         }
 
@@ -1403,22 +1412,12 @@ export const createPlayerSlice = (set, get) => ({
       }
     }
 
-    // 2. Calculate highest safe block
-    if (chunk && chunk.buffer) {
-      // Top-Down Scan
-      for (let y = 127; y >= 0; y--) {
-        const lx = 0; // x=0 is local x=0
-        const lz = 0; // z=0 is local z=0
-        // Use the global getIndex helper if needed, but since it's hard to access here, we can use findSafeSpawnY if it exists in store
-      }
-    }
-
-    // Use the existing findSafeSpawnY function in the store
-    if (typeof state.findSafeSpawnY === 'function') {
-      const highestY = state.findSafeSpawnY(spawnX, spawnZ);
-      if (highestY !== 400 && highestY > 0) { // 400 is the error return
+    // Use the existing findSafeFlatSpawn function in the store
+    if (typeof state.findSafeFlatSpawn === 'function') {
+      const safeSpot = state.findSafeFlatSpawn(spawnX, spawnZ);
+      if (safeSpot && safeSpot.y > 0) {
         // Found a block
-        spawnY = highestY + 2; 
+        spawnY = safeSpot.y + 2;
 
         // Edge Case 4: Suffocation Spawns (Force Clear above spawn)
         // Ensure y and y+1 are clear
@@ -1448,6 +1447,7 @@ export const createPlayerSlice = (set, get) => ({
     await new Promise(resolve => setTimeout(resolve, 650));
 
     // Edge Case 5: Network "Zombie" Desync (Purge queues)
+    playerPosition.set(spawnX, spawnY, spawnZ);
     set({
       playerHealth: get().playerMaxHealth,
       playerPower: get().playerMaxPower,

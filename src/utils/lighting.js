@@ -10,7 +10,8 @@ import {
   CHUNK_VOLUME,
 } from './chunkData';
 
-let QUEUE_SIZE = 100000;
+const QUEUE_SIZE = 4194304;
+const QUEUE_MASK = 4194303;
 let qX = new Int32Array(QUEUE_SIZE);
 let qY = new Int32Array(QUEUE_SIZE);
 let qZ = new Int32Array(QUEUE_SIZE);
@@ -21,20 +22,6 @@ let rqY = new Int32Array(QUEUE_SIZE);
 let rqZ = new Int32Array(QUEUE_SIZE);
 let rqV = new Uint8Array(QUEUE_SIZE);
 
-const checkQueue = (tail) => {
-  if (tail >= QUEUE_SIZE) {
-    QUEUE_SIZE *= 2;
-    const newQX = new Int32Array(QUEUE_SIZE); newQX.set(qX); qX = newQX;
-    const newQY = new Int32Array(QUEUE_SIZE); newQY.set(qY); qY = newQY;
-    const newQZ = new Int32Array(QUEUE_SIZE); newQZ.set(qZ); qZ = newQZ;
-    const newQV = new Uint8Array(QUEUE_SIZE); newQV.set(qV); qV = newQV;
-    
-    const newRQX = new Int32Array(QUEUE_SIZE); newRQX.set(rqX); rqX = newRQX;
-    const newRQY = new Int32Array(QUEUE_SIZE); newRQY.set(rqY); rqY = newRQY;
-    const newRQZ = new Int32Array(QUEUE_SIZE); newRQZ.set(rqZ); rqZ = newRQZ;
-    const newRQV = new Uint8Array(QUEUE_SIZE); newRQV.set(rqV); rqV = newRQV;
-  }
-};
 
 const dirs = [
   [0, 1, 0],
@@ -200,13 +187,11 @@ const seedNeighborLight = (
           if (isSunlight ? lightLvl > 1 && lightLvl < 15 : lightLvl > 1) {
             const gx = nb.cx * 16 + lx;
             const gz = nb.cz * 16 + lz;
-            checkQueue(tail); {
-              qX[tail] = gx;
-              qY[tail] = gy;
-              qZ[tail] = gz;
-              qV[tail] = lightLvl;
+            qX[tail & QUEUE_MASK] = gx;
+              qY[tail & QUEUE_MASK] = gy;
+              qZ[tail & QUEUE_MASK] = gz;
+              qV[tail & QUEUE_MASK] = lightLvl;
               tail++;
-            }
           }
         }
       }
@@ -289,13 +274,11 @@ export const generateSunlight = (
                   nz
                 )
               ) {
-                checkQueue(tail); {
-                  qX[tail] = gx;
-                  qY[tail] = gy;
-                  qZ[tail] = gz;
-                  qV[tail] = 15;
+                qX[tail & QUEUE_MASK] = gx;
+                  qY[tail & QUEUE_MASK] = gy;
+                  qZ[tail & QUEUE_MASK] = gz;
+                  qV[tail & QUEUE_MASK] = 15;
                   tail++;
-                }
                 break; // Only need to add the source once
               }
             }
@@ -312,10 +295,10 @@ export const generateSunlight = (
 
   // Step 2: Flood Fill Scatter
   while (head < tail) {
-    const x = qX[head];
-    const y = qY[head];
-    const z = qZ[head];
-    const val = qV[head];
+    const x = qX[head & QUEUE_MASK];
+    const y = qY[head & QUEUE_MASK];
+    const z = qZ[head & QUEUE_MASK];
+    const val = qV[head & QUEUE_MASK];
     head++;
 
     if (val <= 1) continue;
@@ -357,13 +340,11 @@ export const generateSunlight = (
             true
           );
           if (success) {
-            checkQueue(tail); {
-              qX[tail] = nx;
-              qY[tail] = ny;
-              qZ[tail] = nz;
-              qV[tail] = nextVal;
+            qX[tail & QUEUE_MASK] = nx;
+              qY[tail & QUEUE_MASK] = ny;
+              qZ[tail & QUEUE_MASK] = nz;
+              qV[tail & QUEUE_MASK] = nextVal;
               tail++;
-            }
           } else {
             // Reached an unloaded boundary, emit overflow payload!
             lightOverflow.push({
@@ -421,13 +402,11 @@ export const generateBlockLight = (
           lightLvl,
           false
         );
-        checkQueue(tail); {
-          qX[tail] = gx;
-          qY[tail] = gy;
-          qZ[tail] = gz;
-          qV[tail] = lightLvl;
+        qX[tail & QUEUE_MASK] = gx;
+          qY[tail & QUEUE_MASK] = gy;
+          qZ[tail & QUEUE_MASK] = gz;
+          qV[tail & QUEUE_MASK] = lightLvl;
           tail++;
-        }
       }
     }
   }
@@ -437,10 +416,10 @@ export const generateBlockLight = (
 
   // 2. Flood Fill
   while (head < tail) {
-    const x = qX[head];
-    const y = qY[head];
-    const z = qZ[head];
-    const val = qV[head];
+    const x = qX[head & QUEUE_MASK];
+    const y = qY[head & QUEUE_MASK];
+    const z = qZ[head & QUEUE_MASK];
+    const val = qV[head & QUEUE_MASK];
     head++;
 
     if (val <= 1) continue;
@@ -479,13 +458,11 @@ export const generateBlockLight = (
             false
           );
           if (success) {
-            checkQueue(tail); {
-              qX[tail] = nx;
-              qY[tail] = ny;
-              qZ[tail] = nz;
-              qV[tail] = nextVal;
+            qX[tail & QUEUE_MASK] = nx;
+              qY[tail & QUEUE_MASK] = ny;
+              qZ[tail & QUEUE_MASK] = nz;
+              qV[tail & QUEUE_MASK] = nextVal;
               tail++;
-            }
           } else {
             lightOverflow.push({
               x: nx,
@@ -525,20 +502,19 @@ export const removeLight = (
   const lightOverflow = [];
 
   // Seed removal queue
-  checkQueue(rTail);
-  rqX[rTail] = rx;
-  rqY[rTail] = ry;
-  rqZ[rTail] = rz;
-  rqV[rTail] = removedLightVal;
+  rqX[rTail & QUEUE_MASK] = rx;
+  rqY[rTail & QUEUE_MASK] = ry;
+  rqZ[rTail & QUEUE_MASK] = rz;
+  rqV[rTail & QUEUE_MASK] = removedLightVal;
   rTail++;
   setLightVal(cx, cz, buffer, neighborBuffers, rx, ry, rz, 0, isSunlight);
 
   // 1. Reverse BFS (Darken everything that relied on this light source)
   while (rHead < rTail) {
-    const x = rqX[rHead];
-    const y = rqY[rHead];
-    const z = rqZ[rHead];
-    const val = rqV[rHead];
+    const x = rqX[rHead & QUEUE_MASK];
+    const y = rqY[rHead & QUEUE_MASK];
+    const z = rqZ[rHead & QUEUE_MASK];
+    const val = rqV[rHead & QUEUE_MASK];
     rHead++;
 
     for (let i = 0; i < dirs.length; i++) {
@@ -582,22 +558,18 @@ export const removeLight = (
             0,
             isSunlight
           );
-          checkQueue(rTail); {
-            rqX[rTail] = nx;
-            rqY[rTail] = ny;
-            rqZ[rTail] = nz;
-            rqV[rTail] = neighborLight;
+          rqX[rTail & QUEUE_MASK] = nx;
+            rqY[rTail & QUEUE_MASK] = ny;
+            rqZ[rTail & QUEUE_MASK] = nz;
+            rqV[rTail & QUEUE_MASK] = neighborLight;
             rTail++;
-          }
         } else if (neighborLight >= val) {
           // No! Its light came from somewhere else. Add it to generation queue to re-illuminate!
-          checkQueue(gTail); {
-            qX[gTail] = nx;
-            qY[gTail] = ny;
-            qZ[gTail] = nz;
-            qV[gTail] = neighborLight;
+          qX[gTail & QUEUE_MASK] = nx;
+            qY[gTail & QUEUE_MASK] = ny;
+            qZ[gTail & QUEUE_MASK] = nz;
+            qV[gTail & QUEUE_MASK] = neighborLight;
             gTail++;
-          }
         }
       }
     }
@@ -605,10 +577,10 @@ export const removeLight = (
 
   // 2. Standard BFS (Re-illuminate from other sources)
   while (gHead < gTail) {
-    const x = qX[gHead];
-    const y = qY[gHead];
-    const z = qZ[gHead];
-    const val = qV[gHead];
+    const x = qX[gHead & QUEUE_MASK];
+    const y = qY[gHead & QUEUE_MASK];
+    const z = qZ[gHead & QUEUE_MASK];
+    const val = qV[gHead & QUEUE_MASK];
     gHead++;
 
     if (val <= 1) continue;
@@ -649,13 +621,11 @@ export const removeLight = (
             isSunlight
           );
           if (success) {
-            checkQueue(gTail); {
-              qX[gTail] = nx;
-              qY[gTail] = ny;
-              qZ[gTail] = nz;
-              qV[gTail] = nextVal;
+            qX[gTail & QUEUE_MASK] = nx;
+              qY[gTail & QUEUE_MASK] = ny;
+              qZ[gTail & QUEUE_MASK] = nz;
+              qV[gTail & QUEUE_MASK] = nextVal;
               gTail++;
-            }
           } else {
             lightOverflow.push({
               x: nx,

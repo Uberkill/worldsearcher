@@ -32,7 +32,7 @@ const registerTexture = (filename) => {
 // 0 is reserved for air, so we use empty/fallback for ID 0
 registerTexture('fallback');
 
-export const FaceMappings = new Array(256)
+const FaceMappings = new Array(256)
   .fill(null)
   .map(() => ({ top: 0, bottom: 0, side: 0 }));
 
@@ -55,4 +55,45 @@ Object.keys(BlockRegistry).forEach((key) => {
       FaceMappings[id] = { top: tex, bottom: tex, side: tex };
     }
   }
+});
+
+// --- Binary Lookups for Worker Optimization ---
+const SolidLookup = new Uint8Array(256);
+const FluidLookup = new Uint8Array(256);
+const TextureLookup = new Uint16Array(256 * 3);
+const FloraLookup = new Uint8Array(256);
+const TransparentLookup = new Uint8Array(256);
+
+Object.keys(BlockRegistry).forEach((key) => {
+  const id = BlockIds[key];
+  const conf = blocksConfig[key];
+  if (conf) {
+    SolidLookup[id] = conf.isTransparent ? 0 : 1;
+    FluidLookup[id] = conf.isLiquid ? 1 : 0;
+    FloraLookup[id] = conf.isFlora ? 1 : 0;
+    TransparentLookup[id] = conf.isTransparent ? 1 : 0;
+    
+    if (FaceMappings[id]) {
+      TextureLookup[id * 3 + 0] = FaceMappings[id].top;
+      TextureLookup[id * 3 + 1] = FaceMappings[id].bottom;
+      TextureLookup[id * 3 + 2] = FaceMappings[id].side;
+    } else {
+      TextureLookup[id * 3 + 0] = id;
+      TextureLookup[id * 3 + 1] = id;
+      TextureLookup[id * 3 + 2] = id;
+    }
+  }
+});
+
+SolidLookup[0] = 0; // Air is transparent
+FluidLookup[0] = 0; // Air is not liquid
+FloraLookup[0] = 0; // Air is not flora
+TransparentLookup[0] = 1; // Air is transparent
+
+export const getBinaryRegistries = () => ({
+  solidBuffer: SolidLookup.buffer,
+  fluidBuffer: FluidLookup.buffer,
+  textureBuffer: TextureLookup.buffer,
+  floraBuffer: FloraLookup.buffer,
+  transparentBuffer: TransparentLookup.buffer
 });

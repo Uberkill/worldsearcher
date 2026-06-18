@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useStore } from '../stores/useStore';
+import { useCallback, useEffect, useRef } from 'react';
 
 function actionByKey(key) {
   const keyActionMap = {
@@ -26,7 +25,7 @@ function actionByKey(key) {
 }
 
 export const useKeyboard = () => {
-  const [actions, setActions] = useState({
+  const actions = useRef({
     moveForward: false,
     moveBackward: false,
     moveLeft: false,
@@ -47,14 +46,12 @@ export const useKeyboard = () => {
   });
 
   const handleKeyDown = useCallback((e) => {
-    if (e.repeat) return; // Prevent OS key repeat from causing constant React re-renders
+    if (e.repeat) return; 
 
-    // Ignore all inputs if user is typing in a text field
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
     const action = actionByKey(e.code);
     if (action) {
-      // Prevent movement if the game isn't capturing the mouse
       if (
         !document.pointerLockElement &&
         [
@@ -68,35 +65,26 @@ export const useKeyboard = () => {
       ) {
         return;
       }
-      setActions((prev) => ({
-        ...prev,
-        [action]: true,
-      }));
+      actions.current[action] = true;
     }
   }, []);
 
   const handleKeyUp = useCallback((e) => {
     const action = actionByKey(e.code);
     if (action) {
-      setActions((prev) => ({
-        ...prev,
-        [action]: false,
-      }));
+      actions.current[action] = false;
     }
   }, []);
 
   useEffect(() => {
     const handlePointerLockChange = () => {
       if (!document.pointerLockElement) {
-        setActions((prev) => ({
-          ...prev,
-          moveForward: false,
-          moveBackward: false,
-          moveLeft: false,
-          moveRight: false,
-          jump: false,
-          sprint: false,
-        }));
+          actions.current.moveForward = false;
+          actions.current.moveBackward = false;
+          actions.current.moveLeft = false;
+          actions.current.moveRight = false;
+          actions.current.jump = false;
+          actions.current.sprint = false;
       }
     };
 
@@ -106,10 +94,7 @@ export const useKeyboard = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('keyup', handleKeyUp);
-      document.removeEventListener(
-        'pointerlockchange',
-        handlePointerLockChange
-      );
+      document.removeEventListener('pointerlockchange', handlePointerLockChange);
     };
   }, [handleKeyDown, handleKeyUp]);
 

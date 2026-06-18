@@ -130,7 +130,7 @@ export const getGlobalBlockTex = (cx, cz, buffer, neighborBuffers, neighborObj, 
 
 export const getGlobalBlockLight = (cx, cz, buffer, neighborBuffers, neighborObj, gx, gy, gz) => {
   const val = getGlobalRawBlock(cx, cz, buffer, neighborBuffers, gx, gy, gz);
-  if (val === -2) return 15 << 26; // Out of Y bounds (Max sunlight packed)
-  if (val === -1) return 15;       // Out of bounds / fallback
-  return val;                      // Raw block data containing packed light
+    if (val === -2) return 15 << 26; // Out of Y bounds (Max sunlight packed)
+    if (val === -1) return 15 << 26; // Out of bounds / fallback
+    return val;                      // Raw block data containing packed light
 };

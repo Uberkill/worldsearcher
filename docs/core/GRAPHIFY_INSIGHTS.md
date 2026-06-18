@@ -1,6 +1,6 @@
 # Graphify Architectural Insights
 
-This document synthesizes the structural analysis provided by Graphify (run on `2026-06-08`). Future AI agents and developers should use this to understand the invisible couplings, bottlenecks, and knowledge gaps within the Minecraft Clone codebase.
+This document synthesizes the structural analysis provided by Graphify (run on `2026-06-08`). Future AI agents and developers should use this to understand the invisible couplings, bottlenecks, and knowledge gaps within the worldsearch codebase.
 
 ## 1. The "God Nodes" (Architectural Bottlenecks)
 Graphify measures "betweenness centrality" to find nodes that bridge the most distinct communities. These are the most critical, yet most fragile, points of failure in the system.

@@ -73,6 +73,9 @@ useStore.subscribe(
 );
 
 // Break circular dependency by injecting the state getter directly
+if (typeof window !== 'undefined') {
+  window.__DEBUG_PASS1_CACHE__ = pass1Cache;
+}
 injectWorkerDependencies(() => pass1Cache);
 
 // Run fluid cellular automata ticking at a steady rate

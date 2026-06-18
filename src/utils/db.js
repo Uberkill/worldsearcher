@@ -1,4 +1,5 @@
-import { get, set, keys } from 'idb-keyval';
+/* eslint-disable no-unused-vars */
+import { get, set, del, keys } from 'idb-keyval';
 import './chunkData';
 import { playerPosition, playerRotation } from '../globals';
 
@@ -52,7 +53,7 @@ export const flushWAL = async () => {
   await sendWorkerRequest('FLUSH_WAL', {});
 };
 
-export let skipAutoSaveOnExit = false;
+let skipAutoSaveOnExit = false;
 export const setSkipAutoSave = (val) => {
   skipAutoSaveOnExit = val;
 };
@@ -65,7 +66,6 @@ const visibilityListener = () => {
         playerRotation.x,
         playerRotation.y,
         playerRotation.z,
-        playerRotation.w,
       ];
       window.useStore.getState().savePlayerState(pos, rot);
       // Force a synchronous extraction of modified chunks into the WAL
@@ -118,7 +118,7 @@ export const cancelLoadFromDB = (_chunkKey) => {
   // Not strictly needed with async worker unless we add cancellation logic
 };
 
-export const deleteChunkFromDB = async (chunkKey, seed) => {
+const deleteChunkFromDB = async (chunkKey, seed) => {
   await sendWorkerRequest('DELETE_CHUNK', { chunkKey, slotPrefix: getSlotPrefix(), seed });
 };
 
@@ -143,7 +143,7 @@ export const loadWorldEntities = async () => {
 };
 
 // --- SHIP BUFFER PERSISTENCE ---
-export const saveShipToDB = async (shipBuffer) => {
+const saveShipToDB = async (shipBuffer) => {
   const prefix = getSlotPrefix();
   // shipBuffer is a Uint32Array, we can just save it
   await set(`${prefix}_ship_buffer`, shipBuffer);
@@ -151,7 +151,19 @@ export const saveShipToDB = async (shipBuffer) => {
 
 export const loadShipFromDB = async () => {
   const prefix = getSlotPrefix();
-  return await get(`${prefix}_ship_buffer`);
+  const buffer = await get(`${prefix}_ship_buffer`);
+  if (buffer) {
+    if (buffer.rleBuffer) {
+      return await decompressRLE(buffer.rleBuffer); // Legacy cleanup
+    }
+    if (Array.isArray(buffer)) {
+      return new Uint32Array(buffer);
+    }
+    if (!(buffer instanceof Uint32Array)) {
+      return new Uint32Array(buffer);
+    }
+  }
+  return buffer;
 };
 
 // --- WORLD EXPORTER (.vx Blob) ---
@@ -169,10 +181,12 @@ export const exportSlotBlob = async (slotId) => {
 
   for (const k of slotKeys) {
     const data = await get(k);
-    if (data && data.rleBuffer) {
-      exportData.chunks[k] = data.rleBuffer;
+    if (k.endsWith('_ship_buffer')) {
+      exportData.chunks[k] = Array.from(await compressRLE(data));
+    } else if (data && data.rleBuffer) {
+      exportData.chunks[k] = Array.from(data.rleBuffer);
     } else if (data && data.buffer) {
-      exportData.chunks[k] = await compressRLE(data.buffer);
+      exportData.chunks[k] = Array.from(await compressRLE(data.buffer));
     } else if (data) {
       // This captures player_state, achievements, etc.
       exportData.otherData[k] = data;
@@ -206,7 +220,12 @@ export const importSlotBlob = async (slotId, exportData) => {
     for (const [key, rleArray] of Object.entries(exportData.chunks)) {
       const firstUnderscore = key.indexOf('_');
       const targetKey = `${slotId}${key.substring(firstUnderscore)}`;
-      await set(targetKey, { rleBuffer: rleArray });
+      if (targetKey.endsWith('_ship_buffer')) {
+        const decompressed = await decompressRLE(rleArray);
+        await set(targetKey, decompressed);
+      } else {
+        await set(targetKey, { rleBuffer: rleArray });
+      }
     }
   }
 

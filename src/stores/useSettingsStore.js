@@ -23,7 +23,7 @@ export const useSettingsStore = create(
     isMuted: load('setting_isMuted', false),
 
     // Game Mode
-    gameMode: load('setting_gameMode', 'survival'), // 'survival' | 'creative' | 'hardcore'
+    gameMode: 'survival', // 'survival' | 'creative' | 'hardcore'
 
     // Graphics
     renderDistance: load('setting_renderDistance', 8),

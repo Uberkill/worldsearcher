@@ -1,6 +1,6 @@
 import { useMemo, useRef, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { RigidBody, CuboidCollider, useBeforePhysicsStep } from '@react-three/rapier';
+import { RigidBody, CuboidCollider, useBeforePhysicsStep, useRapier } from '@react-three/rapier';
 import { Vector3, Matrix4, Color, Euler, Quaternion } from 'three';
 import { useStore } from '../stores/useStore';
 import { networkActions } from '../stores/networkActions';
@@ -20,6 +20,15 @@ const _forwardVec = new Vector3();
 const _targetQuat = new Quaternion();
 
 export const ShipPhysics = () => {
+  const { rapier, world } = useRapier();
+  const shipShapeRef = useRef(null);
+  useEffect(() => {
+    if (rapier && !shipShapeRef.current) {
+        // Use a smaller core bounding box for the physics sweep to prevent instant ground intersection
+        shipShapeRef.current = new rapier.Cuboid({ x: 1.5, y: 1.5, z: 1.5 });
+    }
+  }, [rapier]);
+
   const isShipActive = useStore((state) => state.isShipActive);
   const isBuildMode = useStore((state) => state.isBuildMode);
   const shipBuffer = useStore((state) => state.shipBuffer);
@@ -36,200 +45,13 @@ export const ShipPhysics = () => {
   const hasEngine = shipHardwareCounts.engine > 0;
   const hasCapacitor = shipHardwareCounts.capacitor > 0;
 
-  useFrame((_, delta) => {
-    // Local Kill Plane for the "Two Boats" system.
-    if (playerPosition.y < 9990 && playerPosition.y > 5000 && !useStore.getState().forceTeleportPos) {
-      if (useStore.getState().isTransitMode) {
-          // EXPLOIT FIX: Stranded player during warp is returned to the ship instead of Y=800
-          if (!shipTransforms.has('default')) {
-              shipTransforms.set('default', { position: new Vector3(0, 10000, 0), rotation: new Euler() });
-          }
-          const currentTransform = shipTransforms.get('default');
-          if (currentTransform) {
-              const offset = new Vector3(0, 15, -3).applyEuler(currentTransform.rotation);
-              useStore.setState({ forceTeleportPos: [currentTransform.position.x + offset.x, currentTransform.position.y + offset.y, currentTransform.position.z + offset.z] });
-          }
-      } else {
-          useStore.setState({ forceTeleportPos: [playerPosition.x, 260, playerPosition.z] });
-      }
-    }
-    if (!shipTransforms.has('default')) {
-        shipTransforms.set('default', { 
-            position: new Vector3(0, 10000, 0), 
-            rotation: new Euler(),
-            actualPosition: new Vector3(0, 10000, 0),
-            actualQuaternion: { x: 0, y: 0, z: 0, w: 1 },
-            actualVelocity: new Vector3(0, 0, 0)
-        });
-    }
-    const currentTransform = shipTransforms.get('default');
-    if (!currentTransform) return;
-    
-    if (networkActions.getState().isHost && isShipActive) {
-        try {
-            const steering = useStore.getState().shipSteerIntents;
-            let fwd = 0; let side = 0; let up = 0;
-            const shipHelmPlayerId = useStore.getState().shipHelmPlayerId;
-            if (shipHelmPlayerId && steering[shipHelmPlayerId]) {
-               const intent = steering[shipHelmPlayerId];
-               if (intent.forward) fwd += 1;
-               if (intent.backward) fwd -= 1;
-               if (intent.left) side += 1;
-               if (intent.right) side -= 1;
-               if (intent.jump) up += 1;
-               if (intent.sprint) up -= 1;
-            }
-            
-            const storeState = useStore.getState();
-            const shipCorePower = storeState.shipCorePower;
-            const shipHealth = storeState.shipHealth;
-            const speedMultiplier = hasEngine ? 1.5 : 1.0;
-            const drainMultiplier = hasEngine ? 0.5 : 1.0;
-            
-            let maxSpeed = 20 * speedMultiplier;
-            let maxRotSpeed = 1.5 * speedMultiplier;
-            
-            const accel = 40 * speedMultiplier * delta; 
-            const rotAccel = 5 * speedMultiplier * delta;
-            
-            if (shipHealth <= 0) {
-                maxSpeed = 1.0; // Limp Mode
-                maxRotSpeed = 0.2;
-                if (!storeState.isTransitMode) {
-                    velocityRef.current.y -= 10 * delta; // Simulated Gravity
-                }
-            }
-            
-            if (shipCorePower > 0) {
-                velocityRef.current.z += fwd * accel;
-                velocityRef.current.y += up * accel;
-            }
-            
-            velocityRef.current.z *= 0.92;
-            velocityRef.current.y *= 0.92;
-            
-            if (velocityRef.current.z > maxSpeed) velocityRef.current.z = maxSpeed;
-            if (velocityRef.current.z < -maxSpeed) velocityRef.current.z = -maxSpeed;
-            if (velocityRef.current.y > maxSpeed) velocityRef.current.y = maxSpeed;
-            if (velocityRef.current.y < -maxSpeed) velocityRef.current.y = -maxSpeed;
+  useFrame((_, delta) => runShipFrame(delta, isShipActive, hasEngine, hasCapacitor, rbRef, meshRef, velocityRef, lastValidTransform, setShipTransform, shipBuffer, isBuildMode, shipFullRebuildId, activeFires, world, shipShapeRef));
 
-            velocityRef.current.x += side * rotAccel;
-            velocityRef.current.x *= 0.80; 
-            if (velocityRef.current.x > maxRotSpeed) velocityRef.current.x = maxRotSpeed;
-            if (velocityRef.current.x < -maxRotSpeed) velocityRef.current.x = -maxRotSpeed;
-            
-            if (Math.abs(velocityRef.current.z) > 0.1 || Math.abs(velocityRef.current.y) > 0.1 || Math.abs(velocityRef.current.x) > 0.01) {
-               
-               if (shipCorePower > 0 && (fwd !== 0 || side !== 0 || up !== 0)) {
-                   storeState.drainShipPower(5 * delta * drainMultiplier);
-               }
-
-               const newRotY = currentTransform.rotation.y + velocityRef.current.x * delta;
-
-               _euler.set(0, newRotY, 0);
-               _forwardVec.set(0, 0, -1).applyEuler(_euler);
-               
-               _pos.set(
-                  currentTransform.position.x + _forwardVec.x * velocityRef.current.z * delta,
-                  currentTransform.position.y + velocityRef.current.y * delta,
-                  currentTransform.position.z + _forwardVec.z * velocityRef.current.z * delta
-               );
-               lastValidTransform.current.position.copy(currentTransform.position);
-               lastValidTransform.current.rotation.copy(currentTransform.rotation);
-               
-               currentTransform.position.copy(_pos);
-               currentTransform.rotation.copy(_euler);
-               if (!currentTransform.actualVelocity) currentTransform.actualVelocity = new Vector3();
-               currentTransform.actualVelocity.set(
-                   _forwardVec.x * velocityRef.current.z,
-                   velocityRef.current.y,
-                   _forwardVec.z * velocityRef.current.z
-               );
-               
-               // Low frequency UI region update
-               const newRegionX = Math.floor(_pos.x / 2000) * 2000;
-               const newRegionZ = Math.floor(_pos.z / 2000) * 2000;
-               if (storeState.shipRegion.x !== newRegionX || storeState.shipRegion.z !== newRegionZ) {
-                   storeState.setShipRegion(newRegionX, newRegionZ);
-               }
-            }
-        } catch (err) {
-            console.error("CRITICAL ERROR IN SHIP PHYSICS HOST LOOP:", err);
-        }
-    }
-
-  });
-
-  const lastTimeRef = useRef(performance.now());
+  const lastTimeRef = useRef(null);
   useBeforePhysicsStep((world) => {
-    const now = performance.now();
-    const delta = (now - lastTimeRef.current) / 1000.0;
-    lastTimeRef.current = now;
-
-    const currentTransform = shipTransforms.get('default');
-    if (!currentTransform) return;
-    
-    if (rbRef.current) {
-        // Lerp kinematic body to shipTransform
-        const rot = rbRef.current.rotation();
-        _quat.set(rot.x, rot.y, rot.z, rot.w);
-        const currentPos = rbRef.current.translation();
-        const targetPos = currentTransform.position;
-        // Instant teleport if distance is huge (e.g. warping to Sky Dimension)
-        const distSq = Math.pow(targetPos.x - currentPos.x, 2) + Math.pow(targetPos.y - currentPos.y, 2) + Math.pow(targetPos.z - currentPos.z, 2);
-        
-        _targetQuat.setFromEuler(currentTransform.rotation);
-
-        if (distSq > 1000000) {
-            rbRef.current.setTranslation({
-                x: targetPos.x,
-                y: targetPos.y,
-                z: targetPos.z
-            }, true);
-            rbRef.current.setNextKinematicRotation({ x: _targetQuat.x, y: _targetQuat.y, z: _targetQuat.z, w: _targetQuat.w });
-            
-            if (currentTransform.actualPosition) {
-                currentTransform.actualPosition.copy(targetPos);
-                
-                // Keep actualQuaternion if initialized, or fall back
-                if (!currentTransform.actualQuaternion) currentTransform.actualQuaternion = { x: 0, y: 0, z: 0, w: 1 };
-                _quat.setFromEuler(currentTransform.rotation);
-                currentTransform.actualQuaternion.x = _quat.x;
-                currentTransform.actualQuaternion.y = _quat.y;
-                currentTransform.actualQuaternion.z = _quat.z;
-                currentTransform.actualQuaternion.w = _quat.w;
-            }
-        } else {
-            const lerpFactor = Math.min(1.0, delta * 10.0);
-            if (distSq > 0.0001) {
-                _pos.set(
-                    currentPos.x + (targetPos.x - currentPos.x) * lerpFactor,
-                    currentPos.y + (targetPos.y - currentPos.y) * lerpFactor,
-                    currentPos.z + (targetPos.z - currentPos.z) * lerpFactor
-                );
-                rbRef.current.setNextKinematicTranslation({ x: _pos.x, y: _pos.y, z: _pos.z });
-            } else {
-                _pos.copy(currentPos);
-            }
-            
-            // Slerp rotation
-            _quat.slerp(_targetQuat, lerpFactor);
-            rbRef.current.setNextKinematicRotation({ x: _quat.x, y: _quat.y, z: _quat.z, w: _quat.w });
-            
-            if (currentTransform.actualPosition) {
-                currentTransform.actualPosition.copy(_pos);
-                
-                if (!currentTransform.actualQuaternion) currentTransform.actualQuaternion = { x: 0, y: 0, z: 0, w: 1 };
-                currentTransform.actualQuaternion.x = _quat.x;
-                currentTransform.actualQuaternion.y = _quat.y;
-                currentTransform.actualQuaternion.z = _quat.z;
-                currentTransform.actualQuaternion.w = _quat.w;
-            }
-        }
-    }
+    if (lastTimeRef.current === null) lastTimeRef.current = performance.now();
+    runShipPhysicsStep(world, lastTimeRef, isShipActive, hasEngine, rbRef, meshRef, velocityRef, lastValidTransform, setShipTransform);
   });
-
-
   useEffect(() => {
     if (!meshRef.current || !shipBuffer) return;
 
@@ -318,6 +140,7 @@ export const ShipPhysics = () => {
 
   useEffect(() => {
     if (!isShipActive) {
+      // eslint-disable-next-line
       setTempBlocks([]);
     }
   }, [isShipActive, shipFullRebuildId]);
@@ -389,7 +212,11 @@ export const ShipPhysics = () => {
     <group name="ship-physics-grid">
       <RigidBody 
          ref={rbRef} 
-         type="kinematicPosition" 
+         type="dynamic" 
+         enabledRotations={[false, true, false]}
+         linearDamping={1.0}
+         angularDamping={2.0}
+         gravityScale={0}
          colliders={false} 
          collisionGroups={0x0010FFFF}
          activeCollisionTypes={8704}
@@ -398,30 +225,22 @@ export const ShipPhysics = () => {
              if (!isTerrain) return;
              
              if (networkActions.getState().isHost) {
-                 const now = performance.now();
-                 if (now - (window.__lastShipCollision || 0) < 500) return;
-                 window.__lastShipCollision = now;
-                 const velocityMag = Math.sqrt(velocityRef.current.x**2 + velocityRef.current.y**2 + velocityRef.current.z**2);
-                 if (velocityMag > 2) {
-                     // Fix: Defer state update to prevent synchronous unmount crash in Rapier
-                     setTimeout(() => {
-                         useStore.getState().damageShip(velocityMag * 5);
-                     }, 0);
-                     try { EventBus.emit('audio', { sound: 'explosion', source: 'local' }); } catch(err){}
-                 }
-                 
-                  const currentTransform = shipTransforms.get('default');
-                  if (currentTransform && lastValidTransform.current) {
-                      // True Event-Based Rollback
-                      const newPos = lastValidTransform.current.position.toArray();
-                      const rot = currentTransform.rotation;
-                      useStore.getState().setShipTransform('default', newPos, [rot.x, rot.y, rot.z]);
-                  }
-                  
-                  // Reverse strict velocity vectors to bounce mathematically away from the impact plane
-                  velocityRef.current.z *= -0.5;
-                  velocityRef.current.x *= -0.5;
-                  velocityRef.current.y *= -0.5;
+                   const velocityMag = Math.sqrt(velocityRef.current.x**2 + velocityRef.current.y**2 + velocityRef.current.z**2);
+                   const now = performance.now();
+                   if (now - (window.__lastShipCollision || 0) > 500 && velocityMag > 2) {
+                       window.__lastShipCollision = now;
+                       setTimeout(() => {
+                           useStore.getState().damageShip(velocityMag * 5);
+                       }, 0);
+                       try {
+                           EventBus.emit('audio', { sound: 'explosion', source: 'local' });
+                       } catch (err) {}
+                   }
+
+                   // Organic bounce logic: Reflect momentum along all axes, rather than forcing Math.abs
+                   velocityRef.current.z = -velocityRef.current.z * 0.4;
+                   velocityRef.current.x = -velocityRef.current.x * 0.4;
+                   velocityRef.current.y = -velocityRef.current.y * 0.4;
              }
          }}
       >
@@ -460,3 +279,196 @@ export const ShipPhysics = () => {
     </group>
   );
 };
+
+export function runShipFrame(delta, isShipActive, hasEngine, hasCapacitor, rbRef, meshRef, velocityRef, lastValidTransform, setShipTransform, shipBuffer, isBuildMode, shipFullRebuildId, activeFires, world, shipShapeRef) {
+    const currentTransform = ensureShipTransform(lastValidTransform);
+    
+    if (networkActions.getState().isHost && isShipActive) {
+        calculateShipSteering(delta, hasEngine, velocityRef, currentTransform, lastValidTransform);
+    }
+}
+
+function ensureShipTransform(lastValidTransform) {
+    if (!shipTransforms.has('default')) {
+        shipTransforms.set('default', { 
+            position: new Vector3(0, 10000, 0), 
+            rotation: new Euler(),
+            actualPosition: new Vector3(0, 10000, 0),
+            actualQuaternion: { x: 0, y: 0, z: 0, w: 1 },
+            actualVelocity: new Vector3(0, 0, 0)
+        });
+    }
+    const currentTransform = shipTransforms.get('default');
+    if (!currentTransform) throw new Error("Missing default ship transform!"); // FAIL FAST
+
+    if (!lastValidTransform.current.initialized && currentTransform.position.y !== 10000) {
+        lastValidTransform.current.position.copy(currentTransform.position);
+        lastValidTransform.current.rotation.copy(currentTransform.rotation);
+        lastValidTransform.current.initialized = true;
+    }
+    return currentTransform;
+}
+
+function applyVelocityClamping(vel, maxSpeed, maxRotSpeed) {
+    vel.z *= 0.92;
+    vel.y *= 0.92;
+    
+    if (vel.z > maxSpeed) vel.z = maxSpeed;
+    if (vel.z < -maxSpeed) vel.z = -maxSpeed;
+    if (vel.y > maxSpeed) vel.y = maxSpeed;
+    if (vel.y < -maxSpeed) vel.y = -maxSpeed;
+
+    vel.x *= 0.80; 
+    if (vel.x > maxRotSpeed) vel.x = maxRotSpeed;
+    if (vel.x < -maxRotSpeed) vel.x = -maxRotSpeed;
+}
+
+function calculateShipSteering(delta, hasEngine, velocityRef, currentTransform, lastValidTransform) {
+    const steering = useStore.getState().shipSteerIntents;
+    let fwd = 0; let side = 0; let up = 0;
+    const shipHelmPlayerId = useStore.getState().shipHelmPlayerId;
+    if (shipHelmPlayerId && steering[shipHelmPlayerId]) {
+       const intent = steering[shipHelmPlayerId];
+       if (intent.forward) fwd += 1;
+       if (intent.backward) fwd -= 1;
+       if (intent.left) side += 1;
+       if (intent.right) side -= 1;
+       if (intent.jump) up += 1;
+       if (intent.sprint) up -= 1;
+    }
+    
+    const storeState = useStore.getState();
+    const shipCorePower = storeState.shipCorePower;
+    const shipHealth = storeState.shipHealth;
+    const speedMultiplier = hasEngine ? 1.5 : 1.0;
+    const drainMultiplier = hasEngine ? 0.5 : 1.0;
+    
+    let maxSpeed = 20 * speedMultiplier;
+    let maxRotSpeed = 1.5 * speedMultiplier;
+    
+    const accel = 40 * speedMultiplier * delta; 
+    const rotAccel = 5 * speedMultiplier * delta;
+    
+    if (shipHealth <= 0) {
+        maxSpeed = 1.0; // Limp Mode
+        maxRotSpeed = 0.2;
+    }
+    
+    if (shipCorePower > 0) {
+        velocityRef.current.z += fwd * accel;
+        velocityRef.current.y += up * accel;
+    }
+    velocityRef.current.x += side * rotAccel;
+    
+    applyVelocityClamping(velocityRef.current, maxSpeed, maxRotSpeed);
+    
+    if (Math.abs(velocityRef.current.z) > 0.1 || Math.abs(velocityRef.current.y) > 0.1 || Math.abs(velocityRef.current.x) > 0.01) {
+       
+       if (shipCorePower > 0 && (fwd !== 0 || side !== 0 || up !== 0)) {
+           storeState.drainShipPower(5 * delta * drainMultiplier);
+       }
+
+       const newRotY = currentTransform.rotation.y + velocityRef.current.x * delta;
+
+       _euler.set(0, newRotY, 0);
+       _forwardVec.set(0, 0, -1).applyEuler(_euler);
+       
+       lastValidTransform.current.position.copy(currentTransform.position);
+       lastValidTransform.current.rotation.copy(currentTransform.rotation);
+       
+       if (!currentTransform.actualVelocity) currentTransform.actualVelocity = new Vector3();
+       currentTransform.actualVelocity.set(
+           _forwardVec.x * velocityRef.current.z,
+           velocityRef.current.y,
+           _forwardVec.z * velocityRef.current.z
+       );
+       
+       // Low frequency UI region update
+       const newRegionX = Math.floor(_pos.x / 2000) * 2000;
+       const newRegionZ = Math.floor(_pos.z / 2000) * 2000;
+       if (storeState.shipRegion.x !== newRegionX || storeState.shipRegion.z !== newRegionZ) {
+           storeState.setShipRegion(newRegionX, newRegionZ);
+       }
+    }
+}
+
+export function runShipPhysicsStep(world, lastTimeRef, isShipActive, hasEngine, rbRef, meshRef, velocityRef, lastValidTransform, setShipTransform) {
+      const now = performance.now();
+      const delta = (now - lastTimeRef.current) / 1000.0;
+      lastTimeRef.current = now;
+  
+      const currentTransform = shipTransforms.get('default');
+      if (!currentTransform) return;
+      
+      applyShipPhysics(rbRef, velocityRef, currentTransform, lastValidTransform);
+}
+
+function applyShipPhysics(rbRef, velocityRef, currentTransform, lastValidTransform) {
+      if (rbRef.current) {
+          const currentPos = rbRef.current.translation();
+          const currentRot = rbRef.current.rotation();
+          _quat.set(currentRot.x, currentRot.y, currentRot.z, currentRot.w);
+          _euler.setFromQuaternion(_quat);
+          
+          if (currentTransform.forceTeleport) {
+              currentTransform.forceTeleport = false;
+              rbRef.current.setTranslation({ x: currentTransform.position.x, y: currentTransform.position.y, z: currentTransform.position.z }, true);
+              _targetQuat.setFromEuler(currentTransform.rotation);
+              rbRef.current.setRotation({ x: _targetQuat.x, y: _targetQuat.y, z: _targetQuat.z, w: _targetQuat.w }, true);
+              
+              if (lastValidTransform.current) {
+                  lastValidTransform.current.position.copy(currentTransform.position);
+                  lastValidTransform.current.rotation.copy(currentTransform.rotation);
+                  lastValidTransform.current.initialized = true;
+              }
+              if (velocityRef.current) {
+                  velocityRef.current.set(0, 0, 0);
+              }
+              if (currentTransform.actualPosition) {
+                  currentTransform.actualPosition.copy(currentTransform.position);
+                  if (!currentTransform.actualQuaternion) currentTransform.actualQuaternion = { x: 0, y: 0, z: 0, w: 1 };
+                  currentTransform.actualQuaternion.x = _targetQuat.x;
+                  currentTransform.actualQuaternion.y = _targetQuat.y;
+                  currentTransform.actualQuaternion.z = _targetQuat.z;
+                  currentTransform.actualQuaternion.w = _targetQuat.w;
+              }
+              return;
+          }
+
+            // Apply our manual velocityRef steering as physical linear/angular velocity
+            _forwardVec.set(0, 0, -1).applyEuler(_euler);
+            
+            const currentLinvel = rbRef.current.linvel();
+            const isMovingZ = Math.abs(velocityRef.current.z) > 0.05;
+            const isMovingY = Math.abs(velocityRef.current.y) > 0.05;
+
+            const targetLinvel = {
+                x: isMovingZ ? _forwardVec.x * velocityRef.current.z : currentLinvel.x * 0.95,
+                y: isMovingY ? velocityRef.current.y : currentLinvel.y,
+                z: isMovingZ ? _forwardVec.z * velocityRef.current.z : currentLinvel.z * 0.95
+            };
+            
+            // No manual stabilizing needed. Pitch and Roll are locked natively by the engine via enabledRotations!
+            const targetAngvel = {
+                x: 0,
+                y: velocityRef.current.x,
+                z: 0
+            };
+            
+            rbRef.current.setLinvel(targetLinvel, true);
+            rbRef.current.setAngvel(targetAngvel, true);
+
+          // Write back to our visual tracker
+          currentTransform.position.copy(currentPos);
+          currentTransform.rotation.setFromQuaternion(_quat);
+          
+          if (currentTransform.actualPosition) {
+              currentTransform.actualPosition.copy(currentPos);
+              if (!currentTransform.actualQuaternion) currentTransform.actualQuaternion = { x: 0, y: 0, z: 0, w: 1 };
+              currentTransform.actualQuaternion.x = _quat.x;
+              currentTransform.actualQuaternion.y = _quat.y;
+              currentTransform.actualQuaternion.z = _quat.z;
+              currentTransform.actualQuaternion.w = _quat.w;
+          }
+      }
+}

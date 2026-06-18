@@ -15,7 +15,7 @@ export const HeartCoreOverlay = ({ active, onClose }) => {
 
   const handleConsumeSpark = () => {
     // Find spark in inventory
-    const sparkIndex = inventory.findIndex(item => item && (item.texture === 'spark_node' || item.texture === 'spark'));
+    const sparkIndex = inventory.findIndex(item => item && (item.texture === 'spark_node' || item.texture === 'spark_crystal'));
     if (sparkIndex !== -1) {
       executeLocalTransaction({ type: 'inventory', index: sparkIndex }, null, 'DROP', 1);
       chargeShipPower(2500); // 25% charge per spark
@@ -23,7 +23,7 @@ export const HeartCoreOverlay = ({ active, onClose }) => {
   };
 
   const sparkCount = inventory.reduce((acc, item) => {
-    if (item && (item.texture === 'spark_node' || item.texture === 'spark')) {
+    if (item && (item.texture === 'spark_node' || item.texture === 'spark_crystal')) {
       return acc + item.count;
     }
     return acc;

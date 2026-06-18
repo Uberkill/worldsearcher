@@ -19,7 +19,7 @@ export const Screenshot = () => {
         try {
           const dataURL = gl.domElement.toDataURL('image/png');
           const link = document.createElement('a');
-          link.download = `minecraft-clone-screenshot-${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
+          link.download = `worldsearch-screenshot-${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
           link.href = dataURL;
           link.click();
         } catch (err) {

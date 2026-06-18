@@ -1,5 +1,6 @@
 import ChunkWorkerClass from '../workers/chunkWorker.js?worker';
 import { useChunkStore } from '../stores/chunkSlice';
+import { getBinaryRegistries } from '../registry/BlockRegistry.js';
 
 let getPass1Cache = null;
 const POOL_SIZE = Math.min(
@@ -15,6 +16,9 @@ class WorkerManager {
     this.workers = [];
     this.pingPongPool = [];
     this.activeChunks = new Set(); // Prevent chunk data race conditions
+    this.cancelledInFlight = new Set();
+    this._ingestionQueue = [];
+    this._ingestionRunning = false;
 
     for (let i = 0; i < POOL_SIZE; i++) {
       this.spawnWorker(i);
@@ -39,6 +43,19 @@ class WorkerManager {
     };
   }
 
+  _processIngestionQueue() {
+    if (this._ingestionQueue.length === 0) {
+      this._ingestionRunning = false;
+      return;
+    }
+    
+    // Resolve 1 chunk per frame to protect GPU budget
+    const task = this._ingestionQueue.shift();
+    task(); 
+    
+    requestAnimationFrame(() => this._processIngestionQueue());
+  }
+
   spawnWorker(index) {
     const worker = new ChunkWorkerClass();
     const workerObj = {
@@ -53,60 +70,58 @@ class WorkerManager {
     worker.onmessage = ({ data }) => this._onResult(workerObj, data);
     worker.onerror = (e) => this._onError(workerObj, e);
 
+    const registries = getBinaryRegistries();
+    const solidBuf = registries.solidBuffer.slice(0);
+    const fluidBuf = registries.fluidBuffer.slice(0);
+    const texBuf = registries.textureBuffer.slice(0);
+    const floraBuf = registries.floraBuffer.slice(0);
+    const transBuf = registries.transparentBuffer.slice(0);
+    
+    worker.postMessage({
+      type: 'INIT_REGISTRY',
+      solidBuffer: solidBuf,
+      fluidBuffer: fluidBuf,
+      textureBuffer: texBuf,
+      floraBuffer: floraBuf,
+      transparentBuffer: transBuf
+    }, [solidBuf, fluidBuf, texBuf, floraBuf, transBuf]);
+
     this._idle.push(workerObj);
   }
 
   generatePass1(cx, cz, seed) {
     return new Promise((resolve) => {
-      const key = `${cx},${cz}`;
-      const canDispatch = this._idle.length > 0 && !this.activeChunks.has(key);
-      if (canDispatch) {
-        const workerObj = this._idle.pop();
-        this.activeChunks.add(key);
-        this._dispatchGeneratePass1(workerObj, cx, cz, seed, resolve);
-      } else {
-        this._queue.push({ type: 'generatePass1', cx, cz, seed, resolve });
-      }
+      this._queue.push({ type: 'generatePass1', cx, cz, seed, resolve });
+      this.processNextJob();
     });
   }
 
   generatePass2(cx, cz, buffer, getSurfaceHeightMap, seed) {
     return new Promise((resolve) => {
-      const key = `${cx},${cz}`;
-      const canDispatch = this._idle.length > 0 && !this.activeChunks.has(key);
-      if (canDispatch) {
-        const workerObj = this._idle.pop();
-        this.activeChunks.add(key);
-        this._dispatchGeneratePass2(
-          workerObj,
-          cx,
-          cz,
-          buffer,
-          getSurfaceHeightMap,
-          seed,
-          resolve
-        );
+      const firstPass1Idx = this._queue.findIndex((t) => t.type === 'generatePass1');
+      const task = {
+        type: 'generatePass2',
+        cx,
+        cz,
+        buffer,
+        getSurfaceHeightMap,
+        seed,
+        resolve,
+      };
+      if (firstPass1Idx !== -1) {
+        this._queue.splice(firstPass1Idx, 0, task);
       } else {
-        const firstPass1Idx = this._queue.findIndex((t) => t.type === 'generatePass1');
-        const task = {
-          type: 'generatePass2',
-          cx,
-          cz,
-          buffer,
-          getSurfaceHeightMap,
-          seed,
-          resolve,
-        };
-        if (firstPass1Idx !== -1) {
-          this._queue.splice(firstPass1Idx, 0, task);
-        } else {
-          this._queue.push(task);
-        }
+        this._queue.push(task);
       }
+      this.processNextJob();
     });
   }
 
   cancelGenerate(cx, cz) {
+    const key = `${cx},${cz}`;
+    if (this.activeChunks.has(key)) {
+      this.cancelledInFlight.add(key);
+    }
     const idx1 = this._queue.findIndex(
       (t) => t.type === 'generatePass1' && t.cx === cx && t.cz === cz
     );
@@ -124,6 +139,10 @@ class WorkerManager {
   }
 
   cancelRebuild(cx, cz) {
+    const key = `${cx},${cz}`;
+    if (this.activeChunks.has(key)) {
+      this.cancelledInFlight.add(key);
+    }
     this._queue = this._queue.filter((t) => {
       if (t.type === 'rebuild' && t.cx === cx && t.cz === cz) {
         t.resolve({ error: 'CANCELLED' });
@@ -134,6 +153,9 @@ class WorkerManager {
   }
 
   cancelAllPending() {
+    for (const key of this.activeChunks) {
+      this.cancelledInFlight.add(key);
+    }
     this._queue.forEach(t => t.resolve({ error: 'CANCELLED' }));
     this._queue = [];
     for (const resolve of this._pending.values()) {
@@ -148,50 +170,39 @@ class WorkerManager {
 
   rebuild(packedBuffer, neighborBuffers, cx, cz, seed, removedLights, isHighPriority = false) {
     return new Promise((resolve) => {
-      const key = `${cx},${cz}`;
-      const canDispatch = this._idle.length > 0 && !this.activeChunks.has(key);
-      
-      if (canDispatch) {
-        const workerObj = this._idle.pop();
-        this.activeChunks.add(key);
-        this._dispatchRebuild(
-          workerObj,
-          cx,
-          cz,
-          packedBuffer,
-          neighborBuffers,
-          resolve,
-          removedLights
-        );
-      } else {
-        // PRIORITY: High-priority mesh rebuilds (breaking/placing blocks by player) jump ahead of generation!
-        // Low-priority rebuilds (decorator bleeds) append to the back to prevent blocking terrain queue.
-        const firstGenIdx = this._queue.findIndex(
-          (t) => t.type === 'generatePass1' || t.type === 'generatePass2'
-        );
-        const task = {
-          type: 'rebuild',
-          cx,
-          cz,
-          packedBuffer,
-          neighborBuffers,
-          resolve,
-          removedLights,
-        };
+      const firstGenIdx = this._queue.findIndex(
+        (t) => t.type === 'generatePass1' || t.type === 'generatePass2'
+      );
+      const task = {
+        type: 'rebuild',
+        cx,
+        cz,
+        packedBuffer,
+        neighborBuffers,
+        resolve,
+        removedLights,
+        isHighPriority
+      };
 
-        if (isHighPriority && firstGenIdx !== -1) {
-          this._queue.splice(firstGenIdx, 0, task);
-        } else {
-          this._queue.push(task);
-        }
+      if (isHighPriority && firstGenIdx !== -1) {
+        this._queue.splice(firstGenIdx, 0, task);
+      } else {
+        this._queue.push(task);
       }
+      this.processNextJob();
     });
   }
 
   recycleBuffers(toRecycle) {
     if (!toRecycle || toRecycle.length === 0) return;
     const batches = Array.from({ length: POOL_SIZE }, () => []);
-    toRecycle.forEach((buf, i) => batches[i % POOL_SIZE].push(buf));
+    toRecycle.forEach((buf, i) => {
+      if (buf.byteLength === 294912 || buf.byteLength === 262144) {
+        if (this.pingPongPool.length < 50) this.pingPongPool.push(buf);
+      } else {
+        batches[i % POOL_SIZE].push(buf);
+      }
+    });
     batches.forEach((batch, i) => {
         if (batch.length > 0) {
             const workerObj = this.workers[i];
@@ -224,6 +235,11 @@ class WorkerManager {
         workerObj.isDead = true;
         window.__workerTelemetry.resets++;
 
+        if (workerObj.activeChunkKey) {
+            this.activeChunks.delete(workerObj.activeChunkKey);
+            workerObj.activeChunkKey = null;
+        }
+
         const resolve = this._pending.get(workerObj);
         if (resolve) resolve({ error: 'WORKER_TIMEOUT' });
         this._pending.delete(workerObj);
@@ -243,9 +259,20 @@ class WorkerManager {
     if (this._queue.length > 0) {
       if (this._idle.length > 0) {
         // Find the first task whose chunk isn't actively being processed by another worker
-        const taskIdx = this._queue.findIndex((t) => !this.activeChunks.has(`${t.cx},${t.cz}`));
+        let taskIdx = this._queue.findIndex((t) => !this.activeChunks.has(`${t.cx},${t.cz}`));
         
         if (taskIdx !== -1) {
+          const taskObjCheck = this._queue[taskIdx];
+          // Reserve the last idle worker for fast tasks (like block breaking).
+          if (this._idle.length === 1 && POOL_SIZE > 1 && (taskObjCheck.type === 'generatePass1' || taskObjCheck.type === 'generatePass2')) {
+            const rebuildIdx = this._queue.findIndex(t => t.type === 'rebuild' && !this.activeChunks.has(`${t.cx},${t.cz}`));
+            if (rebuildIdx !== -1) {
+              taskIdx = rebuildIdx;
+            } else {
+              return;
+            }
+          }
+
           const workerObj = this._idle.pop();
           const task = this._queue.splice(taskIdx, 1)[0];
           this.activeChunks.add(`${task.cx},${task.cz}`);
@@ -359,14 +386,13 @@ class WorkerManager {
         return;
       }
 
-      const packedBuf = buffer.buffer;
-
       // Implement Input Ping-Pong Pool to eliminate 2.8MB GC Spikes!
       const transfers = new Set();
       
       let pBuf = this.pingPongPool.pop();
-      if (!pBuf || pBuf.byteLength !== packedBuf.byteLength) pBuf = new ArrayBuffer(packedBuf.byteLength);
-      new Uint32Array(pBuf).set(new Uint32Array(packedBuf));
+      if (!pBuf || pBuf.byteLength !== buffer.byteLength) pBuf = new ArrayBuffer(buffer.byteLength);
+      const sourceArray = buffer instanceof Uint32Array ? buffer : new Uint32Array(buffer);
+      new Uint32Array(pBuf).set(sourceArray);
       transfers.add(pBuf);
 
       const safeNeighborBuffers = neighborBuffers.map(n => {
@@ -432,10 +458,11 @@ class WorkerManager {
 
     try {
       let safePackedBuffer = packedBuffer;
-      if (packedBuffer && packedBuffer.buffer) {
+      if (packedBuffer && packedBuffer.byteLength > 0) {
          let pBuf = this.pingPongPool.pop();
-         if (!pBuf || pBuf.byteLength !== packedBuffer.buffer.byteLength) pBuf = new ArrayBuffer(packedBuffer.buffer.byteLength);
-         new Uint32Array(pBuf).set(new Uint32Array(packedBuffer.buffer));
+         if (!pBuf || pBuf.byteLength !== packedBuffer.byteLength) pBuf = new ArrayBuffer(packedBuffer.byteLength);
+         const sourceArray = packedBuffer instanceof Uint32Array ? packedBuffer : new Uint32Array(packedBuffer);
+         new Uint32Array(pBuf).set(sourceArray);
          uniqueTransfers.add(pBuf);
          safePackedBuffer = new Uint32Array(pBuf);
       }
@@ -465,7 +492,7 @@ class WorkerManager {
       console.error('[WorkerManager] Rebuild postMessage failed:', e);
       this._pending.delete(workerObj);
       workerObj.isBusy = false;
-      resolve({ error: 'POST_MESSAGE_FAILED' });
+      resolve(new Error('POST_MESSAGE_FAILED'));
       this._idle.push(workerObj);
       this.processNextJob();
     }
@@ -513,12 +540,41 @@ class WorkerManager {
         resolve({ error: data.message });
       } else if (data.type === 'generatePass1') {
         resolve(data.chunkData);
-      } else if (data.type === 'generatePass2') {
-        resolve(data);
-      } else if (data.type === 'rebuild') {
-        resolve({ meshArrays: data.meshArrays, lightOverflow: data.lightOverflow, buffer: data.buffer });
       } else {
-        resolve({ error: 'UNKNOWN_PAYLOAD' });
+        const chunkKey = `${data.cx},${data.cz}`;
+        this._ingestionQueue.push(() => {
+          if (this.cancelledInFlight.has(chunkKey)) {
+             this.cancelledInFlight.delete(chunkKey);
+             if (data.buffer && (data.buffer.byteLength === 294912 || data.buffer.byteLength === 262144)) {
+                 if (this.pingPongPool.length < 50) this.pingPongPool.push(data.buffer);
+             } else if (data.buffer) {
+                 this.recycleBuffers([data.buffer]);
+             }
+             if (data.meshArrays) {
+                 const toRecycle = [];
+                 for (const val of Object.values(data.meshArrays)) {
+                     if (val instanceof Float32Array || val instanceof Uint32Array) {
+                         toRecycle.push(val.buffer);
+                     }
+                 }
+                 this.recycleBuffers(toRecycle);
+             }
+             resolve({ error: 'CANCELLED_IN_FLIGHT' });
+             return;
+          }
+          if (data.type === 'generatePass2') {
+            resolve(data);
+          } else if (data.type === 'rebuild') {
+            resolve({ meshArrays: data.meshArrays, lightOverflow: data.lightOverflow, buffer: data.buffer });
+          } else {
+            resolve({ error: 'UNKNOWN_PAYLOAD' });
+          }
+        });
+
+        if (!this._ingestionRunning) {
+          this._ingestionRunning = true;
+          requestAnimationFrame(() => this._processIngestionQueue());
+        }
       }
     }
 

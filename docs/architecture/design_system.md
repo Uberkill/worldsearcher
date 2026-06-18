@@ -44,6 +44,11 @@ export const setBlock = (
 };
 ```
 
+> [!CAUTION]
+> **CRITICAL WARNING: The Bitmasking Trap**
+> When reading chunks from the 32-bit `Uint32Array` buffers, you MUST extract the Block ID using a bitmask: `(buffer[idx] & 0xFF) === 0`.
+> Never use strict equality (`buffer[idx] === 0`) to check for an air block. Air blocks frequently contain sunlight or metadata in the upper bits. A strict zero check will fail, silently creating invisible walls in the Greedy Mesher and breaking AI A* Pathfinding!
+
 ## 4. Materials and Shaders
 
 - **Material Sharing Anti-Pattern:** Do NOT share a `ShaderMaterial` instance between a standard `Mesh` and an `InstancedMesh`. Three.js relies on compilation macros (e.g. `#define INSTANCED`). Sharing the material will cause the instancing macro to be dropped, resulting in severe rendering bugs. Always use `.clone()` or regenerate the material via factory functions when spanning different mesh types.

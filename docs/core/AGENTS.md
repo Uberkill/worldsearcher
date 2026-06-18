@@ -1,6 +1,6 @@
 # Developer & AI Agent Instructions (AGENTS.md)
 
-This document contains the critical coding rules, styling guidelines, and framework constraints for working on the Minecraft Clone project. All AI agents and developers must strictly adhere to these standards.
+This document contains the critical coding rules, styling guidelines, and framework constraints for working on the worldsearch project. All AI agents and developers must strictly adhere to these standards.
 
 ## 1. Frameworks & Versions
 

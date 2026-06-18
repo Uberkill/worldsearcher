@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export const UI_MODALS = {
+const UI_MODALS = {
   MENU: 'MENU',
   INVENTORY: 'INVENTORY',
   SHOP: 'SHOP',
