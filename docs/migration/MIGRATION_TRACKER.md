@@ -17,7 +17,7 @@
 | 4 | Data Layer & JSON Typing | ✅ COMPLETE | 7 | 10% |
 | 5 | Worker Pipeline | ⬜ NOT STARTED | — | 35% |
 | 6 | Core Engine | ⬜ NOT STARTED | — | 40% |
-| 7 | State Management | ⬜ NOT STARTED | — | 45% |
+| 7 | State Management | ✅ COMPLETE | 20 | 45% |
 | 8 | Networking | ⬜ NOT STARTED | — | 30% |
 | 9 | Audio & Systems | ⬜ NOT STARTED | — | 15% |
 | 10 | React Hooks | ⬜ NOT STARTED | — | 10% |
@@ -115,12 +115,12 @@
 
 ### Stage 7 — State Management
 **Migration order (smallest → largest):**
-- [ ] Decoupled stores (useUIStore, useChatStore, etc.) → .ts
-- [ ] Small slices (settings, achievements, quests) → .ts
-- [ ] Large slices (entity, ship, player) → .ts
-- [ ] worldActions/ sub-modules → .ts
-- [ ] useStore.js → .ts
-- [ ] EventBus.js → .ts
+- [x] Decoupled stores (useUIStore, useChatStore, etc.) → .ts
+- [x] Small slices (settings, achievements, quests) → .ts
+- [x] Large slices (entity, ship, player) → .ts
+- [x] worldActions/ sub-modules → .ts
+- [x] useStore.js → .ts
+- [x] EventBus.js → .ts
 
 ### Stage 8 — Networking
 - [ ] stores/network/ → .ts (5 files)
