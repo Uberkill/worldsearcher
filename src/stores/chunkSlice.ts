@@ -1,12 +1,24 @@
 import { create } from 'zustand';
+import type { ChunkData } from '../types/world';
 
 // This is the Strangler Fig shadow slice for Core Terrain Chunk management.
-export const useChunkStore = create((set, get) => ({
+interface ChunkSlice {
+  chunks: Record<string, ChunkData>;
+  pendingMeshMounts: any[];
+  overflowChunks: any[];
+  activePhysicsChunks: any[];
+  validateStateParity: (oldChunks: Record<string, ChunkData>) => void;
+  shadowSetChunks: (newChunks: Record<string, ChunkData>) => void;
+  shadowSetMounts: (pendingMounts: any[], overflow: any[]) => void;
+  shadowSetActivePhysics: (physicsChunks: any[]) => void;
+}
+
+export const useChunkStore = create<ChunkSlice>((set, get) => ({
   chunks: {},
   pendingMeshMounts: [],
   overflowChunks: [],
   activePhysicsChunks: [],
-  
+
   // Shadow validators
   validateStateParity: (oldChunks) => {
     const newChunks = get().chunks;
@@ -43,5 +55,5 @@ export const useChunkStore = create((set, get) => ({
 }));
 
 if (typeof window !== 'undefined') {
-  window.useChunkStore = useChunkStore;
+  (window as any).useChunkStore = useChunkStore;
 }

@@ -3,7 +3,22 @@ import { create } from 'zustand';
 // In production, this would be your VPS URL
 const API_URL = 'http://localhost:3001/api';
 
-export const useAuthStore = create((set, get) => ({
+interface AuthSlice {
+  sessionToken: string | null;
+  username: string | null;
+  isAuthenticated: boolean;
+  error: string | null;
+  isLoading: boolean;
+  setToken: (token: string | null, user: string | null) => void;
+  register: (username: string, password: string) => Promise<string | null>;
+  login: (username: string, password: string) => Promise<boolean>;
+  recover: (username: string, recoveryCode: string, newPassword: string) => Promise<boolean>;
+  logout: () => void;
+  uploadSave: (vxBlob: Blob) => Promise<boolean>;
+  downloadSave: () => Promise<Blob | null>;
+}
+
+export const useAuthStore = create<AuthSlice>((set, get) => ({
   sessionToken: localStorage.getItem('ws_session_token') || null,
   username: localStorage.getItem('ws_username') || null,
   isAuthenticated: !!localStorage.getItem('ws_session_token'),
@@ -13,7 +28,7 @@ export const useAuthStore = create((set, get) => ({
   setToken: (token, user) => {
     if (token) {
       localStorage.setItem('ws_session_token', token);
-      localStorage.setItem('ws_username', user);
+      localStorage.setItem('ws_username', user!);
       set({ sessionToken: token, username: user, isAuthenticated: true, error: null });
     } else {
       localStorage.removeItem('ws_session_token');
@@ -32,11 +47,11 @@ export const useAuthStore = create((set, get) => ({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to register');
-      
+
       get().setToken(data.sessionToken, data.username);
       set({ isLoading: false });
       return data.recoveryCode; // Return the code so UI can display it
-    } catch (err) {
+    } catch (err: any) {
       set({ error: err.message, isLoading: false });
       return null;
     }
@@ -52,11 +67,11 @@ export const useAuthStore = create((set, get) => ({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to login');
-      
+
       get().setToken(data.sessionToken, data.username);
       set({ isLoading: false });
       return true;
-    } catch (err) {
+    } catch (err: any) {
       set({ error: err.message, isLoading: false });
       return false;
     }
@@ -72,10 +87,10 @@ export const useAuthStore = create((set, get) => ({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to recover account');
-      
+
       set({ isLoading: false, error: null });
       return true;
-    } catch (err) {
+    } catch (err: any) {
       set({ error: err.message, isLoading: false });
       return false;
     }
@@ -92,7 +107,7 @@ export const useAuthStore = create((set, get) => ({
       const text = await vxBlob.text();
       const res = await fetch(`${API_URL}/upload_save`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${get().sessionToken}`
         },
@@ -100,10 +115,10 @@ export const useAuthStore = create((set, get) => ({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Upload failed');
-      
+
       set({ isLoading: false });
       return true;
-    } catch (err) {
+    } catch (err: any) {
       set({ error: err.message, isLoading: false });
       return false;
     }
@@ -117,12 +132,12 @@ export const useAuthStore = create((set, get) => ({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Download failed');
-      
+
       set({ isLoading: false });
-      
+
       // Convert returned JSON string payload back into a Blob
       return new Blob([data.payload], { type: 'application/json' });
-    } catch (err) {
+    } catch (err: any) {
       set({ error: err.message, isLoading: false });
       return null;
     }
