@@ -1,12 +1,12 @@
 import { useSettingsStore } from './useSettingsStore';
 
-export const createSettingsSlice = (set, get) => ({
+export const createSettingsSlice = (set: any, get: any): Record<string, any> => ({
   ...useSettingsStore.getState(),
 
-  setSpectorData: (data) => useSettingsStore.getState().setSpectorData(data),
-  setGameMode: (mode) => useSettingsStore.getState().setGameMode(mode),
-  setRenderDistance: (v) => useSettingsStore.getState().setRenderDistance(v),
-  setShadowQuality: (v) => useSettingsStore.getState().setShadowQuality(v),
+  setSpectorData: (data: any) => useSettingsStore.getState().setSpectorData(data),
+  setGameMode: (mode: string) => useSettingsStore.getState().setGameMode(mode),
+  setRenderDistance: (v: number) => useSettingsStore.getState().setRenderDistance(v),
+  setShadowQuality: (v: string) => useSettingsStore.getState().setShadowQuality(v),
   openSettings: () => {
     if (get().isDead) return {};
     useSettingsStore.getState().openSettings();
