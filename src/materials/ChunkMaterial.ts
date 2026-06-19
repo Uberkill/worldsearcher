@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ATLAS_GRID_SIZE } from '../utils/TextureAtlas';
 
-export const createChunkMaterial = (textureAtlas, isTransparent = false) => {
+export const createChunkMaterial = (textureAtlas: THREE.Texture, isTransparent = false): THREE.MeshLambertMaterial => {
   const material = isTransparent
     ? new THREE.MeshLambertMaterial({
         map: textureAtlas,
