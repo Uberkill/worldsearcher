@@ -18,7 +18,7 @@
 | 5 | Worker Pipeline | ⬜ NOT STARTED | — | 35% |
 | 6 | Core Engine | ⬜ NOT STARTED | — | 40% |
 | 7 | State Management | ✅ COMPLETE | 20 | 45% |
-| 8 | Networking | ⬜ NOT STARTED | — | 30% |
+| 8 | Networking | ✅ COMPLETE | 12 | 30% |
 | 9 | Audio & Systems | ⬜ NOT STARTED | — | 15% |
 | 10 | React Hooks | ⬜ NOT STARTED | — | 10% |
 | 11 | React Components | ⬜ NOT STARTED | — | 25% |
@@ -123,8 +123,8 @@
 - [x] EventBus.js → .ts
 
 ### Stage 8 — Networking
-- [ ] stores/network/ → .ts (5 files)
-- [ ] systems/network/ → .ts (7 files)
+- [x] stores/network/ → .ts (5 files)
+- [x] systems/network/ → .ts (7 files)
 
 ### Stage 9 — Audio & Systems
 - [ ] audio/ → .ts (3 files)
