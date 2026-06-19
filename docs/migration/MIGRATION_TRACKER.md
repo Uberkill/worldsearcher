@@ -21,7 +21,7 @@
 | 8 | Networking | ✅ COMPLETE | 12 | 30% |
 | 9 | Audio & Systems | ✅ COMPLETE | 7 | 15% |
 | 10 | React Hooks | ✅ COMPLETE | 4 | 10% |
-| 11 | React Components | ⬜ NOT STARTED | — | 25% |
+| 11 | React Components | ✅ COMPLETE | 79 | 25% |
 | 12 | Tests | ⬜ NOT STARTED | — | 10% |
 | 13 | Strictness & Config | ⬜ NOT STARTED | — | 30% |
 | 14 | Final Verification | ⬜ NOT STARTED | — | 5% |
@@ -134,11 +134,11 @@
 - [x] hooks/ → .ts (4 files)
 
 ### Stage 11 — React Components
-- [ ] 11A: Small UI components → .tsx
-- [ ] 11B: Large UI (TitleScreen, InGameUI) → .tsx
-- [ ] 11C: 3D scene components → .tsx
-- [ ] 11D: Entry points (GameEngine, App, main) → .tsx
-- [ ] Update index.html script src
+- [x] 11A: Small UI components → .tsx
+- [x] 11B: Large UI (TitleScreen, InGameUI) → .tsx
+- [x] 11C: 3D scene components → .tsx
+- [x] 11D: Entry points (GameEngine, App, main) → .tsx
+- [x] Update index.html script src
 
 ### Stage 12 — Tests
 - [ ] Vitest setup + unit tests → .ts
