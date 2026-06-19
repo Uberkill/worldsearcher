@@ -11,7 +11,7 @@
 
 import { createNoise2D, createNoise3D } from 'simplex-noise';
 import { getStructuresForChunk } from './structures.js';
-import { BlockIds, BlockById, BlockKeyById } from '../registry/BlockRegistry.js';
+import { BlockIds, BlockById, BlockKeyById } from '../registry/BlockRegistry';
 import {
   setBlock,
   getIndex,
@@ -27,7 +27,7 @@ import {
 } from './chunkData';
 import { getBiomeAt, getBiomeConfig, getRegionStoryBeat, spatialHash as biomeSpatialHash } from './biomes';
 
-export function mulberry32(seed) {
+export function mulberry32(seed: number): () => number {
   return () => {
     seed |= 0;
     seed = (seed + 0x6d2b79f5) | 0;
@@ -61,7 +61,7 @@ let cachedWorldSeed = null;
 
 const MAX_SURFACES = 4;
 
-export const generateChunkPass1 = (cx, cz, worldSeed) => {
+export const generateChunkPass1 = (cx: number, cz: number, worldSeed: number): any => {
   if (worldSeed !== cachedWorldSeed) {
     cachedWorldSeed = worldSeed;
     // CRITICAL FIX: The Simplex noise functions MUST be seeded by the global worldSeed,
@@ -296,12 +296,12 @@ export const generateChunkPass1 = (cx, cz, worldSeed) => {
 
 // ── Pass 2: Decorators & Overflow ────────────────────────────────────────────
 export const generateChunkPass2 = (
-  cx,
-  cz,
-  buffer,
-  getSurfaceHeightMap,
-  worldSeed
-) => {
+  cx: number,
+  cz: number,
+  buffer: Uint32Array,
+  getSurfaceHeightMap: Int16Array | Float32Array,
+  worldSeed: number
+): any => {
   if (worldSeed !== cachedWorldSeed) {
     cachedWorldSeed = worldSeed;
     // noise2D = createNoise2D(mulberry32(worldSeed)); // unused
