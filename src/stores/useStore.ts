@@ -11,24 +11,27 @@ import { setGameStore } from './storeLinker';
 import { injectWorkerDependencies } from '../utils/workerPool';
 import { useSettingsStore } from './useSettingsStore';
 
-export const useStore = create(subscribeWithSelector((...a) => ({
-  ...worldActions(...a),
-  ...createPlayerSlice(...a),
-  ...createEntitySlice(...a),
-  ...createSettingsSlice(...a),
-  ...createAchievementSlice(...a),
-  ...createQuestSlice(...a),
-  ...createShipSlice(...a),
+export const useStore = create<any>()(subscribeWithSelector((...a: any[]) => ({
+  ...worldActions(a[0], a[1]),
+  ...createPlayerSlice(a[0], a[1]),
+  ...createEntitySlice(a[0], a[1]),
+  ...createSettingsSlice(a[0], a[1]),
+  ...createAchievementSlice(a[0], a[1]),
+  ...createQuestSlice(a[0], a[1]),
+  ...createShipSlice(a[0], a[1]),
 })));
 
-window.__USE_STORE__ = useStore;
+if (typeof window !== 'undefined') {
+  (window as any).__USE_STORE__ = useStore;
+  (window as any).useStore = useStore;
+}
 setGameStore(useStore);
 
 let isSyncingSettings = false;
 
 useSettingsStore.subscribe(
-  (state) => state,
-  (settings) => {
+  (state: any) => state,
+  (settings: any) => {
     if (isSyncingSettings) return;
     isSyncingSettings = true;
     useStore.setState({
@@ -50,8 +53,8 @@ useSettingsStore.subscribe(
 );
 
 useStore.subscribe(
-  (state) => state,
-  (state) => {
+  (state: any) => state,
+  (state: any) => {
     if (isSyncingSettings) return;
     isSyncingSettings = true;
     useSettingsStore.setState({
@@ -74,12 +77,12 @@ useStore.subscribe(
 
 // Break circular dependency by injecting the state getter directly
 if (typeof window !== 'undefined') {
-  window.__DEBUG_PASS1_CACHE__ = pass1Cache;
+  (window as any).__DEBUG_PASS1_CACHE__ = pass1Cache;
 }
 injectWorkerDependencies(() => pass1Cache);
 
 // Run fluid cellular automata ticking at a steady rate
-let fluidInterval;
+let fluidInterval: ReturnType<typeof setInterval>;
 // eslint-disable-next-line no-undef
 if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
   fluidInterval = setInterval(() => {
@@ -94,8 +97,8 @@ if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
   }, 800);
 }
 
+// @ts-ignore
 if (import.meta.hot) {
+  // @ts-ignore
   import.meta.hot.dispose(() => clearInterval(fluidInterval));
 }
-
-window.useStore = useStore;
