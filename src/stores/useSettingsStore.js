@@ -16,12 +16,6 @@ export const useSettingsStore = create(
     spectorData: null,
     setSpectorData: (data) => set({ spectorData: data }),
 
-    // Audio
-    masterVolume: load('setting_masterVolume', 0.8),
-    sfxVolume: load('setting_sfxVolume', 1.0),
-    musicVolume: load('setting_musicVolume', 0.5),
-    isMuted: load('setting_isMuted', false),
-
     // Game Mode
     gameMode: 'survival', // 'survival' | 'creative' | 'hardcore'
 
@@ -35,23 +29,6 @@ export const useSettingsStore = create(
     debugPhysics: false,
     debugShadows: false,
 
-    setMasterVolume: (v) => {
-      localStorage.setItem('setting_masterVolume', JSON.stringify(v));
-      set({ masterVolume: v });
-    },
-    setSfxVolume: (v) => {
-      localStorage.setItem('setting_sfxVolume', JSON.stringify(v));
-      set({ sfxVolume: v });
-    },
-    setMusicVolume: (v) => {
-      localStorage.setItem('setting_musicVolume', JSON.stringify(v));
-      set({ musicVolume: v });
-    },
-    toggleMute: () => {
-      const next = !get().isMuted;
-      localStorage.setItem('setting_isMuted', JSON.stringify(next));
-      set({ isMuted: next });
-    },
     setGameMode: (mode) => {
       localStorage.setItem('setting_gameMode', JSON.stringify(mode));
       set({ gameMode: mode });

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Play, Pause, SkipForward, SkipBack, Volume2 } from 'lucide-react';
 import { gameAudio } from '../../audio/GameAudio';
 import { useStore } from '../../stores/useStore';
+import { useAudioStore } from '../../stores/useAudioStore';
 import { useRef } from 'react';
 
 export const MusicPlayerWidget = () => {
@@ -10,8 +11,8 @@ export const MusicPlayerWidget = () => {
     currentTrack: 'None',
   });
 
-  const storeMusicVolume = useStore((state) => state.musicVolume);
-  const setMusicVolumeStore = useStore((state) => state.setMusicVolume);
+  const storeMusicVolume = useAudioStore((state) => state.musicVolume);
+  const setMusicVolumeStore = useAudioStore((state) => state.setMusicVolume);
 
   // localVolume uses 0-100 scale for UI slider
   const [localVolume, setLocalVolume] = useState(() =>
@@ -30,7 +31,7 @@ export const MusicPlayerWidget = () => {
   const handleVolumeChange = (e) => {
     const val = Number(e.target.value);
     setLocalVolume(val);
-    useStore.getState().setMusicVolume(val); // Realtime audio response
+    useAudioStore.getState().setMusicVolume(val); // Realtime audio response
 
     // Debounce store write to prevent React render flooding
     if (debounceRef.current) clearTimeout(debounceRef.current);

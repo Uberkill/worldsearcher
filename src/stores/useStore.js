@@ -33,10 +33,6 @@ useSettingsStore.subscribe(
     isSyncingSettings = true;
     useStore.setState({
       spectorData: settings.spectorData,
-      masterVolume: settings.masterVolume,
-      sfxVolume: settings.sfxVolume,
-      musicVolume: settings.musicVolume,
-      isMuted: settings.isMuted,
       gameMode: settings.gameMode,
       renderDistance: settings.renderDistance,
       shadowQuality: settings.shadowQuality,
@@ -56,10 +52,6 @@ useStore.subscribe(
     isSyncingSettings = true;
     useSettingsStore.setState({
       spectorData: state.spectorData,
-      masterVolume: state.masterVolume,
-      sfxVolume: state.sfxVolume,
-      musicVolume: state.musicVolume,
-      isMuted: state.isMuted,
       gameMode: state.gameMode,
       renderDistance: state.renderDistance,
       shadowQuality: state.shadowQuality,

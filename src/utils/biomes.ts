@@ -1,9 +1,10 @@
 import biomesConfig from '../data/biomes.json';
+import { BiomeRegistryData, BiomeDefinition } from '../types/data';
 
 // Constants
 const BIOME_SCALE = 0.004; // Roughly 250 blocks per biome to prevent patchiness
 
-export function spatialHash(seed, x, y) {
+export function spatialHash(seed: number, x: number, y: number): number {
   let h = seed | 0;
   h = Math.imul(h ^ x, 0x85ebca6b);
   h = Math.imul(h ^ y, 0xc2b2ae35);
@@ -14,7 +15,7 @@ export function spatialHash(seed, x, y) {
 }
 
 // STORY REGION GRAPH: Maps coordinate grids to deterministic Story Beats
-export const getRegionStoryBeat = (regionX, regionZ, worldSeed) => {
+export const getRegionStoryBeat = (regionX: number, regionZ: number, worldSeed: number): string | null => {
   // Region (0,0) is ALWAYS the Starting Village
   if (regionX === 0 && regionZ === 0) return 'starting_village';
 
@@ -29,12 +30,12 @@ export const getRegionStoryBeat = (regionX, regionZ, worldSeed) => {
 };
 
 export const getBiomeAt = (
-  worldX,
-  worldZ,
-  tempNoiseFunc,
-  moistNoiseFunc,
-  regionContexts
-) => {
+  worldX: number,
+  worldZ: number,
+  tempNoiseFunc: (x: number, y: number) => number,
+  moistNoiseFunc: (x: number, y: number) => number,
+  regionContexts?: Array<{ storyBeat: string, anchorX: number, anchorZ: number }>
+): string => {
   // 1. REGION GRAPH OVERRIDES (Jigsaw Modules & Story Beats)
   if (regionContexts) {
     for (let i = 0; i < regionContexts.length; i++) {
@@ -69,6 +70,6 @@ export const getBiomeAt = (
   }
 };
 
-export const getBiomeConfig = (biomeId) => {
-  return biomesConfig[biomeId] || biomesConfig['grassland'];
+export const getBiomeConfig = (biomeId: string): BiomeDefinition => {
+  return (biomesConfig as BiomeRegistryData)[biomeId] || (biomesConfig as BiomeRegistryData)['grassland'];
 };

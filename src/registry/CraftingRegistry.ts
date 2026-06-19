@@ -1,4 +1,16 @@
-const CraftingRecipes = [
+export interface CraftingOutput {
+  texture: string;
+  count: number;
+}
+
+export interface CraftingRecipe {
+  shapeless?: boolean;
+  shape?: (string | null)[][];
+  input?: string[];
+  output: CraftingOutput;
+}
+
+const CraftingRecipes: CraftingRecipe[] = [
   {
     shapeless: true,
     input: ['log'],
@@ -62,7 +74,7 @@ const CraftingRecipes = [
   },
 ];
 
-export const matchRecipe = (grid) => {
+export const matchRecipe = (grid: any[]): CraftingOutput | null => {
   const is3x3 = grid.length === 9;
   const gridWidth = is3x3 ? 3 : 2;
   const gridHeight = is3x3 ? 3 : 2;

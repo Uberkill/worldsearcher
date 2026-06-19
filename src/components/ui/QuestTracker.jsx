@@ -1,6 +1,6 @@
 import { useStore } from '../../stores/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import questsRegistry from '../../registry/quests.json';
+import { QuestsRegistry as questsRegistry } from '../../registry/QuestsRegistry';
 
 export const QuestTracker = () => {
   const mainQuestProgress = useStore((state) => state.mainQuestProgress);

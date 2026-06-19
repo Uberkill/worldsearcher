@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../../stores/useStore';
+import { useAudioStore } from '../../stores/useAudioStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { networkActions } from '../../stores/networkActions';
 import { getGuestSyncData } from '../../utils/syncState';
@@ -234,12 +235,12 @@ export default function InGameUI() {
   const gameMode = useStore((state) => state.gameMode);
 
   // Real audio from settings
-  const masterVolume = useStore((state) => state.masterVolume);
-  const setMasterVolumeStore = useStore((state) => state.setMasterVolume);
-  const sfxVolume = useStore((state) => state.sfxVolume);
-  const setSfxVolumeStore = useStore((state) => state.setSfxVolume);
-  const musicVolume = useStore((state) => state.musicVolume);
-  const setMusicVolumeStore = useStore((state) => state.setMusicVolume);
+  const masterVolume = useAudioStore((state) => state.masterVolume);
+  const setMasterVolumeStore = useAudioStore((state) => state.setMasterVolume);
+  const sfxVolume = useAudioStore((state) => state.sfxVolume);
+  const setSfxVolumeStore = useAudioStore((state) => state.setSfxVolume);
+  const musicVolume = useAudioStore((state) => state.musicVolume);
+  const setMusicVolumeStore = useAudioStore((state) => state.setMusicVolume);
 
   // Convert 0.0-1.0 to 0-100 for sliders
   const audioMaster = Math.round(masterVolume * 100);

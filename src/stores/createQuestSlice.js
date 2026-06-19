@@ -1,5 +1,5 @@
 import { getNetworkStore } from './storeLinker';
-import questsRegistry from '../registry/quests.json';
+import { QuestsRegistry as questsRegistry } from '../registry/QuestsRegistry';
 import { get as getIDB, set as setIDB } from 'idb-keyval';
 import { playerPosition } from '../globals';
 

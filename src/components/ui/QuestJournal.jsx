@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../../stores/useStore';
 import { useUIStore } from '../../stores/useUIStore';
-import questsData from '../../registry/quests.json';
+import { QuestsRegistry as questsData } from '../../registry/QuestsRegistry';
 import { networkActions } from '../../stores/networkActions';
 
 export const QuestJournal = () => {

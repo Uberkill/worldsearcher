@@ -1,6 +1,6 @@
 # TypeScript Migration Tracker
 
-> **Current Stage:** 0 — Migration Infrastructure
+> **Current Stage:** 1 — Pre-Migration Refactoring
 > **Status:** IN PROGRESS
 > **Started:** 2026-06-19
 > **Last Updated:** 2026-06-19
@@ -10,11 +10,11 @@
 
 | Stage | Name | Status | Files Done | Risk |
 |-------|------|--------|------------|------|
-| 0 | Migration Infrastructure | 🔵 IN PROGRESS | — | 5% |
-| 1 | Pre-Migration Refactoring | ⬜ NOT STARTED | — | 25% |
-| 2 | Type Foundation | ⬜ NOT STARTED | — | 10% |
-| 3 | Leaf Node Migration | ⬜ NOT STARTED | — | 15% |
-| 4 | Data Layer & JSON Typing | ⬜ NOT STARTED | — | 10% |
+| 0 | Migration Infrastructure | ✅ COMPLETE | — | 5% |
+| 1 | Pre-Migration Refactoring | ✅ COMPLETE | 7 | 25% |
+| 2 | Type Foundation | ✅ COMPLETE | 9 | 10% |
+| 3 | Leaf Node Migration | ✅ COMPLETE | 8 | 15% |
+| 4 | Data Layer & JSON Typing | ✅ COMPLETE | 7 | 10% |
 | 5 | Worker Pipeline | ⬜ NOT STARTED | — | 35% |
 | 6 | Core Engine | ⬜ NOT STARTED | — | 40% |
 | 7 | State Management | ⬜ NOT STARTED | — | 45% |
@@ -47,50 +47,56 @@
 **Goal:** Fix circular dep + split worldActions.js. Pure JS refactors, no TS yet.
 
 **1A — Fix Circular Dependency:**
-- [ ] Create src/stores/useAudioStore.js (extract audio config from useStore)
-- [ ] Update GameAudio.js to import from useAudioStore
-- [ ] Update createPlayerSlice.js to remove audio config
-- [ ] Verify no circular dep warnings
+- [x] Create src/stores/useAudioStore.js (extract audio config from useStore)
+- [x] Update GameAudio.js to import from useAudioStore
+- [x] Update createPlayerSlice.js to remove audio config
+- [x] Verify no circular dep warnings
 
 **1B — Split worldActions.js (3,189 lines → 5 modules):**
-- [ ] Create src/stores/worldActions/ directory
-- [ ] Move chunk operations → chunkOperations.js
-- [ ] Move mesh mounting → meshMounting.js
-- [ ] Move fluid simulation → fluidSimulation.js
-- [ ] Move GC → garbageCollection.js
-- [ ] Move strangler interceptors → stranglerInterceptors.js
-- [ ] Create index.js barrel re-export
-- [ ] Delete original worldActions.js
-- [ ] All tests pass
-- [ ] Bump canary tracker
+- [x] Create src/stores/worldActions/ directory
+- [x] Move chunk operations → chunkOperations.js
+- [x] Move mesh mounting → meshMounting.js
+- [x] Move fluid simulation → fluidSimulation.js
+- [x] Move GC → garbageCollection.js
+- [x] Move strangler interceptors → stranglerInterceptors.js
+- [x] Create index.js barrel re-export
+- [x] Delete original worldActions.js
+- [x] All tests pass
+- [x] Bump canary tracker
 
 ### Stage 2 — Type Foundation
 **Goal:** Create src/types/ with shared type definitions. No file renames.
 
 **Files to create:**
-- [ ] src/types/blocks.ts
-- [ ] src/types/items.ts
-- [ ] src/types/world.ts
-- [ ] src/types/player.ts
-- [ ] src/types/network.ts
-- [ ] src/types/store.ts
-- [ ] src/types/workers.ts
-- [ ] src/types/entities.ts
-- [ ] src/types/ship.ts
-- [ ] src/types/index.ts
+- [x] src/types/blocks.ts
+- [x] src/types/items.ts
+- [x] src/types/world.ts
+- [x] src/types/player.ts
+- [x] src/types/network.ts
+- [x] src/types/store.ts
+- [x] src/types/workers.ts
+- [x] src/types/entities.ts
+- [x] src/types/ship.ts
+- [x] src/types/index.ts
 
 ### Stage 3 — Leaf Node Migration
 **Goal:** Convert simplest files first. No downstream dependencies.
 
-**Files (in order):**
-- [ ] src/globals.js → .ts
-- [ ] src/worldSeed.js → .ts
-- [ ] src/utils/ — all ~20 files → .ts
-- [ ] src/registry/ — all 6 files → .ts
+**Files to convert (.js → .ts):**
+- [x] src/globals.ts
+- [x] src/worldSeed.ts
+- [x] src/utils/EventBus.ts
+- [x] src/utils/NetworkEventBus.ts
+- [x] src/registry/Registry.ts
+- [x] src/registry/ItemRegistry.ts
+- [x] src/registry/BlockRegistry.ts
+- [x] src/registry/CraftingRegistry.ts
 
 ### Stage 4 — Data Layer
-- [ ] Create typed loaders for blocks.json, items.json, biomes.json, loot.json
-- [ ] Type prefab definitions
+- [x] Create typed loaders for blocks.json, items.json, biomes.json, loot.json
+- [x] Migrate src/registry/InteractionRegistry.js
+- [x] Migrate src/registry/SmeltingRegistry.js
+- [x] Create typed loaders for quests.json, skills.json
 
 ### Stage 5 — Worker Pipeline
 - [ ] Worker message discriminated unions
@@ -160,4 +166,36 @@ _(Updated as files are migrated)_
 
 | File | Stage | Date | Notes |
 |------|-------|------|-------|
-| — | — | — | Migration not yet started |
+| `src/stores/useAudioStore.js` | 1A | 2026-06-19 | Extracted from `useStore.js` to break cycle |
+| `src/stores/worldActions/index.js` | 1B | 2026-06-19 | Re-export barrel file |
+| `src/stores/worldActions/sharedState.js` | 1B | 2026-06-19 | Shared states across modules |
+| `src/stores/worldActions/chunkOperations.js` | 1B | 2026-06-19 | Extracted from `worldActions.js` |
+| `src/stores/worldActions/meshMounting.js` | 1B | 2026-06-19 | Extracted from `worldActions.js` |
+| `src/stores/worldActions/fluidSimulation.js` | 1B | 2026-06-19 | Extracted from `worldActions.js` |
+| `src/stores/worldActions/garbageCollection.js` | 1B | 2026-06-19 | Extracted from `worldActions.js` |
+| `src/stores/worldActions/stranglerInterceptors.js` | 1B | 2026-06-19 | Extracted from `worldActions.js` |
+| `src/types/blocks.ts` | 2 | 2026-06-19 | Type definitions for block registry |
+| `src/types/items.ts` | 2 | 2026-06-19 | Type definitions for item registry |
+| `src/types/world.ts` | 2 | 2026-06-19 | Type definitions for chunks/world |
+| `src/types/player.ts` | 2 | 2026-06-19 | Type definitions for player state |
+| `src/types/network.ts` | 2 | 2026-06-19 | Type definitions for network peers |
+| `src/types/store.ts` | 2 | 2026-06-19 | Core RootState type |
+| `src/types/workers.ts` | 2 | 2026-06-19 | Type definitions for worker messages |
+| `src/types/entities.ts` | 2 | 2026-06-19 | Type definitions for entities |
+| `src/types/ship.ts` | 2 | 2026-06-19 | Type definitions for ships |
+| `src/types/index.ts` | 2 | 2026-06-19 | Central type export |
+| `src/globals.ts` | 3 | 2026-06-19 | Renamed from .js, added TS types |
+| `src/worldSeed.ts` | 3 | 2026-06-19 | Renamed from .js, added TS types |
+| `src/utils/EventBus.ts` | 3 | 2026-06-19 | Renamed from .js, added TS types |
+| `src/utils/NetworkEventBus.ts` | 3 | 2026-06-19 | Renamed from .js, added TS types |
+| `src/registry/Registry.ts` | 3 | 2026-06-19 | Renamed from .js, added TS types |
+| `src/registry/ItemRegistry.ts` | 3 | 2026-06-19 | Renamed from .js, added TS types |
+| `src/registry/BlockRegistry.ts` | 3 | 2026-06-19 | Renamed from .js, added TS types |
+| `src/registry/CraftingRegistry.ts` | 3 | 2026-06-19 | Renamed from .js, added TS types |
+| `src/types/data.ts` | 4 | 2026-06-19 | Added types for all JSON data models |
+| `src/utils/biomes.ts` | 4 | 2026-06-19 | Renamed from .js, added TS types |
+| `src/registry/InteractionRegistry.ts` | 4 | 2026-06-19 | Renamed from .js, added TS types |
+| `src/registry/SmeltingRegistry.ts` | 4 | 2026-06-19 | Renamed from .js, added TS types |
+| `src/registry/QuestsRegistry.ts` | 4 | 2026-06-19 | Created typed wrapper for quests.json |
+| `src/registry/SkillsRegistry.ts` | 4 | 2026-06-19 | Created typed wrapper for skills.json |
+| `src/registry/LootRegistry.ts` | 4 | 2026-06-19 | Created typed wrapper for loot.json |

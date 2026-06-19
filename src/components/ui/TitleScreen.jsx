@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import * as THREE from 'three';
 import { useStore } from '../../stores/useStore';
+import { useAudioStore } from '../../stores/useAudioStore';
 import { networkActions } from '../../stores/networkActions';
 import { useConnectionStore } from '../../stores/connectionSlice';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -158,10 +159,10 @@ export default function TitleScreen({ onStartNew, onContinue }) {
   const [syncMessage, setSyncMessage] = useState(null);
 
   // Real audio from settings
-  const masterVolume = useStore((state) => state.masterVolume);
-  const setMasterVolumeStore = useStore((state) => state.setMasterVolume);
-  const musicVolume = useStore((state) => state.musicVolume);
-  const setMusicVolumeStore = useStore((state) => state.setMusicVolume);
+  const masterVolume = useAudioStore((state) => state.masterVolume);
+  const setMasterVolumeStore = useAudioStore((state) => state.setMasterVolume);
+  const musicVolume = useAudioStore((state) => state.musicVolume);
+  const setMusicVolumeStore = useAudioStore((state) => state.setMusicVolume);
 
   const audioMaster = Math.round(masterVolume * 100);
   const audioMusic = Math.round(musicVolume * 100);

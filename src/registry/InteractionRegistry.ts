@@ -1,10 +1,25 @@
 import { SHIP_CENTER_X, SHIP_CENTER_Y, SHIP_CENTER_Z } from '../stores/createShipSlice';
+import { RootState } from '../types/store';
+import { NetworkState } from '../types/network';
+
+export interface InteractionParams {
+    state: RootState;
+    netState: NetworkState;
+    useStore: any;
+    EventBus: any;
+    bx: number;
+    by: number;
+    bz: number;
+    hit?: { isShip?: boolean };
+}
+
+export type InteractionCallback = (params: InteractionParams) => void;
 
 const exitPointerLock = () => {
     if (document.pointerLockElement) document.exitPointerLock();
 };
 
-export const InteractionRegistry = {
+export const InteractionRegistry: Record<string, InteractionCallback> = {
     'crafting_table': ({ state, EventBus }) => {
         if (state.toggleCraftingTable) {
             setTimeout(() => {

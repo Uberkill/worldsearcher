@@ -3,15 +3,19 @@
 // regardless of which thread or worker calls generateChunk.
 //
 // Change this number for a completely different world.
-let WORLD_SEED = 123456789;
+let WORLD_SEED: number = 123456789;
 
-export const setWorldSeed = (seed) => {
-  WORLD_SEED = parseInt(seed, 10);
+export const setWorldSeed = (seed: number | string): void => {
+  if (typeof seed === 'string') {
+    WORLD_SEED = parseInt(seed, 10);
+  } else {
+    WORLD_SEED = seed;
+  }
 };
 
-export const getSeed = () => WORLD_SEED;
+export const getSeed = (): number => WORLD_SEED;
 
-export const initWorldSeed = () => {
+export const initWorldSeed = (): void => {
   const slotId = sessionStorage.getItem('saveSlotId') || 'default';
   const metaStr = localStorage.getItem(`saveMetadata_${slotId}`);
 

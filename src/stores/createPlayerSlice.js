@@ -14,7 +14,7 @@ import { getSeed } from '../worldSeed';
 import { EventBus } from '../utils/EventBus';
 import { matchRecipe } from '../registry/CraftingRegistry';
 import { useChunkStore } from './chunkSlice';
-import skillsData from '../registry/skills.json';
+import { SkillsRegistry as skillsData } from '../registry/SkillsRegistry';
 import { useUIStore } from './useUIStore';
 
 export const createPlayerSlice = (set, get) => ({

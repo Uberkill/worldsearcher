@@ -36,6 +36,10 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@babel/generator": "^8.0.0",
+    "@babel/parser": "^8.0.0",
+    "@babel/traverse": "^8.0.0",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.60.0",
     "@tailwindcss/vite": "^4.3.1",

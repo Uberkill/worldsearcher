@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { useSettingsStore } from '../stores/useSettingsStore';
+import { useAudioStore } from '../stores/useAudioStore';
 import { EventBus } from '../utils/EventBus';
 
 class GameAudioSystem {
@@ -106,7 +106,7 @@ class GameAudioSystem {
 
     // 4. Subscribe to Zustand settings
     this.updateVolumes();
-    useSettingsStore.subscribe(() => this.updateVolumes());
+    useAudioStore.subscribe(() => this.updateVolumes());
 
     this.initialized = true;
     
@@ -138,7 +138,7 @@ class GameAudioSystem {
 
   updateVolumes() {
     if (!this.initialized) return;
-    const state = useSettingsStore.getState();
+    const state = useAudioStore.getState();
     const isMuted = state.isMuted;
 
     const masterVol = isMuted ? 0 : state.masterVolume;
@@ -274,7 +274,7 @@ class GameAudioSystem {
     this.musicGain.gain.cancelScheduledValues(now);
     this.musicGain.gain.setValueAtTime(Math.max(0.001, currentVol * 0.2), now);
     this.musicGain.gain.exponentialRampToValueAtTime(
-      Math.max(0.001, useSettingsStore.getState().musicVolume * 0.5),
+      Math.max(0.001, useAudioStore.getState().musicVolume * 0.5),
       now + 1.5
     );
   }

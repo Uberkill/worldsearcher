@@ -1,10 +1,11 @@
 import blocksConfig from '../data/blocks.json';
+import { BlockDefinition } from '../types/blocks';
 
-export const BlockRegistry = blocksConfig;
+export const BlockRegistry: Record<string, BlockDefinition> = blocksConfig as unknown as Record<string, BlockDefinition>;
 
-export const BlockIds = {};
-export const BlockById = {};
-export const BlockKeyById = {};
+export const BlockIds: Record<string, number> = {};
+export const BlockById: Record<number, BlockDefinition> = {};
+export const BlockKeyById: Record<number, string> = {};
 
 Object.keys(BlockRegistry).forEach((key) => {
   const block = BlockRegistry[key];
@@ -15,10 +16,10 @@ Object.keys(BlockRegistry).forEach((key) => {
 });
 
 // --- Texture Atlas Mapping ---
-export const TextureRegistry = [];
-const TextureIdByName = {};
+export const TextureRegistry: string[] = [];
+const TextureIdByName: Record<string, number> = {};
 
-const registerTexture = (filename) => {
+const registerTexture = (filename?: string): number => {
   if (!filename) return 0;
   if (TextureIdByName[filename] !== undefined) {
     return TextureIdByName[filename];
@@ -32,7 +33,13 @@ const registerTexture = (filename) => {
 // 0 is reserved for air, so we use empty/fallback for ID 0
 registerTexture('fallback');
 
-const FaceMappings = new Array(256)
+interface FaceMapping {
+  top: number;
+  bottom: number;
+  side: number;
+}
+
+const FaceMappings: Array<FaceMapping | null> = new Array(256)
   .fill(null)
   .map(() => ({ top: 0, bottom: 0, side: 0 }));
 

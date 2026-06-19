@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../../stores/useStore';
-import skillsData from '../../registry/skills.json';
+import { SkillsRegistry as skillsData } from '../../registry/SkillsRegistry';
 
 const getCategoryColor = (category) => {
   switch(category) {

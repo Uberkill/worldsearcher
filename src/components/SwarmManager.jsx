@@ -10,7 +10,7 @@ import { useConnectionStore } from '../stores/connectionSlice';
 import { playerPosition, ServerTickMetrics } from '../globals';
 import { globalAudioPool } from '../audio/globalAudioPool';
 import { SWARM_CONFIG, swarmActiveCounts } from '../utils/swarmConfig';
-import lootTable from '../data/loot.json';
+import { LootRegistry as lootTable } from '../registry/LootRegistry';
 
 // AI Modes
 const MODE_DEAD = 0;

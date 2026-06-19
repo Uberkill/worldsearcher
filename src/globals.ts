@@ -1,5 +1,17 @@
 import { Vector3, Euler } from 'three';
 
+interface WorldSearchGlobals {
+  playerPosition: Vector3;
+  playerLastSafePosition: Vector3;
+  playerRotation: Euler;
+  ServerTickMetrics: { tps: number; mspt: number };
+  shipTransforms: Map<string, { position: Vector3; rotation: Euler }>;
+}
+
+declare global {
+  var __WORLD_SEARCH_GLOBALS__: WorldSearchGlobals;
+}
+
 // Ensure globals survive React Fast Refresh (HMR)
 if (!globalThis.__WORLD_SEARCH_GLOBALS__) {
   globalThis.__WORLD_SEARCH_GLOBALS__ = {
