@@ -1,4 +1,5 @@
 import { BlockById } from '../registry/BlockRegistry';
+import type { NeighborBuffer } from '../types/world';
 import {
   getSunlight,
   getBlockLight,
@@ -33,15 +34,15 @@ const dirs = [
 ];
 
 const isTransparent = (
-  cx,
-  cz,
-  buffer,
-  neighborBuffers,
-  neighborObj,
-  gx,
-  gy,
-  gz
-) => {
+  cx: number,
+  cz: number,
+  buffer: Uint32Array,
+  neighborBuffers: NeighborBuffer[] | null | undefined,
+  neighborObj: Record<string, any> | null | undefined,
+  gx: number,
+  gy: number,
+  gz: number
+): boolean => {
   if (gy > CHUNK_Y_MAX || gy < CHUNK_Y_MIN) return true;
 
   const lx = gx - cx * 16;
@@ -67,7 +68,7 @@ const isTransparent = (
   return BlockById[tex]?.isTransparent || false;
 };
 
-const getLight = (cx, cz, buffer, neighborBuffers, gx, gy, gz, isSunlight) => {
+const getLight = (cx: number, cz: number, buffer: Uint32Array, neighborBuffers: NeighborBuffer[] | null | undefined, gx: number, gy: number, gz: number, isSunlight: boolean): number => {
   if (gy > CHUNK_Y_MAX) return isSunlight ? 15 : 0;
   if (gy < CHUNK_Y_MIN) return 0;
 
@@ -94,16 +95,16 @@ const getLight = (cx, cz, buffer, neighborBuffers, gx, gy, gz, isSunlight) => {
 };
 
 const setLightVal = (
-  cx,
-  cz,
-  buffer,
-  neighborBuffers,
-  gx,
-  gy,
-  gz,
-  val,
-  isSunlight
-) => {
+  cx: number,
+  cz: number,
+  buffer: Uint32Array,
+  neighborBuffers: NeighborBuffer[] | null | undefined,
+  gx: number,
+  gy: number,
+  gz: number,
+  val: number,
+  isSunlight: boolean
+): boolean => {
   if (gy > CHUNK_Y_MAX || gy < CHUNK_Y_MIN) return false;
 
   const lx = gx - cx * 16;
@@ -140,12 +141,12 @@ const setLightVal = (
 };
 
 const seedNeighborLight = (
-  cx,
-  cz,
-  neighborBuffers,
-  isSunlight,
-  currentTail
-) => {
+  cx: number,
+  cz: number,
+  neighborBuffers: NeighborBuffer[] | null | undefined,
+  isSunlight: boolean,
+  currentTail: number
+): number => {
   if (!neighborBuffers) return currentTail;
   let tail = currentTail;
 
@@ -202,12 +203,12 @@ const seedNeighborLight = (
 
 // --- PASS 1: SUNLIGHT RAYCAST & BFS ---
 export const generateSunlight = (
-  buffer,
-  cx,
-  cz,
-  neighborBuffers,
-  neighborObj = null
-) => {
+  buffer: Uint32Array,
+  cx: number,
+  cz: number,
+  neighborBuffers: NeighborBuffer[] | null | undefined,
+  neighborObj: Record<string, any> | null = null
+): Array<{x: number, y: number, z: number, val: number, type: string}> => {
   let head = 0;
   let tail = 0;
   const lightOverflow = [];
@@ -365,12 +366,12 @@ export const generateSunlight = (
 
 // --- PASS 2: BLOCK LIGHT BFS ---
 export const generateBlockLight = (
-  buffer,
-  cx,
-  cz,
-  neighborBuffers,
-  neighborObj = null
-) => {
+  buffer: Uint32Array,
+  cx: number,
+  cz: number,
+  neighborBuffers: NeighborBuffer[] | null | undefined,
+  neighborObj: Record<string, any> | null = null
+): Array<{x: number, y: number, z: number, val: number, type: string}> => {
   let head = 0;
   let tail = 0;
   const lightOverflow = [];
@@ -482,17 +483,17 @@ export const generateBlockLight = (
 
 // --- PASS 3: LIGHT REMOVAL BFS (GHOST LIGHT FIX) ---
 export const removeLight = (
-  buffer,
-  cx,
-  cz,
-  neighborBuffers,
-  rx,
-  ry,
-  rz,
-  removedLightVal,
-  isSunlight,
-  neighborObj = null
-) => {
+  buffer: Uint32Array,
+  cx: number,
+  cz: number,
+  neighborBuffers: NeighborBuffer[] | null | undefined,
+  rx: number,
+  ry: number,
+  rz: number,
+  removedLightVal: number,
+  isSunlight: boolean,
+  neighborObj: Record<string, any> | null = null
+): Array<{x: number, y: number, z: number, val: number, type: string}> => {
   let rHead = 0;
   let rTail = 0;
 
