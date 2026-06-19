@@ -1,3 +1,4 @@
+// sharedState.js
 export const inFlightChunks = new Set();
 export const inFlightPromises = new Map();
 export const cancelledChunks = new Set();
@@ -12,7 +13,8 @@ export const bufferRecycleQueue = [];
 export const worldState = {
   rafRebuildHandle: null,
   worldReadyForRebuild: false,
-  bufferRecycleTimer: null
+  bufferRecycleTimer: null,
+  currentRawGet: null
 };
 
 export const getChunkKey = (x, z) => `${Math.floor(x / 16)},${Math.floor(z / 16)}`;

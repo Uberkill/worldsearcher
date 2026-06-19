@@ -11,9 +11,6 @@ import { getSeed } from '../../worldSeed';
 import { tickFluids, wakeFluidsAround } from '../../utils/fluidSystem';
 import { EventBus } from '../../utils/EventBus';
 import { pendingRenderKeys } from '../../utils/chunkRenderSignal';
-
-// Module-level guard: prevents two concurrent async calls from double-generating
-// the same chunk (race condition when the player moves fast).
 import {
   inFlightChunks, inFlightPromises, cancelledChunks, processingNetworkDeltas,
   dirtyChunkSet, inFlightRebuildSet, pass1Cache, pendingUnloads, flareLightMap,
@@ -21,9 +18,47 @@ import {
 } from './sharedState';
 import { getCombinedState } from './stranglerInterceptors';
 
-export const createFluidSimulation = (rawSet, rawGet) => {
-const set = rawSet;
-const get = rawGet;
-return {
+// mirrors isWorldReady — set below once store is live
+
+const flushDirtyChunks = (get, rawGet, rawSet) => {
+  rafRebuildHandle = null;
+  if (dirtyChunkSet.size === 0) return;
+
+  // Drain the set — snapshot it so any new additions during async work go into the next frame
+  const toRebuild = [...dirtyChunkSet];
+  dirtyChunkSet.clear();
+  for (const chunkKey of toRebuild) {
+    if (inFlightRebuildSet.has(chunkKey)) {
+      // Worker already running for this chunk — re-dirty it so it rebuilds again after completion
+      dirtyChunkSet.add(chunkKey);
+      continue;
+    }
+    _executeRebuild(chunkKey, get, rawGet, rawSet);
+  }
 };
+const scheduleRafFlush = (get, rawGet, rawSet) => {
+  if (rafRebuildHandle !== null) return; // Already scheduled
+  rafRebuildHandle = requestAnimationFrame(() => flushDirtyChunks(get, rawGet, rawSet));
+};
+const flushBufferRecycleQueue = () => {
+  if (bufferRecycleQueue.length > 0) {
+    const validBuffers = new Set();
+    for (let i = 0; i < bufferRecycleQueue.length; i++) {
+      if (bufferRecycleQueue[i] && bufferRecycleQueue[i].byteLength > 0) {
+        validBuffers.add(bufferRecycleQueue[i]);
+      }
+    }
+    if (validBuffers.size > 0) {
+      chunkWorkerPool.recycleBuffers(Array.from(validBuffers));
+    }
+    bufferRecycleQueue.length = 0;
+  }
+};
+
+export const createFluidSimulation = (rawSet, rawGet) => {
+  const set = rawSet;
+  const get = rawGet;
+  return {
+tickFluids: () => tickFluids(rawGet, rawSet),
+  };
 };

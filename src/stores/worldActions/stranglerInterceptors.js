@@ -1,23 +1,10 @@
-import { getNetworkStore } from '../storeLinker';
-import { useEnvironmentStore } from '../environmentSlice';
-import { useFlareStore } from '../flareSlice';
 import { useChunkStore } from '../chunkSlice';
 import { useInventoryStore } from '../inventorySlice';
-import { saveChunkToDB, loadChunkFromDB, clearDB, cancelLoadFromDB, flushWAL } from '../../utils/db';
-import { BlockRegistry, BlockById, BlockKeyById, BlockIds } from '../../registry/BlockRegistry';
-import { setBlock, getIndex, getTextureId, CHUNK_Y_MIN, CHUNK_Y_MAX, getIsHidden, getHealth } from '../../utils/chunkData';
-import { chunkWorkerPool } from '../../utils/workerPool';
-import { getSeed } from '../../worldSeed';
-import { tickFluids, wakeFluidsAround } from '../../utils/fluidSystem';
-import { EventBus } from '../../utils/EventBus';
-import { pendingRenderKeys } from '../../utils/chunkRenderSignal';
-
-// Module-level guard: prevents two concurrent async calls from double-generating
-// the same chunk (race condition when the player moves fast).
+import { useEnvironmentStore } from '../environmentSlice';
+import { useFlareStore } from '../flareSlice';
 import { worldState } from './sharedState';
 
 let currentRawGet = null;
-
 const staticWorldProxy = new Proxy({}, {
   get: (target, prop) => {
     if (prop === 'chunks' || prop === 'pendingMeshMounts' || prop === 'overflowChunks' || prop === 'activePhysicsChunks') {
@@ -35,7 +22,6 @@ const staticWorldProxy = new Proxy({}, {
     return currentRawGet ? currentRawGet()[prop] : undefined;
   }
 });
-
 const getCombinedState = rawGet => {
   currentRawGet = rawGet;
   return staticWorldProxy;

@@ -2,12 +2,11 @@ import { createGarbageCollection } from './garbageCollection';
 import { createFluidSimulation } from './fluidSimulation';
 import { createMeshMounting } from './meshMounting';
 import { createChunkOperations } from './chunkOperations';
-import { getCombinedState } from './stranglerInterceptors';
 
-export const worldActions = (rawSet, rawGet) => ({
-  ...createGarbageCollection(rawSet, rawGet),
-  ...createFluidSimulation(rawSet, rawGet),
-  ...createMeshMounting(rawSet, rawGet),
-  ...createChunkOperations(rawSet, rawGet)
+export const worldActions = (set, get) => ({
+  ...createGarbageCollection(set, get),
+  ...createFluidSimulation(set, get),
+  ...createMeshMounting(set, get),
+  ...createChunkOperations(set, get)
 });
 export { pass1Cache } from './sharedState';
