@@ -1,16 +1,18 @@
+import type { ShipWorkerRequest, ShipWorkerResponse } from '../types/workers';
+
 const SHIP_SIZE = 32;
 const SHIP_CENTER = Math.floor(SHIP_SIZE / 2);
 
 const visited = new Uint8Array(SHIP_SIZE * SHIP_SIZE * SHIP_SIZE);
-const getIdx = (x, y, z) => y * (SHIP_SIZE * SHIP_SIZE) + z * SHIP_SIZE + x;
+const getIdx = (x: number, y: number, z: number) => y * (SHIP_SIZE * SHIP_SIZE) + z * SHIP_SIZE + x;
 
 // Map to hold persistent buffers for N ships
-const internalBuffers = new Map();
+const internalBuffers = new Map<string, Uint32Array>();
 
 // Debounce map for meshing
-const meshTimeouts = new Map();
+const meshTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 
-const runMeshing = (shipId, buffer, bounds, jobId) => {
+const runMeshing = (shipId: string, buffer: Uint32Array, bounds: any, jobId: number) => {
   visited.fill(0);
   const volumes = [];
   const { startX, startY, startZ, endX, endY, endZ } = bounds;
@@ -85,8 +87,8 @@ const runMeshing = (shipId, buffer, bounds, jobId) => {
   self.postMessage({ shipId, volumes, jobId, bounds });
 };
 
-self.onmessage = function(e) {
-  const payload = e.data;
+self.onmessage = function(e: MessageEvent<ShipWorkerRequest>) {
+  const payload = e.data as any;
   const shipId = payload.shipId || 'default';
   const jobId = payload.jobId || 0;
   const bounds = payload.bounds || { startX: 0, startY: 0, startZ: 0, endX: 32, endY: 32, endZ: 32 };

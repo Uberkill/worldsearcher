@@ -24,6 +24,7 @@ import {
   generateChunkPass1,
   generateChunkPass2,
 } from '../utils/chunkGenerator.js';
+import type { ChunkWorkerRequest, ChunkWorkerResponse } from '../types/workers';
 import { CHUNK_VOLUME, getIndex } from '../utils/chunkData.js';
 import { buildGreedyArrays } from '../utils/greedyMesh.js';
 import {
@@ -102,7 +103,8 @@ const extractTransfers = (meshArrays) => {
   return { transferables: Array.from(uniqueTransfers) };
 };
 
-self.onmessage = async ({ data }) => {
+self.onmessage = async (e: MessageEvent<ChunkWorkerRequest>) => {
+  const data = e.data;
   if (data.type === 'INIT_REGISTRY') {
     SolidLookup = new Uint8Array(data.solidBuffer);
     FluidLookup = new Uint8Array(data.fluidBuffer);
@@ -140,8 +142,8 @@ self.onmessage = async ({ data }) => {
     self.postMessage({
       type: 'error',
       message: 'Worker received generation task before registry initialization.',
-      cx: data?.cx,
-      cz: data?.cz,
+      cx: (data as any)?.cx,
+      cz: (data as any)?.cz,
     });
     return;
   }
@@ -285,8 +287,8 @@ self.onmessage = async ({ data }) => {
       type: 'error',
       message: _err.message,
       stack: _err.stack,
-      cx: data?.cx,
-      cz: data?.cz,
+      cx: (data as any)?.cx,
+      cz: (data as any)?.cz,
     });
   }
 };

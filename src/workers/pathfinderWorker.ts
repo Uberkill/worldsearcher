@@ -1,7 +1,8 @@
-// pathfinderWorker.js
+// pathfinderWorker.ts
 // A* Pathfinding Worker for Voxel Environments
+import type { PathfinderRequest, PathfinderResponse } from '../types/workers';
 
-const getChunkKey = (cx, cz) => `${cx},${cz}`;
+const getChunkKey = (cx: number, cz: number) => `${cx},${cz}`;
 
 // Binary Heap for A* Priority Queue
 class MinHeap {
@@ -70,26 +71,27 @@ const heuristic = (x1, y1, z1, x2, y2, z2) => {
   return Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2 + (z1 - z2) ** 2);
 };
 
-const chunkCache = new Map();
+const chunkCache = new Map<string, Uint32Array>();
 
-self.onmessage = function (e) {
-  const type = e.data.type || 'REQUEST_PATH';
+self.onmessage = function (e: MessageEvent<PathfinderRequest>) {
+  const data = e.data as any; // Temporary cast to deal with union
+  const type = data.type || 'REQUEST_PATH';
 
   if (type === 'UPDATE_CHUNK') {
-    const { chunkKey, buffer } = e.data;
+    const { chunkKey, buffer } = data;
     chunkCache.set(chunkKey, buffer);
     return;
   }
 
   if (type === 'REMOVE_CHUNK') {
-    const { chunkKey } = e.data;
+    const { chunkKey } = data;
     chunkCache.delete(chunkKey);
     return;
   }
 
   if (type !== 'REQUEST_PATH') return;
 
-  const { id, sequenceID, start, end } = e.data;
+  const { id, sequenceID, start, end } = data;
   
   if (!start || !end) return;
 

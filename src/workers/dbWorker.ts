@@ -1,5 +1,6 @@
 import { get, del, setMany, keys } from 'idb-keyval';
 import { BlockIds } from '../registry/BlockRegistry';
+import type { DBWorkerRequest, DBWorkerResponse } from '../types/workers';
 
 const CHUNK_VOLUME = 16 * 288 * 16; // 73728 elements (Y from -32 to 255)
 
@@ -20,7 +21,7 @@ const setBlock = (buffer, index, textureId, health = 100, isHidden = 0, level = 
 
 const RLE_TEMP_BUFFER = new Uint32Array(CHUNK_VOLUME * 2);
 
-const compressRLE = (bufferInput) => {
+const compressRLE = (bufferInput: ArrayBuffer | Uint32Array): Uint32Array => {
   const uint32Array = bufferInput instanceof Uint32Array ? bufferInput : new Uint32Array(bufferInput);
   let rleIdx = 0;
   let currentVal = uint32Array[0];
@@ -40,8 +41,8 @@ const compressRLE = (bufferInput) => {
   return new Uint32Array(RLE_TEMP_BUFFER.subarray(0, rleIdx));
 };
 
-const decompressRLE = (rleArray) => {
-  let rleUint32;
+const decompressRLE = (rleArray: ArrayBuffer | Uint32Array | { buffer: ArrayBuffer, byteOffset?: number, byteLength?: number }): Uint32Array => {
+  let rleUint32: Uint32Array;
   if (rleArray instanceof Uint32Array) {
     rleUint32 = rleArray;
   } else if (rleArray && rleArray.buffer instanceof ArrayBuffer) {
@@ -71,7 +72,7 @@ const decompressRLE = (rleArray) => {
   return arr;
 };
 
-const migrateLegacyChunk = (legacyData) => {
+const migrateLegacyChunk = (legacyData: any): { buffer: Uint32Array, isMigrated: boolean } | null => {
   const buffer = new Uint32Array(CHUNK_VOLUME);
 
   if (legacyData.buffer) {
@@ -154,17 +155,19 @@ const flushWAL = async () => {
   await flushPromise;
 };
 
-self.onmessage = async (e) => {
-  const { id, type, payload } = e.data;
+self.onmessage = async (e: MessageEvent<DBWorkerRequest>) => {
+  const data = e.data;
+  const id = data.id;
+  const type = data.type;
   try {
-    if (type === 'COMPRESS') {
-      const rle = compressRLE(payload.buffer);
+    if (data.type === 'COMPRESS') {
+      const rle = compressRLE(data.payload.buffer);
       self.postMessage({ id, result: rle }, [rle.buffer]);
-    } else if (type === 'DECOMPRESS') {
-      const uncompressed = decompressRLE(payload.rleBuffer);
+    } else if (data.type === 'DECOMPRESS') {
+      const uncompressed = decompressRLE(data.payload.rleBuffer);
       self.postMessage({ id, result: uncompressed }, [uncompressed.buffer]);
-    } else if (type === 'SAVE_CHUNK') {
-      const { chunkKey, slotPrefix, buffer, seed } = payload;
+    } else if (data.type === 'SAVE_CHUNK') {
+      const { chunkKey, slotPrefix, buffer, seed } = data.payload;
       const key = `${slotPrefix}_chunk_v14_${seed}_${chunkKey}`;
       const rleBuffer = compressRLE(buffer);
       walCache.set(key, { rleBuffer });
@@ -176,8 +179,8 @@ self.onmessage = async (e) => {
         }, 5000);
       }
       self.postMessage({ id, result: true });
-    } else if (type === 'LOAD_CHUNK') {
-      const { chunkKey, slotPrefix, seed } = payload;
+    } else if (data.type === 'LOAD_CHUNK') {
+      const { chunkKey, slotPrefix, seed } = data.payload;
       const key = `${slotPrefix}_chunk_v14_${seed}_${chunkKey}`;
       if (walCache.has(key)) {
         const walData = walCache.get(key);
@@ -212,14 +215,14 @@ self.onmessage = async (e) => {
           self.postMessage({ id, result: null });
         }
       }
-    } else if (type === 'DELETE_CHUNK') {
-      const { chunkKey, slotPrefix, seed } = payload;
+    } else if (data.type === 'DELETE_CHUNK') {
+      const { chunkKey, slotPrefix, seed } = data.payload;
       const key = `${slotPrefix}_chunk_v14_${seed}_${chunkKey}`;
       if (walCache.has(key)) walCache.delete(key);
       await del(key);
       self.postMessage({ id, result: true });
-    } else if (type === 'CLEAR_DB') {
-      const { slotId, isSlotPrefix } = payload;
+    } else if (data.type === 'CLEAR_DB') {
+      const { slotId, isSlotPrefix } = data.payload;
       walCache.clear();
       if (walTimer) {
         clearTimeout(walTimer);
@@ -238,7 +241,7 @@ self.onmessage = async (e) => {
         }
       }
       self.postMessage({ id, result: true });
-    } else if (type === 'FLUSH_WAL') {
+    } else if (data.type === 'FLUSH_WAL') {
       await flushWAL();
       self.postMessage({ id, result: true });
     }

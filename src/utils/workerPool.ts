@@ -1,14 +1,50 @@
-import ChunkWorkerClass from '../workers/chunkWorker.js?worker';
+import ChunkWorkerClass from '../workers/chunkWorker?worker';
 import { useChunkStore } from '../stores/chunkSlice';
-import { getBinaryRegistries } from '../registry/BlockRegistry.js';
+import { getBinaryRegistries } from '../registry/BlockRegistry';
+import type { ChunkWorkerRequest, ChunkWorkerResponse } from '../types/workers';
 
-let getPass1Cache = null;
+let getPass1Cache: (() => Map<string, any>) | null = null;
 const POOL_SIZE = Math.min(
   Math.max(Math.floor((navigator.hardwareConcurrency || 2) / 2), 1),
   4
 );
 
+export interface WorkerObj {
+  instance: Worker;
+  lastPingTime: number;
+  isBusy: boolean;
+  isDead: boolean;
+  index: number;
+  activeChunkKey?: string | null;
+  startTime?: number;
+}
+
+export interface WorkerTask {
+  type: string;
+  cx?: number;
+  cz?: number;
+  seed?: number;
+  buffer?: Uint32Array | ArrayBuffer;
+  getSurfaceHeightMap?: Int16Array;
+  packedBuffer?: Uint32Array;
+  neighborBuffers?: Array<{cx: number, cz: number, buffer: Uint32Array}>;
+  removedLights?: any[];
+  isHighPriority?: boolean;
+  resolve: (value: any) => void;
+}
+
 class WorkerManager {
+  _idle: WorkerObj[];
+  _pending: Map<WorkerObj, (value: any) => void>;
+  _queue: WorkerTask[];
+  workers: WorkerObj[];
+  pingPongPool: ArrayBuffer[];
+  activeChunks: Set<string>;
+  cancelledInFlight: Set<string>;
+  _ingestionQueue: Array<() => void>;
+  _ingestionRunning: boolean;
+  watchdogInterval?: ReturnType<typeof setInterval>;
+
   constructor() {
     this._idle = []; // workerObjs waiting for a job
     this._pending = new Map(); // workerObj → resolve fn
@@ -56,7 +92,7 @@ class WorkerManager {
     requestAnimationFrame(() => this._processIngestionQueue());
   }
 
-  spawnWorker(index) {
+  spawnWorker(index: number) {
     const worker = new ChunkWorkerClass();
     const workerObj = {
       instance: worker,
@@ -67,7 +103,7 @@ class WorkerManager {
     };
     this.workers[index] = workerObj;
 
-    worker.onmessage = ({ data }) => this._onResult(workerObj, data);
+    worker.onmessage = ({ data }: MessageEvent<ChunkWorkerResponse>) => this._onResult(workerObj, data);
     worker.onerror = (e) => this._onError(workerObj, e);
 
     const registries = getBinaryRegistries();
@@ -89,14 +125,14 @@ class WorkerManager {
     this._idle.push(workerObj);
   }
 
-  generatePass1(cx, cz, seed) {
+  generatePass1(cx: number, cz: number, seed: number) {
     return new Promise((resolve) => {
       this._queue.push({ type: 'generatePass1', cx, cz, seed, resolve });
       this.processNextJob();
     });
   }
 
-  generatePass2(cx, cz, buffer, getSurfaceHeightMap, seed) {
+  generatePass2(cx: number, cz: number, buffer: ArrayBuffer, getSurfaceHeightMap: Int16Array, seed: number) {
     return new Promise((resolve) => {
       const firstPass1Idx = this._queue.findIndex((t) => t.type === 'generatePass1');
       const task = {
@@ -117,7 +153,7 @@ class WorkerManager {
     });
   }
 
-  cancelGenerate(cx, cz) {
+  cancelGenerate(cx: number, cz: number) {
     const key = `${cx},${cz}`;
     if (this.activeChunks.has(key)) {
       this.cancelledInFlight.add(key);
@@ -138,7 +174,7 @@ class WorkerManager {
     }
   }
 
-  cancelRebuild(cx, cz) {
+  cancelRebuild(cx: number, cz: number) {
     const key = `${cx},${cz}`;
     if (this.activeChunks.has(key)) {
       this.cancelledInFlight.add(key);
@@ -168,7 +204,7 @@ class WorkerManager {
     }
   }
 
-  rebuild(packedBuffer, neighborBuffers, cx, cz, seed, removedLights, isHighPriority = false) {
+  rebuild(packedBuffer: Uint32Array, neighborBuffers: Array<{cx: number, cz: number, buffer: Uint32Array}>, cx: number, cz: number, seed: number, removedLights?: any[], isHighPriority = false) {
     return new Promise((resolve) => {
       const firstGenIdx = this._queue.findIndex(
         (t) => t.type === 'generatePass1' || t.type === 'generatePass2'
@@ -193,7 +229,7 @@ class WorkerManager {
     });
   }
 
-  recycleBuffers(toRecycle) {
+  recycleBuffers(toRecycle: ArrayBuffer[]) {
     if (!toRecycle || toRecycle.length === 0) return;
     const batches = Array.from({ length: POOL_SIZE }, () => []);
     toRecycle.forEach((buf, i) => {
@@ -311,7 +347,7 @@ class WorkerManager {
     }
   }
 
-  _dispatchGeneratePass1(workerObj, cx, cz, seed, resolve) {
+  _dispatchGeneratePass1(workerObj: WorkerObj, cx: number, cz: number, seed: number, resolve: (v: any) => void) {
     workerObj.isBusy = true;
     workerObj.activeChunkKey = `${cx},${cz}`;
     workerObj.lastPingTime = Date.now();
@@ -322,13 +358,13 @@ class WorkerManager {
   }
 
   _dispatchGeneratePass2(
-    workerObj,
-    cx,
-    cz,
-    buffer,
-    getSurfaceHeightMap,
-    seed,
-    resolve
+    workerObj: WorkerObj,
+    cx: number,
+    cz: number,
+    buffer: ArrayBuffer | Uint32Array,
+    getSurfaceHeightMap: Int16Array | any,
+    seed: number,
+    resolve: (v: any) => void
   ) {
     workerObj.isBusy = true;
     workerObj.activeChunkKey = `${cx},${cz}`;
@@ -428,13 +464,13 @@ class WorkerManager {
   }
 
   _dispatchRebuild(
-    workerObj,
-    cx,
-    cz,
-    packedBuffer,
-    neighborBuffers,
-    resolve,
-    removedLights
+    workerObj: WorkerObj,
+    cx: number,
+    cz: number,
+    packedBuffer: Uint32Array,
+    neighborBuffers: Array<{cx: number, cz: number, buffer: Uint32Array}>,
+    resolve: (v: any) => void,
+    removedLights?: any[]
   ) {
     workerObj.isBusy = true;
     workerObj.activeChunkKey = `${cx},${cz}`;
@@ -498,7 +534,7 @@ class WorkerManager {
     }
   }
 
-  _onResult(workerObj, data) {
+  _onResult(workerObj: WorkerObj, data: ChunkWorkerResponse) {
     if (data.type === 'PONG') {
       workerObj.lastPingTime = Date.now();
       return;
@@ -582,7 +618,7 @@ class WorkerManager {
     this.processNextJob();
   }
 
-  _onError(workerObj, e) {
+  _onError(workerObj: WorkerObj, e: any) {
     console.error('[WorkerManager] worker error:', e?.message || e);
     workerObj.isBusy = false;
     if (workerObj.activeChunkKey) {
@@ -626,7 +662,7 @@ class WorkerManager {
 // Singleton — one pool for the whole app
 export const chunkWorkerPool = new WorkerManager();
 
-export const injectWorkerDependencies = (pass1CacheGetter) => {
+export const injectWorkerDependencies = (pass1CacheGetter: () => Map<string, any>) => {
     getPass1Cache = pass1CacheGetter;
 };
 
