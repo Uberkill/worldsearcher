@@ -1,8 +1,21 @@
 import { create } from 'zustand';
 
+interface Flare {
+  id: string;
+  pos: [number, number, number];
+  normal: [number, number, number];
+  isShip: boolean;
+  emitLight: boolean;
+}
 
+interface FlareSlice {
+  placedFlares: Flare[];
+  placeFlare: (pos: [number, number, number], normal: [number, number, number], id: string, isShip?: boolean) => void;
+  removeFlare: (id: string) => void;
+  validateStateParity: (oldPlacedFlares: Flare[]) => void;
+}
 
-export const useFlareStore = create((set, get) => ({
+export const useFlareStore = create<FlareSlice>((set, get) => ({
   placedFlares: [],
 
   placeFlare: (pos, normal, id, isShip = false) => {
