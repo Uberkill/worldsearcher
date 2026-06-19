@@ -9,7 +9,8 @@ import {
   getIsHidden,
   getBlockLight,
   getGlobalBlockLight,
-} from './chunkData.js';
+} from './chunkData';
+import type { NeighborBuffer } from '../types/world';
 
 const NEIGHBORS = [
   { nx: 0, ny: 1, nz: 0 },
@@ -49,7 +50,7 @@ const pIdxBuffer = new Uint32Array(MAX_FACES * 6);
 const floraMatricesBuffer = new Float32Array(MAX_FACES * 16);
 const floraPackedBuffer = new Float32Array(MAX_FACES);
 
-export const buildGreedyArrays = (buffer, cx, cz, neighborBuffers, recycledBufferBuckets = null, SolidLookup, FluidLookup, TextureLookup, FloraLookup, TransparentLookup) => {
+export const buildGreedyArrays = (buffer: Uint32Array, cx: number, cz: number, neighborBuffers: NeighborBuffer[] | null | undefined, recycledBufferBuckets: Record<number, ArrayBuffer[]> | null = null, SolidLookup: Uint8Array, FluidLookup: Uint8Array, TextureLookup: Uint16Array, FloraLookup: Uint8Array, TransparentLookup: Uint8Array): Record<string, any> => {
   const result = {
     solid: [],
     transparent: [],
