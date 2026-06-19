@@ -17,5 +17,5 @@ export const worldState = {
   currentRawGet: null
 };
 
-export const getChunkKey = (x, z) => `${Math.floor(x / 16)},${Math.floor(z / 16)}`;
-export const getBlockKey = (x, y, z) => `${x},${y},${z}`;
+export const getChunkKey = (x: number, z: number): string => `${Math.floor(x / 16)},${Math.floor(z / 16)}`;
+export const getBlockKey = (x: number, y: number, z: number): string => `${x},${y},${z}`;
