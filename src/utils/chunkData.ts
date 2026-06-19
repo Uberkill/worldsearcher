@@ -14,7 +14,8 @@
  * - Bits 30-31 (2 bits): Unused.
  */
 
-import { BlockRegistry } from '../registry/BlockRegistry.js';
+import { BlockRegistry } from '../registry/BlockRegistry';
+import type { NeighborBuffer } from '../types/world';
 
 export const CHUNK_SIZE_X = 16;
 export const CHUNK_SIZE_Z = 16;
@@ -34,7 +35,7 @@ export const HALO_SIZE_Z = CHUNK_SIZE_Z + CHUNK_PAD * 2;
  * @param {number} y - Absolute Y (-64 to 255)
  * @param {number} lz - Local Z (0 to 15)
  */
-export const getIndex = (lx, y, lz) => {
+export const getIndex = (lx: number, y: number, lz: number): number => {
   const yOffset = y - CHUNK_Y_MIN;
   // Index formula: (Y * 256) + (Z * 16) + X
   return yOffset * 256 + lz * 16 + lx;
@@ -46,15 +47,15 @@ export const getIndex = (lx, y, lz) => {
  * Bit-packs block metadata into the ECS buffer.
  */
 export const setBlock = (
-  buffer,
-  index,
-  textureId,
-  health,
-  isHidden,
+  buffer: Uint32Array,
+  index: number,
+  textureId: number,
+  health: number,
+  isHidden: boolean | number,
   level = 0,
   blockLight = 0,
   sunLight = 0
-) => {
+): void => {
   const h = (health === Infinity || health >= 9999) ? 511 : Math.min(Math.max(health, 0), 510);
   buffer[index] =
     (textureId & 0xff) |
@@ -66,26 +67,26 @@ export const setBlock = (
 };
 
 // --- Fast ECS Readers ---
-export const getTextureId = (val) => val & 0xff;
+export const getTextureId = (val: number): number => val & 0xff;
 
-export const getHealth = (val) => {
+export const getHealth = (val: number): number => {
   const h = (val >> 8) & 0x1ff;
   return h === 511 ? Infinity : h;
 };
 
-export const getLevel = (val) => (val >> 17) & 0xf;
+export const getLevel = (val: number): number => (val >> 17) & 0xf;
 
-export const getIsHidden = (val) => ((val >> 21) & 1) === 1;
+export const getIsHidden = (val: number): boolean => ((val >> 21) & 1) === 1;
 
-export const getBlockLight = (val) => (val >> 22) & 0xf;
+export const getBlockLight = (val: number): number => (val >> 22) & 0xf;
 
-export const getSunlight = (val) => (val >> 26) & 0xf;
+export const getSunlight = (val: number): number => (val >> 26) & 0xf;
 
 /**
  * Helper to safely query a global coordinate across the main chunk and its neighbors.
  * Returns -2 if out of Y bounds, -1 if out of X/Z bounds (neighbor not found), otherwise returns the raw 32-bit block.
  */
-const getGlobalRawBlock = (cx, cz, buffer, neighborBuffers, gx, gy, gz) => {
+const getGlobalRawBlock = (cx: number, cz: number, buffer: Uint32Array, neighborBuffers: NeighborBuffer[] | null | undefined, gx: number, gy: number, gz: number): number => {
   if (gy < CHUNK_Y_MIN || gy > CHUNK_Y_MAX) return -2;
 
   if (gx >= cx * 16 && gx < cx * 16 + 16 && gz >= cz * 16 && gz < cz * 16 + 16) {
@@ -109,12 +110,12 @@ const getGlobalRawBlock = (cx, cz, buffer, neighborBuffers, gx, gy, gz) => {
   return -1;
 };
 
-export const getGlobalBlockVal = (cx, cz, buffer, neighborBuffers, gx, gy, gz) => {
+export const getGlobalBlockVal = (cx: number, cz: number, buffer: Uint32Array, neighborBuffers: NeighborBuffer[] | null | undefined, gx: number, gy: number, gz: number): number => {
   const val = getGlobalRawBlock(cx, cz, buffer, neighborBuffers, gx, gy, gz);
   return val < 0 ? 0 : val;
 };
 
-export const getGlobalBlockTex = (cx, cz, buffer, neighborBuffers, neighborObj, gx, gy, gz) => {
+export const getGlobalBlockTex = (cx: number, cz: number, buffer: Uint32Array, neighborBuffers: NeighborBuffer[] | null | undefined, neighborObj: Record<string, any> | null | undefined, gx: number, gy: number, gz: number): number => {
   const val = getGlobalRawBlock(cx, cz, buffer, neighborBuffers, gx, gy, gz);
   if (val >= 0) return getTextureId(val);
 
@@ -128,7 +129,7 @@ export const getGlobalBlockTex = (cx, cz, buffer, neighborBuffers, neighborObj, 
 
 
 
-export const getGlobalBlockLight = (cx, cz, buffer, neighborBuffers, neighborObj, gx, gy, gz) => {
+export const getGlobalBlockLight = (cx: number, cz: number, buffer: Uint32Array, neighborBuffers: NeighborBuffer[] | null | undefined, neighborObj: Record<string, any> | null | undefined, gx: number, gy: number, gz: number): number => {
   const val = getGlobalRawBlock(cx, cz, buffer, neighborBuffers, gx, gy, gz);
     if (val === -2) return 15 << 26; // Out of Y bounds (Max sunlight packed)
     if (val === -1) return 15 << 26; // Out of bounds / fallback

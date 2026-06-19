@@ -28,6 +28,13 @@ export interface ChunkData {
 
 export type ChunkKey = string; // format: "x,z"
 
+export interface NeighborBuffer {
+  cx: number;
+  cz: number;
+  buffer: Uint32Array;
+}
+
+
 export interface WorldEnvironment {
   worldTime: number;
   currentDay: number;

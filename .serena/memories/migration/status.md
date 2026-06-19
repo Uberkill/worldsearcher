@@ -1,23 +1,26 @@
 # TypeScript Migration Status
 
-**Current Stage:** 0 — Migration Infrastructure
+**Current Stage:** 5 — Worker Pipeline
 **Status:** IN PROGRESS
-**Migrated Files:** 0 / ~107
+**Migrated Files:** 36 / ~107
 **Build Status:** GREEN (typecheck passes, dev server works)
 **Blocked By:** Nothing
 
 ## What Was Done
-- TypeScript installed (typescript, typescript-eslint, @types/three)
-- tsconfig.json created (3-file structure: root + app + node)
-- src/vite-env.d.ts created
-- package.json updated (typecheck + build scripts)
-- ESLint updated with typescript-eslint
-- lint-staged updated for .ts/.tsx
-- docs/migration/ created (5 files: AGENT_BRIEFING, MIGRATION_TRACKER, DECISIONS, TYPE_CONVENTIONS, STAGE_LOG)
+- Stage 0: Infrastructure completed
+- Stage 1: Circular dependencies fixed, worldActions split
+- Stage 2: Type Foundation completed (src/types/* created)
+- Stage 3: Leaf Node Migration completed (globals, registries, utils)
+- Stage 4: Data Layer & JSON Typing completed (typed loaders created)
+- All prior changes have been committed and verified.
 
 ## What Is Next
-- Complete Stage 0 verification
-- Begin Stage 1: Fix circular dep + split worldActions.js
+- Stage 5: Worker message discriminated unions
+- Stage 5: Migrate src/workers/chunkWorker.js
+- Stage 5: Migrate src/workers/dbWorker.js
+- Stage 5: Migrate src/workers/pathfinderWorker.js
+- Stage 5: Migrate src/workers/shipWorker.js
+- Stage 5: Migrate src/utils/workerPool.js
 
 ## Key References
 - Full plan: `docs/migration/MIGRATION_TRACKER.md`

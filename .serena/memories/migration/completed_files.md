@@ -1,14 +1,34 @@
-# Migrated Files Tracker
+# Completed Files (Migrated to .ts)
 
-## Stage 0 — Infrastructure (no source files migrated)
-- [x] tsconfig.json (NEW)
-- [x] tsconfig.app.json (NEW)
-- [x] tsconfig.node.json (NEW)
-- [x] src/vite-env.d.ts (NEW)
-- [x] eslint.config.js (UPDATED — added typescript-eslint)
-- [x] .lintstagedrc (UPDATED — added .ts/.tsx globs)
-- [x] package.json (UPDATED — added typecheck script)
+## Stage 2: Type Foundation
+- src/types/blocks.ts
+- src/types/items.ts
+- src/types/world.ts
+- src/types/player.ts
+- src/types/network.ts
+- src/types/store.ts
+- src/types/workers.ts
+- src/types/entities.ts
+- src/types/ship.ts
+- src/types/index.ts
 
-## Stage 1 — Not started
-## Stage 2 — Not started
-## Stage 3 — Not started
+## Stage 3: Leaf Node Migration
+- src/globals.ts
+- src/worldSeed.ts
+- src/utils/EventBus.ts
+- src/utils/NetworkEventBus.ts
+- src/registry/Registry.ts
+- src/registry/ItemRegistry.ts
+- src/registry/BlockRegistry.ts
+- src/registry/CraftingRegistry.ts
+
+## Stage 4: Data Layer
+- src/types/data.ts
+- src/utils/biomes.ts
+- src/registry/InteractionRegistry.ts
+- src/registry/SmeltingRegistry.ts
+- src/registry/QuestsRegistry.ts
+- src/registry/SkillsRegistry.ts
+- src/registry/LootRegistry.ts
+
+*(Note: Stage 1 involved JS refactoring, so files weren't renamed to .ts yet, but `worldActions.js` was split and `useAudioStore.js` created)*

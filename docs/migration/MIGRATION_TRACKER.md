@@ -99,12 +99,12 @@
 - [x] Create typed loaders for quests.json, skills.json
 
 ### Stage 5 — Worker Pipeline
-- [ ] Worker message discriminated unions
-- [ ] src/workers/chunkWorker.js → .ts
-- [ ] src/workers/dbWorker.js → .ts
-- [ ] src/workers/pathfinderWorker.js → .ts
-- [ ] src/workers/shipWorker.js → .ts
-- [ ] src/utils/workerPool.js → .ts
+- `[x]` Worker message discriminated unions
+- `[x]` src/workers/chunkWorker.js → .ts
+- `[x]` src/workers/dbWorker.js → .ts
+- `[x]` src/workers/pathfinderWorker.js → .ts
+- `[x]` src/workers/shipWorker.js → .ts
+- `[x]` src/utils/workerPool.js → .ts
 
 ### Stage 6 — Core Engine
 - [ ] ECS bitpacking utils → .ts
