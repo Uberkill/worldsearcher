@@ -20,6 +20,7 @@ import { getCombinedState } from './stranglerInterceptors';
 
 // mirrors isWorldReady — set below once store is live
 
+let _executeRebuild = null;
 const flushDirtyChunks = (get, rawGet, rawSet) => {
   worldState.rafRebuildHandle = null;
   if (dirtyChunkSet.size === 0) return;
@@ -942,14 +943,13 @@ requestMeshRebuild: chunkKey => {
     _executeRebuild = key => get()._executeRebuildInternal(key, get, rawGet, rawSet);
   }
 
-  // During startup (world not ready yet) hold rebuilds for 1s to prevent a storm
-  if (!worldReadyForRebuild) {
+  if (!worldState.worldReadyForRebuild) {
     const isReady = get().isWorldReady;
-    if (isReady) worldReadyForRebuild = true;
+    if (isReady) worldState.worldReadyForRebuild = true;
     if (!isReady) {
       // Fallback: a single short timeout for startup only — once fired we switch to rAF mode
       setTimeout(() => {
-        worldReadyForRebuild = true;
+        worldState.worldReadyForRebuild = true;
         dirtyChunkSet.add(chunkKey);
         scheduleRafFlush(get, rawGet, rawSet);
       }, 1000);
