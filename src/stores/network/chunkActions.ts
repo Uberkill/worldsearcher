@@ -1,14 +1,14 @@
 import { getGameStore } from '../storeLinker';
 import { playerPosition } from '../../globals';
 
-export const createChunkActions = (set, get) => ({
+export const createChunkActions = (set: any, get: any): Record<string, any> => ({
   processChunkQueue: () => {
      const state = get();
      if (state.inFlightChunkRequests >= state.MAX_CONCURRENT_CHUNK_REQUESTS || state.chunkQueue.length === 0) return;
      
      // Sort pendingChunkRequests by distance to player
      let px = 0, pz = 0;
-     const useStore = window.useStore || (typeof getGameStore === 'function' ? getGameStore() : null);
+     const useStore = (window as any).useStore || (typeof getGameStore === 'function' ? getGameStore() : null);
      if (useStore) {
         px = playerPosition.x;
         pz = playerPosition.z;
@@ -24,8 +24,8 @@ export const createChunkActions = (set, get) => ({
      
      const nextReq = sortedQueue[0];
      
-     set(prev => ({ 
-         chunkQueue: prev.chunkQueue.filter(r => r.chunkKey !== nextReq.chunkKey),
+     set((prev: any) => ({ 
+         chunkQueue: prev.chunkQueue.filter((r: any) => r.chunkKey !== nextReq.chunkKey),
          inFlightChunkRequests: prev.inFlightChunkRequests + 1,
          chunkRequests: { ...prev.chunkRequests, [nextReq.chunkKey]: nextReq.resolve }
      }));
@@ -38,7 +38,7 @@ export const createChunkActions = (set, get) => ({
         } catch(_e) {
            if (retryCount > 3) {
               nextReq.resolve('PRISTINE');
-              set(prev => {
+              set((prev: any) => {
                   const next = { ...prev.chunkRequests };
                   delete next[nextReq.chunkKey];
                   return { chunkRequests: next, inFlightChunkRequests: Math.max(0, prev.inFlightChunkRequests - 1) };
@@ -67,7 +67,7 @@ export const createChunkActions = (set, get) => ({
      get().processChunkQueue();
   },
 
-  requestChunkFromHost: (chunkKey) => {
+  requestChunkFromHost: (chunkKey: string) => {
      return new Promise((resolve) => {
         const { connections, isHost } = get();
         if (isHost || connections.length === 0) {
@@ -75,7 +75,7 @@ export const createChunkActions = (set, get) => ({
            return;
         }
         
-        set(state => ({ chunkQueue: [...state.chunkQueue, { chunkKey, resolve }] }));
+        set((state: any) => ({ chunkQueue: [...state.chunkQueue, { chunkKey, resolve }] }));
         get().processChunkQueue();
      });
   }

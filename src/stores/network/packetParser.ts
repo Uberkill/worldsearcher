@@ -1,6 +1,6 @@
 import { getGameStore } from '../storeLinker';
 
-export const parseBinaryPacket = (data, set, get) => {
+export const parseBinaryPacket = (data: ArrayBuffer | Uint8Array, set: any, get: any): void => {
     const buffer = data instanceof ArrayBuffer ? data : data.buffer;
     const typeByte = new Uint8Array(buffer)[0];
     const view = new DataView(buffer);
@@ -22,7 +22,7 @@ export const parseBinaryPacket = (data, set, get) => {
            return;
         }
 
-        set(prev => {
+        set((prev: any) => {
             const currentBuffer = prev.players[id]?.positionBuffer || [];
             const newBuffer = [...currentBuffer, { x, y, z, pitch, yaw, timestamp: Date.now() }];
             if (newBuffer.length > 5) newBuffer.shift();
@@ -67,7 +67,7 @@ export const parseBinaryPacket = (data, set, get) => {
             });
         }
         
-        set(prev => ({
+        set((prev: any) => ({
             enemySyncBuffers: {
                 ...prev.enemySyncBuffers,
                 [subType]: { entities, seq: packetSeq, timestamp: Date.now() }
