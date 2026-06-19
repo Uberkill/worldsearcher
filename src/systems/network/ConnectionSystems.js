@@ -85,6 +85,17 @@ const initializeConnectionSystems = () => {
        }));
     }
   });
+
+  NetworkEventBus.on('GUEST_STATE_SYNC', (payload) => {
+     const { data, getNetworkState } = payload;
+     if (!getNetworkState().isHost) return;
+     
+     import('idb-keyval').then(({ set: idbSet }) => {
+        const prefix = sessionStorage.getItem('saveSlotId') || 'default';
+        const guestKey = `${prefix}_guest_${data.playerId}`;
+        idbSet(guestKey, data.savedState).catch(err => console.error("Failed to save guest state:", err));
+     });
+  });
 };
 
 // Auto-initialize when imported

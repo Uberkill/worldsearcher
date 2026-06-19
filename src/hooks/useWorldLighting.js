@@ -119,13 +119,20 @@ export function useWorldLighting(
       scene.fog.color.copy(fogColor);
       state.scene.background = fogColor;
 
-      const baseDensity = 1.0 / (renderDistance * 14);
-      // eslint-disable-next-line react-hooks/immutability
-      scene.fog.density = THREE.MathUtils.lerp(
-        baseDensity,
-        0.04,
-        stormFactorRef.current
-      );
+      if (scene.fog.isFogExp2) {
+        const baseDensity = 1.0 / (renderDistance * 14);
+        // eslint-disable-next-line react-hooks/immutability
+        scene.fog.density = THREE.MathUtils.lerp(
+          baseDensity,
+          0.04,
+          stormFactorRef.current
+        );
+      } else {
+        const baseNear = renderDistance * 16 * 0.4;
+        const baseFar = renderDistance * 16 * 0.95;
+        scene.fog.near = THREE.MathUtils.lerp(baseNear, renderDistance * 16 * 0.1, stormFactorRef.current);
+        scene.fog.far = THREE.MathUtils.lerp(baseFar, renderDistance * 16 * 0.4, stormFactorRef.current);
+      }
     }
 
     // No more lightning flashes or thunder. Just rain pitter patter.

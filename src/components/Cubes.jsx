@@ -37,12 +37,10 @@ export const Cubes = memo(() => {
     const chunkStore = useChunkStore.getState();
     const len = chunkStore.pendingMeshMounts?.length || 0;
     // Upload a max of 2 chunks per frame during initial load (len>10) to prevent VRAM timeout/TDR, then trickle 1/frame
-    const batchSize = Math.min(len, len > 10 ? 2 : 1);
+    const batchSize = 1; // STRICTLY 1 to prevent GPU frame time spikes!
     if (batchSize > 0) {
       store.mountNextMesh(batchSize);
     }
-
-
 
     // Update material time uniforms for animated blocks (water, lava)
     const isDebugLighting = store.debugLighting;

@@ -28,7 +28,7 @@ const initializeWorldSyncSystems = () => {
                const chunk = useChunkStore.getState().chunks[data.chunkKey];
                if (chunk && chunk.isModified && chunk.buffer) {
                    compressRLE(chunk.buffer).then(rle => {
-                       try { senderConn.send({ type: 'WORLD_SYNC_RLE', chunkKey: data.chunkKey, rle }); } catch { /* ignore */ }
+                       try { senderConn.send({ type: 'WORLD_SYNC_RLE', chunkKey: data.chunkKey, rle: Array.from(rle) }); } catch { /* ignore */ }
                    });
                } else if (chunk && !chunk.isModified) {
                    try { senderConn.send({ type: 'CHUNK_PRISTINE', chunkKey: data.chunkKey }); } catch { /* ignore */ }
@@ -37,7 +37,7 @@ const initializeWorldSyncSystems = () => {
                       loadChunkFromDB(data.chunkKey).then(dbChunk => {
                          if (dbChunk && dbChunk.isModified && dbChunk.buffer) {
                              compressRLE(dbChunk.buffer).then(rle => {
-                                 try { senderConn.send({ type: 'WORLD_SYNC_RLE', chunkKey: data.chunkKey, rle }); } catch { /* ignore */ }
+                                 try { senderConn.send({ type: 'WORLD_SYNC_RLE', chunkKey: data.chunkKey, rle: Array.from(rle) }); } catch { /* ignore */ }
                              });
                          } else {
                              try { senderConn.send({ type: 'CHUNK_PRISTINE', chunkKey: data.chunkKey }); } catch { /* ignore */ }

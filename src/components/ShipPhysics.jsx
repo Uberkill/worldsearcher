@@ -212,7 +212,7 @@ export const ShipPhysics = () => {
     <group name="ship-physics-grid">
       <RigidBody 
          ref={rbRef} 
-         type="dynamic" 
+         type={networkActions.getState().isHost && hasEngine && isShipActive && !isBuildMode ? 'dynamic' : 'kinematicPosition'}
          enabledRotations={[false, true, false]}
          linearDamping={1.0}
          angularDamping={2.0}
@@ -384,8 +384,8 @@ function calculateShipSteering(delta, hasEngine, velocityRef, currentTransform, 
        );
        
        // Low frequency UI region update
-       const newRegionX = Math.floor(_pos.x / 2000) * 2000;
-       const newRegionZ = Math.floor(_pos.z / 2000) * 2000;
+       const newRegionX = Math.floor(currentTransform.position.x / 2000) * 2000;
+       const newRegionZ = Math.floor(currentTransform.position.z / 2000) * 2000;
        if (storeState.shipRegion.x !== newRegionX || storeState.shipRegion.z !== newRegionZ) {
            storeState.setShipRegion(newRegionX, newRegionZ);
        }
@@ -400,7 +400,26 @@ export function runShipPhysicsStep(world, lastTimeRef, isShipActive, hasEngine, 
       const currentTransform = shipTransforms.get('default');
       if (!currentTransform) return;
       
-      applyShipPhysics(rbRef, velocityRef, currentTransform, lastValidTransform);
+      const isHost = networkActions.getState().isHost;
+      if (isHost) {
+          applyShipPhysics(rbRef, velocityRef, currentTransform, lastValidTransform);
+      } else {
+          // Guest: smoothly interpolate kinematic body to the networked transform
+          if (rbRef.current) {
+              rbRef.current.setNextKinematicTranslation(currentTransform.position);
+              _targetQuat.setFromEuler(currentTransform.rotation);
+              rbRef.current.setRotation({ x: _targetQuat.x, y: _targetQuat.y, z: _targetQuat.z, w: _targetQuat.w }, true);
+              
+              if (currentTransform.actualPosition) {
+                  currentTransform.actualPosition.copy(currentTransform.position);
+                  if (!currentTransform.actualQuaternion) currentTransform.actualQuaternion = { x: 0, y: 0, z: 0, w: 1 };
+                  currentTransform.actualQuaternion.x = _targetQuat.x;
+                  currentTransform.actualQuaternion.y = _targetQuat.y;
+                  currentTransform.actualQuaternion.z = _targetQuat.z;
+                  currentTransform.actualQuaternion.w = _targetQuat.w;
+              }
+          }
+      }
 }
 
 function applyShipPhysics(rbRef, velocityRef, currentTransform, lastValidTransform) {

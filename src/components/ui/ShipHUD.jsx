@@ -68,8 +68,8 @@ export const ShipHUD = () => {
 
   return (
     <div className="absolute top-24 left-1/2 -translate-x-1/2 flex items-center space-x-6 pointer-events-none z-50 transition-all duration-500">
-      <div className="flex flex-col items-center bg-black/80 backdrop-blur-xl border border-cyan-500/30 px-8 py-4 rounded-3xl shadow-[0_0_30px_rgba(34,211,238,0.2)]">
-        <h2 className="text-[10px] text-cyan-400 font-bold tracking-[0.4em] mb-4 uppercase">Ghost Ship Systems</h2>
+      <div className="flex flex-col items-center bg-black/80 backdrop-blur-xl border border-white/10 px-8 py-4 rounded-3xl shadow-[0_0_30px_rgba(255,255,255,0.05)]">
+        <h2 className="text-[10px] text-white font-bold tracking-[0.4em] mb-4 uppercase">Ghost Ship Systems</h2>
         
         {/* Core Power */}
         <div className="flex items-center space-x-4 mb-3 w-full">
@@ -107,7 +107,7 @@ export const ShipHUD = () => {
            {/* Speed */}
            <div className="flex flex-col items-end">
               <span className="text-[9px] text-white/50 uppercase tracking-widest mb-1">Velocity</span>
-              <span ref={speedRef} className="font-mono text-xs text-cyan-300">0 u/s</span>
+              <span ref={speedRef} className="font-mono text-xs text-white/90">0 u/s</span>
            </div>
         </div>
       </div>

@@ -166,11 +166,11 @@ export const Astrolabe = ({ active, onClose }) => {
       ctx.lineTo(centerX - 10, centerY + 10);
       ctx.lineTo(centerX + 10, centerY + 10);
       ctx.closePath();
-      ctx.fillStyle = '#22d3ee';
+      ctx.fillStyle = '#ffffff';
       ctx.fill();
 
       // Coordinates & Destination Display
-      ctx.fillStyle = 'rgba(34, 211, 238, 0.8)';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
       ctx.font = '24px monospace';
       ctx.textAlign = 'center';
       ctx.fillText(`X:${Math.floor(px)} Z:${Math.floor(pz)}`, centerX, 580);
@@ -232,7 +232,7 @@ export const Astrolabe = ({ active, onClose }) => {
 
   return (
     <BaseOverlay active={active} onClose={onClose}>
-      <div className="relative pointer-events-auto bg-black/50 p-4 rounded-full border-4 border-neutral-800 drop-shadow-[0_0_25px_rgba(34,211,238,0.4)]">
+      <div className="relative pointer-events-auto bg-black/50 p-4 rounded-full border-4 border-neutral-800 drop-shadow-[0_0_25px_rgba(255,255,255,0.15)]">
         <button onClick={onClose} className="absolute top-8 right-8 z-50 text-neutral-400 hover:text-white transition-colors bg-black/80 rounded-full p-2 border border-neutral-700">
           <X size={32} />
         </button>

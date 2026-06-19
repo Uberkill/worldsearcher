@@ -209,18 +209,27 @@ export const createConnectionActions = (set, get) => ({
         // Intercept send to count bytes
         const originalSend = conn.send;
         conn.send = (data) => {
-          if (window.__DEBUG_STATS__) {
-             trackPacket(data, 'sent');
-             if (data instanceof ArrayBuffer || data instanceof Uint8Array) window.__DEBUG_STATS__.bytesSent += data.byteLength;
-             else if (data instanceof Blob) window.__DEBUG_STATS__.bytesSent += data.size;
-             else {
-                try { 
-                   if (data.type === 'WORLD_SYNC_RLE' && data.rle) window.__DEBUG_STATS__.bytesSent += data.rle.length * 4 + 100;
-                   else window.__DEBUG_STATS__.bytesSent += JSON.stringify(data).length; 
-                } catch(e) { console.warn("[Network] Dropped packet/action:", e.message); }
-             }
+          if (conn._isSending) {
+             originalSend.call(conn, data);
+             return;
           }
-          originalSend.call(conn, data);
+          conn._isSending = true;
+          try {
+             if (window.__DEBUG_STATS__) {
+                trackPacket(data, 'sent');
+                if (data instanceof ArrayBuffer || data instanceof Uint8Array) window.__DEBUG_STATS__.bytesSent += data.byteLength;
+                else if (data instanceof Blob) window.__DEBUG_STATS__.bytesSent += data.size;
+                else {
+                   try { 
+                      if (data.type === 'WORLD_SYNC_RLE' && data.rle) window.__DEBUG_STATS__.bytesSent += data.rle.length * 4 + 100;
+                      else window.__DEBUG_STATS__.bytesSent += JSON.stringify(data).length; 
+                   } catch(e) { console.warn("[Network] Dropped packet/action:", e.message); }
+                }
+             }
+             originalSend.call(conn, data);
+          } finally {
+             conn._isSending = false;
+          }
         };
         
         set(state => ({ connections: [...state.connections, conn] }));
@@ -377,18 +386,27 @@ export const createConnectionActions = (set, get) => ({
         // Intercept send to count bytes
         const originalSend = conn.send;
         conn.send = (data) => {
-          if (window.__DEBUG_STATS__) {
-             trackPacket(data, 'sent');
-             if (data instanceof ArrayBuffer || data instanceof Uint8Array) window.__DEBUG_STATS__.bytesSent += data.byteLength;
-             else if (data instanceof Blob) window.__DEBUG_STATS__.bytesSent += data.size;
-             else {
-                try { 
-                   if (data.type === 'WORLD_SYNC_RLE' && data.rle) window.__DEBUG_STATS__.bytesSent += data.rle.length * 4 + 100;
-                   else window.__DEBUG_STATS__.bytesSent += JSON.stringify(data).length; 
-                } catch(e) { console.warn("[Network] Dropped packet/action:", e.message); }
-             }
+          if (conn._isSending) {
+             originalSend.call(conn, data);
+             return;
           }
-          originalSend.call(conn, data);
+          conn._isSending = true;
+          try {
+             if (window.__DEBUG_STATS__) {
+                trackPacket(data, 'sent');
+                if (data instanceof ArrayBuffer || data instanceof Uint8Array) window.__DEBUG_STATS__.bytesSent += data.byteLength;
+                else if (data instanceof Blob) window.__DEBUG_STATS__.bytesSent += data.size;
+                else {
+                   try { 
+                      if (data.type === 'WORLD_SYNC_RLE' && data.rle) window.__DEBUG_STATS__.bytesSent += data.rle.length * 4 + 100;
+                      else window.__DEBUG_STATS__.bytesSent += JSON.stringify(data).length; 
+                   } catch(e) { console.warn("[Network] Dropped packet/action:", e.message); }
+                }
+             }
+             originalSend.call(conn, data);
+          } finally {
+             conn._isSending = false;
+          }
         };
 
           // Guest Watchdog Timer
@@ -461,5 +479,11 @@ export const createConnectionActions = (set, get) => ({
       console.error('Peer error:', err);
       set({ connectionStatus: 'disconnected', connections: [], unreliableConnections: [] });
     });
+  },
+
+  syncGuestStateToHost: (savedState) => {
+    const netState = get();
+    if (netState.isHost) return;
+    netState.broadcastEvent({ type: 'GUEST_STATE_SYNC', playerId: netState.playerId, savedState });
   }
 });

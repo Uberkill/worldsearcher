@@ -41,7 +41,7 @@ export const ShipyardUI = ({ active, onClose }) => {
     <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-auto select-none" onClick={onClose}>
       <div 
         className={`bg-black/90 backdrop-blur-xl border rounded-2xl p-8 w-[500px] transition-all duration-500 ${
-          isShipActive ? 'border-red-500/30 shadow-[0_0_50px_rgba(239,68,68,0.1)]' : 'border-cyan-500/30 shadow-[0_0_50px_rgba(34,211,238,0.1)]'
+          isShipActive ? 'border-red-500/30 shadow-[0_0_50px_rgba(239,68,68,0.1)]' : 'border-white/10 shadow-[0_0_50px_rgba(255,255,255,0.04)]'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -50,10 +50,10 @@ export const ShipyardUI = ({ active, onClose }) => {
             {isShipActive ? (
               <ShieldAlert className="text-red-400 drop-shadow-[0_0_8px_#ef4444]" size={28} />
             ) : (
-              <Rocket className="text-cyan-400 drop-shadow-[0_0_8px_#22d3ee]" size={28} />
+              <Rocket className="text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" size={28} />
             )}
-            <h2 className="text-2xl font-light tracking-[0.2em] text-white">
-              SHIP<span className={`font-bold ${isShipActive ? 'text-red-400' : 'text-cyan-400'}`}>
+            <h2 className="text-2xl font-medium tracking-[0.2em] text-white">
+              SHIP<span className={`font-bold ${isShipActive ? 'text-red-400' : 'text-white'}`}>
                 {isShipActive ? 'MGMT' : 'YARD'}
               </span>
             </h2>
@@ -105,7 +105,7 @@ export const ShipyardUI = ({ active, onClose }) => {
           ) : (
             <button
               onClick={handleLaunch}
-              className="w-full py-4 rounded-xl font-bold tracking-[0.2em] uppercase transition-all flex justify-center items-center space-x-3 bg-cyan-500 hover:bg-cyan-400 text-black shadow-[0_0_20px_rgba(34,211,238,0.4)] hover:shadow-[0_0_30px_rgba(34,211,238,0.6)]"
+              className="w-full py-4 rounded-xl font-bold tracking-[0.2em] uppercase transition-all flex justify-center items-center space-x-3 bg-white hover:bg-white/90 text-black shadow-md"
             >
               <Rocket size={20} />
               <span>Launch Ship</span>

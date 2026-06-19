@@ -321,10 +321,10 @@ export const SwarmManager = ({ type, max }) => {
 
     if (isGuest) {
       const buffer = netState.enemySyncBuffers[cfg.subTypeId];
-      if (buffer) {
+      if (buffer && buffer.entities) {
         p.active.fill(0);
         let newActiveCount = 0;
-        for (const ent of buffer) {
+        for (const ent of buffer.entities) {
           const i = ent.id;
           if (i >= max) continue;
           p.active[i] = 1;

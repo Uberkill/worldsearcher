@@ -76,7 +76,7 @@ export const LunarAnchorOverlay = ({ active, onClose }) => {
         <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
           <div className="flex items-center space-x-3">
             <Anchor className="text-indigo-400 drop-shadow-[0_0_8px_#818cf8]" size={28} />
-            <h2 className="text-2xl font-light tracking-[0.2em] text-white">
+            <h2 className="text-2xl font-medium tracking-[0.2em] text-white">
               LUNAR <span className="font-bold text-indigo-400">ANCHOR</span>
             </h2>
           </div>
@@ -95,7 +95,7 @@ export const LunarAnchorOverlay = ({ active, onClose }) => {
             <h3 className="text-xl font-bold tracking-widest text-white mb-2 uppercase">
               {isTransitMode ? 'Transit Mode Engaged' : 'Anchored to Sector'}
             </h3>
-            <p className="text-sm font-light text-white/50 mb-6">
+            <p className="text-sm font-medium text-white/50 mb-6">
               {isTransitMode 
                 ? 'WARNING: Reality degradation detected. Glitch storms imminent.' 
                 : 'Ship is stable. Safe to extract resources from nearby sky islands.'}
@@ -130,7 +130,7 @@ export const LunarAnchorOverlay = ({ active, onClose }) => {
             
             {isTransitMode && (
               <div className="mt-8 border-t border-white/10 pt-6">
-                <h4 className="text-sm font-bold tracking-widest text-cyan-400 mb-4 uppercase">Short Jump Coordinates</h4>
+                <h4 className="text-sm font-bold tracking-widest text-white mb-4 uppercase">Short Jump Coordinates</h4>
                 <div className="flex space-x-4 mb-4">
                    <input
                      type="number"
@@ -152,7 +152,7 @@ export const LunarAnchorOverlay = ({ active, onClose }) => {
                   disabled={shipCorePower < 2500 || targetX === '' || targetZ === ''}
                   className={`w-full py-3 rounded-lg font-bold tracking-widest uppercase transition-all flex justify-center items-center space-x-3 ${
                     shipCorePower >= 2500 && targetX !== '' && targetZ !== ''
-                      ? 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-[0_0_20px_rgba(8,145,178,0.4)]'
+                      ? 'bg-white/20 hover:bg-white/40 text-white shadow-md'
                       : 'bg-white/5 text-white/30 border border-white/10 cursor-not-allowed'
                   }`}
                 >

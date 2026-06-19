@@ -32,14 +32,14 @@ export const HeartCoreOverlay = ({ active, onClose }) => {
   return (
     <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-auto select-none" onClick={onClose}>
       <div 
-        className="bg-black/90 backdrop-blur-xl border border-cyan-500/30 rounded-2xl p-8 w-[500px] shadow-[0_0_50px_rgba(34,211,238,0.1)]"
+        className="bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl p-8 w-[500px] shadow-[0_0_50px_rgba(255,255,255,0.04)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
           <div className="flex items-center space-x-3">
-            <Zap className="text-cyan-400 drop-shadow-[0_0_8px_#22d3ee]" size={28} />
-            <h2 className="text-2xl font-light tracking-[0.2em] text-white">
-              HEART <span className="font-bold text-cyan-400">CORE</span>
+            <Zap className="text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]" size={28} />
+            <h2 className="text-2xl font-medium tracking-[0.2em] text-white">
+              HEART <span className="font-bold text-white">CORE</span>
             </h2>
           </div>
           <button
@@ -55,14 +55,14 @@ export const HeartCoreOverlay = ({ active, onClose }) => {
           <div className="bg-black/50 border border-white/5 rounded-xl p-6">
             <div className="flex justify-between items-end mb-2">
               <span className="text-sm font-bold tracking-widest text-white/50 uppercase">Core Capacity</span>
-              <span className="font-mono text-xl text-cyan-300 drop-shadow-[0_0_5px_#67e8f9]">
+              <span className="font-mono text-xl text-white/90 drop-shadow-[0_0_5px_#67e8f9]">
                 {Math.ceil(shipCorePower)} / {shipMaxPower}
               </span>
             </div>
             
             <div className="relative h-6 bg-black rounded-full overflow-hidden border border-white/10 shadow-inner">
               <div 
-                className="absolute top-0 left-0 h-full bg-cyan-500/80 transition-all duration-1000 shadow-[0_0_20px_#22d3ee]"
+                className="absolute top-0 left-0 h-full bg-white/80 transition-all duration-1000 shadow-md"
                 style={{ width: `${percentage}%` }}
               >
                 <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImEiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTTAgNDBMNDAgMEg0MHY0MEgwem0wIDBoNDBMMCA0MFYweiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjYSkiLz48L3N2Zz4=')] opacity-30 animate-[slide_2s_linear_infinite]" />
@@ -83,15 +83,15 @@ export const HeartCoreOverlay = ({ active, onClose }) => {
             
             <div className="grid grid-cols-2 gap-4 w-full">
               {/* Ship Core Refuel */}
-              <div className="flex flex-col items-center p-4 border border-cyan-500/30 rounded-xl bg-cyan-900/10">
+              <div className="flex flex-col items-center p-4 border border-white/10 rounded-xl bg-white/5">
                 <div className="flex items-center space-x-3 mb-4">
-                  <div className="w-12 h-12 rounded-lg border-2 border-dashed border-cyan-500/50 flex flex-col items-center justify-center bg-cyan-900/20">
-                    <Battery size={20} className="text-cyan-400 mb-1" />
-                    <span className="text-[9px] font-mono text-cyan-200">{sparkCount} AVL</span>
+                  <div className="w-12 h-12 rounded-lg border-2 border-dashed border-white/20 flex flex-col items-center justify-center bg-white/5">
+                    <Battery size={20} className="text-white mb-1" />
+                    <span className="text-[9px] font-mono text-white/80">{sparkCount} AVL</span>
                   </div>
                   <div className="flex flex-col space-y-1">
                     <span className="text-xs text-white/70">Spark Node</span>
-                    <span className="text-xs font-mono text-cyan-400">+25% Core</span>
+                    <span className="text-xs font-mono text-white">+25% Core</span>
                   </div>
                 </div>
 
@@ -100,7 +100,7 @@ export const HeartCoreOverlay = ({ active, onClose }) => {
                   disabled={sparkCount === 0 || shipCorePower >= shipMaxPower}
                   className={`w-full py-2 text-sm rounded-lg font-bold tracking-widest uppercase transition-all flex justify-center items-center space-x-2 ${
                     sparkCount > 0 && shipCorePower < shipMaxPower
-                      ? 'bg-cyan-500 hover:bg-cyan-400 text-black shadow-[0_0_15px_rgba(34,211,238,0.4)]' 
+                      ? 'bg-white hover:bg-white/80 text-black shadow-md' 
                       : 'bg-white/5 text-white/30 cursor-not-allowed border border-white/10'
                   }`}
                 >

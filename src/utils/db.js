@@ -41,13 +41,15 @@ const sendWorkerRequest = (type, payload, transferList = []) => {
 };
 
 export const compressRLE = async (bufferInput) => {
-  const uint32Array = bufferInput instanceof Uint32Array ? bufferInput : new Uint32Array(bufferInput);
-  return await sendWorkerRequest('COMPRESS', { buffer: uint32Array });
+  const sourceArray = bufferInput instanceof Uint32Array ? bufferInput : new Uint32Array(bufferInput);
+  const clonedArray = new Uint32Array(sourceArray);
+  return await sendWorkerRequest('COMPRESS', { buffer: clonedArray }, [clonedArray.buffer]);
 };
 
 export const decompressRLE = async (rleArray) => {
-  const rleUint32 = rleArray instanceof Uint32Array ? rleArray : new Uint32Array(rleArray.buffer || rleArray);
-  return await sendWorkerRequest('DECOMPRESS', { rleBuffer: rleUint32 });
+  const sourceArray = rleArray instanceof Uint32Array ? rleArray : new Uint32Array(rleArray.buffer || rleArray);
+  const clonedArray = new Uint32Array(sourceArray);
+  return await sendWorkerRequest('DECOMPRESS', { rleBuffer: clonedArray }, [clonedArray.buffer]);
 };
 export const flushWAL = async () => {
   await sendWorkerRequest('FLUSH_WAL', {});
@@ -85,8 +87,9 @@ if (typeof window !== 'undefined') {
 
 export const saveChunkToDB = async (chunkKey, chunkData, seed) => {
   const start = performance.now();
-  const uint32Array = chunkData.buffer instanceof Uint32Array ? chunkData.buffer : new Uint32Array(chunkData.buffer);
-  const result = await sendWorkerRequest('SAVE_CHUNK', { chunkKey, slotPrefix: getSlotPrefix(), buffer: uint32Array, seed });
+  const sourceArray = chunkData.buffer instanceof Uint32Array ? chunkData.buffer : new Uint32Array(chunkData.buffer);
+  const clonedArray = new Uint32Array(sourceArray);
+  const result = await sendWorkerRequest('SAVE_CHUNK', { chunkKey, slotPrefix: getSlotPrefix(), buffer: clonedArray, seed }, [clonedArray.buffer]);
   const latency = performance.now() - start;
 
   if (window.__DEBUG_STATS__) {

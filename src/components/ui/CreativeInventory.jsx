@@ -34,8 +34,8 @@ export const CreativeInventory = ({ active, onClose }) => {
       <div className="bg-neutral-900 border-4 border-neutral-700 p-6 rounded-lg shadow-2xl relative w-full max-w-2xl h-[85dvh] flex flex-col">
         <h2 className="text-2xl font-bold text-white mb-4 font-mono" style={{ textShadow: '2px 2px 0 #000' }}>Creative Database</h2>
         
-        <div className="flex items-center bg-black/40 border border-cyan-500/50 rounded-lg p-3 mb-4 shadow-[0_0_15px_rgba(34,211,238,0.1)]">
-          <Search size={20} className="text-cyan-400 mr-3" />
+        <div className="flex items-center bg-black/40 border border-white/20 rounded-lg p-3 mb-4 shadow-[0_0_15px_rgba(255,255,255,0.05)]">
+          <Search size={20} className="text-white mr-3" />
           <input
             type="text"
             placeholder="Search all items and blocks..."
@@ -61,7 +61,7 @@ export const CreativeInventory = ({ active, onClose }) => {
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-1.5 font-bold font-mono text-sm rounded transition-colors ${
                 activeTab === tab 
-                  ? 'bg-cyan-500 text-black border border-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.5)]' 
+                  ? 'bg-white text-black border border-white shadow-md' 
                   : 'bg-neutral-800 text-neutral-400 border border-neutral-700 hover:bg-neutral-700 hover:text-white'
               }`}
             >
@@ -70,7 +70,7 @@ export const CreativeInventory = ({ active, onClose }) => {
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#22d3ee transparent' }}>
+        <div className="flex-1 overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#ffffff40 transparent' }}>
           <div className="grid grid-cols-10 gap-2">
             {allItems.map(texture => {
               const reg = GlobalRegistry[texture];
@@ -87,7 +87,7 @@ export const CreativeInventory = ({ active, onClose }) => {
               return (
               <div 
                 key={texture}
-                className="w-12 h-12 border-2 border-neutral-800 rounded hover:border-cyan-400 transition-colors cursor-pointer relative shadow-lg group flex flex-col items-center justify-center"
+                className="w-12 h-12 border-2 border-neutral-800 rounded hover:border-white/30 transition-colors cursor-pointer relative shadow-lg group flex flex-col items-center justify-center"
                 data-tooltip={tooltipName}
                 style={{ backgroundColor: fallbackColor }}
                 onMouseDown={(e) => {

@@ -1,4 +1,5 @@
-/* eslint-disable no-unused-vars */
+
+
 /**
  * chunkWorker.js — Off-thread chunk generation + greedy mesh worker.
  *
@@ -30,7 +31,7 @@ import {
   generateBlockLight,
   removeLight,
 } from '../utils/lighting.js';
-import { CHUNK_Y_MIN, CHUNK_Y_MAX } from '../utils/chunkData.js';
+
 
 const recycledBufferBuckets = {};
 for (let i = 8; i <= 24; i++) recycledBufferBuckets[1 << i] = [];

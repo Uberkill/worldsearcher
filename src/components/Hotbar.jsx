@@ -78,39 +78,45 @@ export const Hotbar = () => {
   if (isInventoryOpen || isMenuOpen || isSettingsOpen || isDead || isSeated) return null;
 
   return (
-    <div className="hotbar-wrapper">
-      <div className="coin-display">
-        ⚙ <span className="coin-amount">{coins}</span>
+    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 z-[100]">
+      <div className="absolute bottom-full right-0 mb-3 bg-slate-900/60 backdrop-blur-md px-5 py-2 rounded-lg text-slate-100 text-lg font-medium border border-white/10 z-[1000] shadow-xl">
+        ⚙ {coins}
       </div>
 
       {activeReg && (
-        <div className="active-item-name">
+        <div className="text-slate-100 text-sm font-medium bg-slate-900/60 px-5 py-1.5 rounded-full backdrop-blur-md border border-white/10 uppercase tracking-[0.2em] shadow-lg">
           {activeReg.name} {activeItem.count > 1 ? `(${activeItem.count})` : ''}
         </div>
       )}
 
-      <div className="hotbar-container">
-        <div className="hotbar-group blocks-group">
+      <div className="flex items-center gap-3 p-3 bg-slate-900/60 backdrop-blur-md border border-white/10 rounded-lg shadow-2xl">
+        <div className="flex gap-2 p-1 rounded bg-white/5">
           {hotbarItems.map((item, idx) => {
             const color = item
               ? GlobalRegistry[item.texture]?.color || '#fff'
               : 'transparent';
+            const isActive = activeHotbarIndex === idx;
             return (
               <div
                 key={`hb-${idx}`}
-                className={`hotbar-slot ${activeHotbarIndex === idx ? 'active' : ''}`}
+                className={`relative w-12 h-12 rounded bg-black/20 border border-transparent flex items-center justify-center cursor-pointer transition-all duration-200 hover:bg-white/5 ${isActive ? 'border-white/50 bg-white/10 shadow-lg -translate-y-1' : ''}`}
                 onClick={() => setActiveHotbarIndex(idx)}
               >
-                <div className="hotbar-number">{idx + 1}</div>
-                {item && (
-                  <div
-                    className="hotbar-icon"
-                    style={{ backgroundColor: color }}
-                  >
-                    {item.count > 1 && (
-                      <span className="item-count">{item.count}</span>
+                <div className="absolute inset-0 p-1.5 flex flex-col justify-between pointer-events-none">
+                  <span className="text-[10px] font-semibold text-white/50 leading-none">{idx + 1}</span>
+                  <div className="flex justify-end">
+                    {item && item.count > 1 && (
+                      <span className="text-[10px] font-semibold text-white drop-shadow-md leading-none">
+                        {item.count}
+                      </span>
                     )}
                   </div>
+                </div>
+                {item && (
+                  <div
+                    className={`w-7 h-7 rounded-sm shadow-md border border-white/5 transition-transform duration-200 ${isActive ? 'scale-105' : ''}`}
+                    style={{ backgroundColor: color }}
+                  />
                 )}
               </div>
             );

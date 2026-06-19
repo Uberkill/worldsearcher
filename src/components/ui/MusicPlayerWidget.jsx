@@ -48,14 +48,14 @@ export const MusicPlayerWidget = () => {
   };
 
   return (
-    <div className="w-full bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-[0_0_30px_rgba(34,211,238,0.1)] flex flex-col space-y-4">
+    <div className="w-full bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-[0_0_30px_rgba(255,255,255,0.05)] flex flex-col space-y-4">
       {/* Top Row: Track Info */}
       <div className="flex justify-between items-center px-2">
         <div className="flex flex-col">
-          <span className="text-[10px] text-cyan-400 tracking-[0.3em] font-bold uppercase">
+          <span className="text-[10px] text-white tracking-[0.3em] font-bold uppercase">
             Now Playing
           </span>
-          <span className="text-sm font-light tracking-widest text-white mt-1 capitalize">
+          <span className="text-sm font-medium tracking-widest text-white mt-1 capitalize">
             {playerState.currentTrack !== 'None'
               ? playerState.currentTrack
               : 'Idle'}
@@ -73,7 +73,7 @@ export const MusicPlayerWidget = () => {
 
           <button
             onClick={handlePlayPause}
-            className="w-10 h-10 rounded-full bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center text-cyan-300 hover:bg-cyan-500/40 hover:scale-105 transition-all"
+            className="w-10 h-10 rounded-full bg-white/20 border border-white/20 flex items-center justify-center text-white/90 hover:bg-white/20 hover:scale-105 transition-all"
           >
             {playerState.isPlaying ? (
               <Pause size={18} />
@@ -97,7 +97,7 @@ export const MusicPlayerWidget = () => {
         <div className="flex-1 relative flex items-center h-4">
           <div className="absolute w-full h-[2px] bg-white/10 rounded-full" />
           <div
-            className="absolute h-[2px] bg-cyan-400 rounded-full"
+            className="absolute h-[2px] bg-white rounded-full"
             style={{ width: `${localVolume}%` }}
           />
           <input
@@ -109,7 +109,7 @@ export const MusicPlayerWidget = () => {
             className="absolute w-full opacity-0 cursor-pointer"
           />
         </div>
-        <span className="text-[10px] font-mono text-cyan-200 w-8 text-right">
+        <span className="text-[10px] font-mono text-white/80 w-8 text-right">
           {localVolume}%
         </span>
       </div>

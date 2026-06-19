@@ -185,7 +185,7 @@ export const SpectorModal = () => {
             <X size={20} className="text-gray-400 hover:text-white" />
           </button>
 
-          <h2 className="text-3xl font-black mb-4 text-cyan-400 uppercase tracking-wider">
+          <h2 className="text-3xl font-black mb-4 text-white uppercase tracking-wider">
             Engine Dump Ready
           </h2>
           <p className="text-gray-400 mb-8 leading-relaxed">
@@ -260,7 +260,7 @@ export const SpectorModal = () => {
 
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 pointer-events-auto">
-      <div className="bg-black/90 backdrop-blur-2xl border border-cyan-400/50 rounded-2xl p-8 shadow-[0_0_50px_rgba(34,211,238,0.15)] flex flex-col items-center min-w-[400px]">
+      <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-2xl p-8 shadow-lg flex flex-col items-center min-w-[400px]">
         <button
           onClick={() => setSpectorData(null)}
           className="absolute top-4 right-4 p-2 text-white/40 hover:text-red-400 hover:bg-white/5 rounded-full transition-colors cursor-pointer"
@@ -269,10 +269,10 @@ export const SpectorModal = () => {
         </button>
 
         <div className="text-center mb-8">
-          <h3 className="text-cyan-200/80 tracking-[0.3em] text-sm font-light mb-1">
+          <h3 className="text-white/80/80 tracking-[0.3em] text-sm font-medium mb-1">
             SYSTEM DIAGNOSTICS
           </h3>
-          <h3 className="text-cyan-400 tracking-[0.2em] text-2xl font-bold">
+          <h3 className="text-white tracking-[0.2em] text-2xl font-bold">
             FRAME CAPTURE
           </h3>
         </div>
@@ -288,10 +288,10 @@ export const SpectorModal = () => {
           </div>
           <div className="w-px bg-white/10" />
           <div className="flex flex-col items-center">
-            <span className="text-cyan-400/70 text-xs tracking-widest font-bold mb-1">
+            <span className="text-white/70 text-xs tracking-widest font-bold mb-1">
               DRAW CALLS
             </span>
-            <span className="text-cyan-400 text-3xl font-mono font-bold drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">
+            <span className="text-white text-3xl font-mono font-bold drop-shadow-[0_0_8px_rgba(255,255,255,0.1)]">
               {drawCalls}
             </span>
           </div>
@@ -300,13 +300,13 @@ export const SpectorModal = () => {
         <div className="flex gap-4 w-full">
           <button
             onClick={() => downloadFile('json')}
-            className="flex-1 bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/30 hover:border-cyan-400 rounded-lg py-3 flex items-center justify-center gap-2 transition-all group cursor-pointer"
+            className="flex-1 bg-black/40 hover:bg-white/10 border border-white/10 hover:border-white/30 rounded-lg py-3 flex items-center justify-center gap-2 transition-all group cursor-pointer"
           >
             <FileJson
               size={18}
-              className="text-cyan-400 group-hover:scale-110 transition-transform"
+              className="text-white group-hover:scale-110 transition-transform"
             />
-            <span className="text-cyan-100 text-sm font-bold tracking-wider">
+            <span className="text-white text-sm font-bold tracking-wider">
               .JSON (AI)
             </span>
           </button>

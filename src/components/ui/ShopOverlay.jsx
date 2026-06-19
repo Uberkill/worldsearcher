@@ -51,10 +51,10 @@ export const ShopOverlay = ({ active, onClose }) => {
     <div
       className={`absolute inset-0 flex items-center justify-center transition-all duration-[500ms] ease-[cubic-bezier(0.23,1,0.32,1)] ${active ? 'opacity-100 pointer-events-auto scale-100' : 'opacity-0 pointer-events-none scale-105'}`}
     >
-      <div className="bg-[#0b0c10]/80 backdrop-blur-3xl border border-white/10 rounded-2xl w-[800px] shadow-2xl overflow-hidden flex flex-col">
+      <div className="bg-[#0b0c10]/80 backdrop-blur-xl border border-white/10 rounded-2xl w-[800px] shadow-2xl overflow-hidden flex flex-col">
         <div className="flex items-center justify-between p-6 border-b border-white/5 bg-white/5">
           <div>
-            <h3 className="text-xl font-light tracking-[0.3em] text-cyan-400">
+            <h3 className="text-xl font-medium tracking-[0.3em] text-white">
               BIOMETRIC <span className="font-bold text-white">UPGRADES</span>
             </h3>
             <p className="text-xs text-white/50 tracking-widest mt-1">
@@ -74,7 +74,7 @@ export const ShopOverlay = ({ active, onClose }) => {
             </div>
             <button
               onClick={onClose}
-              className="p-2 text-white/40 hover:text-cyan-400 hover:bg-white/5 rounded-full transition-colors cursor-pointer"
+              className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-full transition-colors cursor-pointer"
             >
               <X size={24} />
             </button>

@@ -1,20 +1,5 @@
 import { create } from 'zustand';
 
-const UI_MODALS = {
-  MENU: 'MENU',
-  INVENTORY: 'INVENTORY',
-  SHOP: 'SHOP',
-  CRAFTING: 'CRAFTING',
-  SKILL_TREE: 'SKILL_TREE',
-  QUEST_JOURNAL: 'QUEST_JOURNAL',
-  SHIPYARD: 'SHIPYARD',
-  ASTROLABE: 'ASTROLABE',
-  HEART_CORE: 'HEART_CORE',
-  WARP_DRIVE: 'WARP_DRIVE',
-  LUNAR_ANCHOR: 'LUNAR_ANCHOR',
-  CHEST: 'CHEST',
-  FURNACE: 'FURNACE',
-};
 
 export const useUIStore = create((set, get) => ({
   activeModal: null,

@@ -32,19 +32,19 @@ export const SkillTreeOverlay = ({ active, onClose }) => {
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
       >
-        <div className="bg-slate-900/80 backdrop-blur-md border border-cyan-500/30 rounded-xl p-8 w-full max-w-4xl shadow-2xl pointer-events-auto overflow-hidden flex flex-col max-h-[80vh]">
+        <div className="bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-xl p-8 w-full max-w-4xl shadow-2xl pointer-events-auto overflow-hidden flex flex-col max-h-[80vh]">
           
           {/* Header */}
           <div className="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
             <div>
-              <h2 className="text-3xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 uppercase">
+              <h2 className="text-3xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-white to-white/60 uppercase">
                 Skill Tree
               </h2>
               <p className="text-slate-400 text-sm mt-1">Allocate Data to upgrade your abilities.</p>
             </div>
             <div className="text-right">
               <div className="text-sm text-slate-400 uppercase tracking-wider">Available Data</div>
-              <div className="text-2xl font-bold text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]">
+              <div className="text-2xl font-bold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.1)]">
                 {playerData} KB
               </div>
             </div>
@@ -70,16 +70,16 @@ export const SkillTreeOverlay = ({ active, onClose }) => {
                   whileHover={{ scale: 1.02 }}
                   className={`p-5 rounded-lg border flex flex-col justify-between transition-all duration-300 ${
                     isUnlocked
-                      ? 'bg-cyan-900/40 border-cyan-400/50 shadow-[0_0_15px_rgba(34,211,238,0.2)]'
+                      ? 'bg-white/10 border-white/20 shadow-md'
                       : canUnlock
-                      ? 'bg-slate-800/60 border-slate-600 hover:border-cyan-500/50 cursor-pointer'
+                      ? 'bg-slate-800/60 border-slate-600 hover:border-white/20 cursor-pointer'
                       : 'bg-slate-900/40 border-slate-800 opacity-60'
                   }`}
                   onClick={() => { if (canUnlock) handleUnlock(skill.id, skill.cost, skill.prerequisites); }}
                 >
                   <div>
                     <div className="flex justify-between items-start mb-2">
-                      <h3 className={`font-bold text-lg ${isUnlocked ? 'text-cyan-300' : 'text-slate-200'}`}>
+                      <h3 className={`font-bold text-lg ${isUnlocked ? 'text-white/90' : 'text-slate-200'}`}>
                         {skill.name}
                       </h3>
                       <span className={`text-xs uppercase font-bold tracking-wider ${getCategoryColor(skill.category)}`}>
@@ -96,12 +96,12 @@ export const SkillTreeOverlay = ({ active, onClose }) => {
                   </div>
 
                   <div className="flex justify-between items-end mt-4">
-                    <span className={`font-mono text-sm ${isUnlocked ? 'text-transparent' : canAfford ? 'text-cyan-400' : 'text-rose-500'}`}>
+                    <span className={`font-mono text-sm ${isUnlocked ? 'text-transparent' : canAfford ? 'text-white' : 'text-rose-500'}`}>
                       {isUnlocked ? 'UNLOCKED' : `Cost: ${skill.cost} KB`}
                     </span>
                     
                     {!isUnlocked && canUnlock && (
-                      <span className="text-xs bg-cyan-500/20 text-cyan-300 px-2 py-1 rounded">
+                      <span className="text-xs bg-white/20 text-white/90 px-2 py-1 rounded">
                         Click to Unlock
                       </span>
                     )}

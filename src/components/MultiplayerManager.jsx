@@ -71,41 +71,41 @@ const PlayerAvatar = ({ id }) => {
           timeSpan > 0 ? (renderTime - past.timestamp) / timeSpan : 1;
 
         targetPos.current.set(
-          THREE.MathUtils.lerp(past.pos[0], future.pos[0], fraction),
-          THREE.MathUtils.lerp(past.pos[1], future.pos[1], fraction),
-          THREE.MathUtils.lerp(past.pos[2], future.pos[2], fraction)
+          THREE.MathUtils.lerp(past.x, future.x, fraction),
+          THREE.MathUtils.lerp(past.y, future.y, fraction),
+          THREE.MathUtils.lerp(past.z, future.z, fraction)
         );
 
-        let diffY = future.rot[1] - past.rot[1];
+        let diffY = future.yaw - past.yaw;
         while (diffY < -Math.PI) diffY += Math.PI * 2;
         while (diffY > Math.PI) diffY -= Math.PI * 2;
-        const lerpY = past.rot[1] + diffY * fraction;
+        const lerpY = past.yaw + diffY * fraction;
 
         targetQuat.current.setFromEuler(new THREE.Euler(0, lerpY, 0, 'YXZ'));
 
         if (headGroupRef.current) {
           headGroupRef.current.rotation.x = THREE.MathUtils.lerp(
-            past.rot[0],
-            future.rot[0],
+            past.pitch,
+            future.pitch,
             fraction
           );
         }
       } else if (past && !future) {
         // Lag spike: Extrapolate or halt
-        targetPos.current.set(past.pos[0], past.pos[1], past.pos[2]);
+        targetPos.current.set(past.x, past.y, past.z);
         targetQuat.current.setFromEuler(
-          new THREE.Euler(0, past.rot[1], 0, 'YXZ')
+          new THREE.Euler(0, past.yaw, 0, 'YXZ')
         );
-        if (headGroupRef.current) headGroupRef.current.rotation.x = past.rot[0];
+        if (headGroupRef.current) headGroupRef.current.rotation.x = past.pitch;
       } else if (!past && buffer.length > 0) {
         // Render time too old
         const first = buffer[0];
-        targetPos.current.set(first.pos[0], first.pos[1], first.pos[2]);
+        targetPos.current.set(first.x, first.y, first.z);
         targetQuat.current.setFromEuler(
-          new THREE.Euler(0, first.rot[1], 0, 'YXZ')
+          new THREE.Euler(0, first.yaw, 0, 'YXZ')
         );
         if (headGroupRef.current)
-          headGroupRef.current.rotation.x = first.rot[0];
+          headGroupRef.current.rotation.x = first.pitch;
       }
     }
 

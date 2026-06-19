@@ -521,7 +521,7 @@ export const ChunkManager = () => {
       sweepGen.current = chunkSweep(
         currentCx,
         currentCz,
-        useStore.getState().renderDistance,
+        useStore.getState().renderDistance || 8,
         knownChunks.current,
         failedChunks.current,
         chunksToCheck,

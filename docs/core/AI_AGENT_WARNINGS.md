@@ -42,6 +42,7 @@ Agents returned references or deeply nested arrays from Workers, causing the bro
 **How it MUST be done:**
 - In `dbWorker.js`, explicitly define the arrays to be transferred in the second argument of `postMessage`: `self.postMessage(response, [array1.buffer, array2.buffer])`.
 - If an array needs to be kept in the Worker *and* sent to the Main thread, you must explicitly copy it (`new Uint32Array(oldArray)`) and transfer the copy's buffer. 
+- **BANNED API**: Do not use `.slice(0)` on `ArrayBuffer` or `TypedArray` objects on the Main Thread (e.g., in `db.js`), as this triggers deep synchronous clones on the V8 heap and causes severe Garbage Collection spikes. Use tightly packed bounds like `new Uint32Array(buffer)` instead.
 
 ## 🛑 STRICT RULE 4: REACT IS FOR HITBOXES, NATIVE IS FOR VISUALS
 While visual geometry is handled natively (Rule 1), we **do** keep physics in React.
@@ -73,3 +74,15 @@ The hybrid flight system's raycaster (`castRayShip`) and physics engine (`ShipPh
    Never convert the ship's physical `Quaternion` into an `Euler` (Pitch/Yaw/Roll) for raycasting if the ship is capable of pitching or rolling. This introduces Gimbal Lock and causes the raycaster's rotational matrix to completely desynchronize from the visual mesh. The raycaster must read `.actualQuaternion` directly from the Rapier `RigidBody`.
 3. **Stationary Vector Collapse (Lerping):**
    In `ShipPhysics.jsx`, the visual interpolation vector (`_pos`) pauses its lerp updates when the physics engine detects the ship has stopped moving (`distSq < 0.0001`). If you fail to clone the `RigidBody`'s resting `currentPos` into `_pos` during this sleep state, the `actualPosition` memory will collapse to its uninitialized default `[0, 0, 0]`. This will instantly blind the raycaster and hide all interactive blocks as soon as the ship parks.
+
+## 🛑 STRICT RULE 7: ZUSTAND STATE MUTATION ANTI-PATTERNS (THE `__patch` IIFE)
+The `const __patch = (prev => { ... })(prev)` anonymous closure pattern is bloated, creates heavy garbage collection churn, and breaks IDE stack traces.
+**Directive:** Future agents must write clean, direct state updates (`set(state => ...)`) and actively work to purge legacy `__patch` closures from `worldActions.js`.
+
+## 🛑 STRICT RULE 8: VISIBILITY & FRUSTUM CULLING (THE WHITE VOID BUG)
+In the Zustand store, the `overflowChunks` array explicitly maps to **INVISIBLE / CULLED** chunks natively skipped by Three.js in `ChunkRenderer.jsx`. 
+**Directive:** Do NOT push newly loaded chunks blindly into `overflowChunks` (as previously seen in `mountNextMesh`), otherwise the `ChunkRenderer` will forcefully set `group.visible = false` for the entire world. Furthermore, never remove the `mountNextMesh` queue-draining logic from the `useFrame` loop, or Web Worker geometry will become indefinitely bottlenecked.
+
+## 🛑 STRICT RULE 9: QUATERNION MATH FOR PHYSICS (GIMBAL LOCK)
+Relying on `Euler` conversions for vehicle/seat rotations causes Gimbal Lock. Normalizing a zero-magnitude vector causes a "NaN Collapse" that bricks the physics engine.
+**Directive:** Enforce pure `Quaternion` math for offset tracking, and mandate `lengthSq() > 0` checks before any vector normalization.

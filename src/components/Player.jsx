@@ -151,6 +151,26 @@ export const Player = () => {
   const meshRef = useRef();
   const { isFlying, isSeated, initialPos } = usePlayerPhysics(playerRef, meshRef, camera, actionsRef);
 
+  const spawnPhysicsPending = useStore((state) => state.spawnPhysicsPending);
+  const { rapier, world } = useRapier();
+  const physicsWaitFrames = useRef(0);
+
+  useFrame(() => {
+    if (spawnPhysicsPending) {
+       physicsWaitFrames.current++;
+       const ray = new rapier.Ray(
+         { x: playerPosition.x, y: playerPosition.y + 10, z: playerPosition.z },
+         { x: 0, y: -1, z: 0 }
+       );
+       const hit = world.castRay(ray, 300, false, 1); // TERRAIN is 1
+       if (hit || physicsWaitFrames.current > 300) {
+          useStore.getState().setWorldReady();
+          useStore.getState().setSpawnPhysicsPending(false);
+          physicsWaitFrames.current = 0;
+       }
+    }
+  });
+
     return (
     <group>
       <RigidBody

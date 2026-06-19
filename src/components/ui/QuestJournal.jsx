@@ -25,7 +25,7 @@ export const QuestJournal = () => {
         exit={{ opacity: 0, x: 50 }}
         className="fixed top-20 right-8 z-40 w-96 max-w-[90vw] pointer-events-none"
       >
-        <div className="bg-slate-900/70 backdrop-blur-lg border-l border-t border-b border-cyan-500/20 rounded-l-xl p-6 shadow-[0_0_20px_rgba(0,0,0,0.5)] pointer-events-auto max-h-[80vh] overflow-y-auto">
+        <div className="bg-slate-900/70 backdrop-blur-lg border-l border-t border-b border-white/10 rounded-l-xl p-6 shadow-[0_0_20px_rgba(0,0,0,0.5)] pointer-events-auto max-h-[80vh] overflow-y-auto">
           
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-yellow-500 uppercase">
@@ -102,7 +102,7 @@ export const QuestJournal = () => {
 
                   return (
                     <div key={sq.questId} className="bg-slate-800/30 p-3 rounded-lg border border-slate-700">
-                      <h4 className="text-md font-bold text-cyan-300 mb-1">{registryData.title}</h4>
+                      <h4 className="text-md font-bold text-white/90 mb-1">{registryData.title}</h4>
                       <p className="text-xs text-slate-400 mb-3">{registryData.description}</p>
                       
                       <div className="space-y-2">
@@ -114,13 +114,13 @@ export const QuestJournal = () => {
                             <div key={idx}>
                               <div className="flex justify-between text-[10px] mb-1">
                                 <span className="text-slate-300 capitalize">{obj.type} {obj.target.replace('_', ' ')}</span>
-                                <span className={current >= max ? "text-emerald-400" : "text-cyan-200"}>{current} / {max}</span>
+                                <span className={current >= max ? "text-emerald-400" : "text-white/80"}>{current} / {max}</span>
                               </div>
                               <div className="h-1 bg-slate-900 rounded-full overflow-hidden">
                                 <motion.div 
                                   initial={{ width: 0 }}
                                   animate={{ width: `${percent}%` }}
-                                  className={`h-full ${current >= max ? 'bg-emerald-500' : 'bg-cyan-500'}`}
+                                  className={`h-full ${current >= max ? 'bg-emerald-500' : 'bg-white'}`}
                                 />
                               </div>
                             </div>

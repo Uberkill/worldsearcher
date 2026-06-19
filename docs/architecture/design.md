@@ -29,12 +29,12 @@ The game targets a **Premium Sci-Fi / Modern Voxel** aesthetic. It should not lo
 
 - **Hover States:** Elements must feel reactive. Buttons should subtly scale up (`hover:scale-105`) and brighten on hover.
 - **Micro-animations:** Incorporate tap animations (`whileTap={{ scale: 0.95 }}`) on all clickable items.
-- **Gradients:** Primary action buttons (like "Start Game" or "Join World") should feature smooth, modern gradients (e.g., `bg-gradient-to-r from-cyan-500 to-blue-600`).
+- **Borders:** Primary action buttons (like "Start Game" or "Join World") should feature subtle, crisp borders and hover states without gradients (e.g., `bg-white/5 hover:bg-white/10 border border-white/10`).
 
 ### The HUD (Heads-Up Display)
 
 - **Minimalist:** The HUD must never obscure the player's view of the world.
-- **Hotbar:** The hotbar should float at the bottom of the screen with a glassmorphic background. The currently selected slot must be heavily highlighted with a glowing outline (`ring-2 ring-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.5)]`).
+- **Hotbar:** The hotbar should float at the bottom of the screen with a glassmorphic background. The currently selected slot must be highlighted with a crisp, minimal border (e.g., `border-white/50 bg-white/10`) rather than glowing rings.
 - **Status Bars:** Health and resource bars should feature smooth width transitions when values change. Avoid rigid, instantly snapping bars.
 
 ## 4. Color Palette Tokens (Reference)

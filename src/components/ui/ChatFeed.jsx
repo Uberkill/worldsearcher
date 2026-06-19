@@ -116,12 +116,12 @@ export const ChatFeed = () => {
               transition={{ duration: 0.2 }}
               className={`text-sm px-3 py-1.5 rounded-lg w-max max-w-full break-words backdrop-blur-md border ${
                 msg.type === 'system'
-                  ? 'bg-yellow-500/20 text-yellow-200 border-yellow-500/30 italic font-light'
+                  ? 'bg-yellow-500/20 text-yellow-200 border-yellow-500/30 italic font-medium'
                   : 'bg-black/60 text-white border-white/10'
               }`}
             >
               {msg.type === 'chat' && (
-                <span className="font-bold text-cyan-400 mr-2">
+                <span className="font-bold text-white mr-2">
                   {msg.sender}:
                 </span>
               )}
@@ -139,9 +139,9 @@ export const ChatFeed = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             onSubmit={handleSubmit}
-            className="pointer-events-auto bg-black/80 backdrop-blur-xl border border-cyan-500/50 p-2 rounded-xl flex items-center shadow-[0_0_15px_rgba(34,211,238,0.2)]"
+            className="pointer-events-auto bg-black/80 backdrop-blur-xl border border-white/20 p-2 rounded-xl flex items-center shadow-md"
           >
-            <MessageSquare size={16} className="text-cyan-400 ml-2 mr-3" />
+            <MessageSquare size={16} className="text-white ml-2 mr-3" />
             <input
               ref={inputRef}
               type="text"

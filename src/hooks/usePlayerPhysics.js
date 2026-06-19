@@ -27,8 +27,10 @@ const _rayOrigin = { x: 0, y: 0, z: 0 };
 // FAIL FAST & LOUD
 function assertFinite3(vec, context) {
   if (!Number.isFinite(vec.x) || !Number.isFinite(vec.y) || !Number.isFinite(vec.z)) {
-    throw new Error(`[Assert] NaN/Infinity Vector detected in ${context}: x=${vec.x}, y=${vec.y}, z=${vec.z}`);
+    console.error(`[Assert] NaN/Infinity Vector detected in ${context}: x=${vec.x}, y=${vec.y}, z=${vec.z}`);
+    return false;
   }
+  return true;
 }
 
 const playerSafeStack = [];
@@ -379,8 +381,7 @@ function runFixedTick(world, playerRef, meshRef, camera, actionsRef, isFlying, i
         const shipTransform = shipTransforms.get('default');
         if (shipTransform) {
             const localOffset = useStore.getState().seatOffset || [0, 0, -3];
-            _seatEuler.fromArray([shipTransform.rotation.x, shipTransform.rotation.y, shipTransform.rotation.z]);
-            _seatOffsetVec.set(localOffset[0], localOffset[1] + 1.4, localOffset[2]).applyEuler(_seatEuler);
+            _seatOffsetVec.set(localOffset[0], localOffset[1] + 1.4, localOffset[2]).applyQuaternion(shipTransform.actualQuaternion);
               const newPos = {
                   x: shipTransform.position.x + _seatOffsetVec.x,
                   y: shipTransform.position.y + _seatOffsetVec.y,
@@ -402,14 +403,14 @@ function runFixedTick(world, playerRef, meshRef, camera, actionsRef, isFlying, i
     const TICK_TIME = 1000 / (ServerTickMetrics.tps || 20);
 
     let ticksThisFrame = 0;
-    while (accumulator.current >= TICK_TIME && ticksThisFrame < 10) {
+    while (accumulator.current >= TICK_TIME && ticksThisFrame < 1) {
       let startMSPT = performance.now();
       corePhysicsStep(world, playerRef, meshRef, camera, actionsRef, isFlying, isSeated, initialPos, context);
       ServerTickMetrics.mspt = performance.now() - startMSPT;
       accumulator.current -= TICK_TIME;
       ticksThisFrame++;
     }
-    if (ticksThisFrame >= 10) accumulator.current = 0;
+    if (ticksThisFrame >= 1) accumulator.current = 0;
 }
 
 function runVisualTick(state, delta, playerRef, meshRef, camera, actionsRef, isFlying, isSeated, initialPos, context) {
@@ -417,6 +418,43 @@ function runVisualTick(state, delta, playerRef, meshRef, camera, actionsRef, isF
     // Poll Keyboard & Steer Vectors at 144Hz
     const storeState = useStore.getState();
     const isCreative = storeState.gameMode?.toLowerCase() === 'creative';
+    const { jump, sprint, moveForward, moveBackward, moveLeft, moveRight } = actionsRef.current;
+    
+    if (storeState.isSeated) {
+      const newIntent = `${moveForward}|${moveBackward}|${moveLeft}|${moveRight}|${jump}|${sprint}`;
+      if (lastIntentRef.current !== newIntent) {
+        lastIntentRef.current = newIntent;
+        networkActions.getState().broadcastEvent({
+           type: 'SHIP_STEER_INTENT',
+           forward: moveForward,
+           backward: moveBackward,
+           left: moveLeft,
+           right: moveRight,
+           jump: jump,
+           sprint: sprint
+        });
+        if (networkActions.getState().isHost) {
+           networkActions.getState().handleNetworkData({
+              type: 'SHIP_STEER_INTENT',
+              forward: moveForward,
+              backward: moveBackward,
+              left: moveLeft,
+              right: moveRight,
+              jump: jump,
+              sprint: sprint
+           }, { metadata: { playerId: networkActions.getState().playerId } });
+        }
+      }
+    } else {
+      if (lastIntentRef.current !== null) {
+        lastIntentRef.current = null;
+        const stopIntent = { type: 'SHIP_STEER_INTENT', forward: false, backward: false, left: false, right: false, jump: false, sprint: false };
+        networkActions.getState().broadcastEvent(stopIntent);
+        if (networkActions.getState().isHost) {
+           networkActions.getState().handleNetworkData(stopIntent, { metadata: { playerId: networkActions.getState().playerId } });
+        }
+      }
+    }
     
 /* Input vectors calculated in corePhysicsStep to avoid 1-frame latency */
 
@@ -429,11 +467,11 @@ function runVisualTick(state, delta, playerRef, meshRef, camera, actionsRef, isF
             const localOffset = storeState.seatOffset || [0, 0, -3];
             if (shipTransform.actualQuaternion) {
                 _seatQuat.set(shipTransform.actualQuaternion.x, shipTransform.actualQuaternion.y, shipTransform.actualQuaternion.z, shipTransform.actualQuaternion.w);
-                _seatEuler.setFromQuaternion(_seatQuat);
+                _seatOffsetVec.set(localOffset[0], localOffset[1] + 1.4, localOffset[2]).applyQuaternion(_seatQuat);
             } else {
                 _seatEuler.fromArray([shipTransform.rotation.x, shipTransform.rotation.y, shipTransform.rotation.z]);
+                _seatOffsetVec.set(localOffset[0], localOffset[1] + 1.4, localOffset[2]).applyEuler(_seatEuler);
             }
-            _seatOffsetVec.set(localOffset[0], localOffset[1] + 1.4, localOffset[2]).applyEuler(_seatEuler);
             
             const posToUse = shipTransform.actualPosition || shipTransform.position;
             _camPos.set(
@@ -502,16 +540,21 @@ function corePhysicsStep(world, playerRef, meshRef, camera, actionsRef, isFlying
     _frontVector.set(0, 0, -1);
     _frontVector.applyQuaternion(camera.quaternion);
     _frontVector.y = 0;
-    _frontVector.normalize();
-    _sideVector.copy(_frontVector).cross(camera.up).normalize();
+    if (_frontVector.lengthSq() > 0) {
+      _frontVector.normalize();
+      _sideVector.copy(_frontVector).cross(camera.up).normalize();
+    } else {
+      _frontVector.set(0, 0, -1);
+      _sideVector.set(1, 0, 0);
+    }
 
     _direction.set(0, 0, 0);
     if (moveForward) _direction.add(_frontVector);
     if (moveBackward) _direction.sub(_frontVector);
     if (moveRight) _direction.add(_sideVector);
     if (moveLeft) _direction.sub(_sideVector);
-
-    _intendedDirection.copy(_direction.normalize().multiplyScalar(currentSpeed));
+    if (_direction.lengthSq() > 0) _direction.normalize();
+    _intendedDirection.copy(_direction.multiplyScalar(currentSpeed));
     _intendedJump = jump;
     
     if (state.isSeated) {
@@ -526,41 +569,6 @@ function corePhysicsStep(world, playerRef, meshRef, camera, actionsRef, isFlying
               playerRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
           }
       }
-
-      const newIntent = `${moveForward}|${moveBackward}|${moveLeft}|${moveRight}|${jump}|${sprint}`;
-      if (lastIntentRef.current !== newIntent) {
-        lastIntentRef.current = newIntent;
-        networkActions.getState().broadcastEvent({
-           type: 'SHIP_STEER_INTENT',
-           forward: moveForward,
-           backward: moveBackward,
-           left: moveLeft,
-           right: moveRight,
-           jump: jump,
-           sprint: sprint
-        });
-        // also send to self if host
-        if (networkActions.getState().isHost) {
-           networkActions.getState().handleNetworkData({
-              type: 'SHIP_STEER_INTENT',
-              forward: moveForward,
-              backward: moveBackward,
-              left: moveLeft,
-              right: moveRight,
-              jump: jump,
-              sprint: sprint
-           }, { metadata: { playerId: networkActions.getState().playerId } });
-        }
-      }
-    } else {
-      if (lastIntentRef.current !== null) {
-        lastIntentRef.current = null;
-        const stopIntent = { type: 'SHIP_STEER_INTENT', forward: false, backward: false, left: false, right: false, jump: false, sprint: false };
-        networkActions.getState().broadcastEvent(stopIntent);
-        if (networkActions.getState().isHost) {
-           networkActions.getState().handleNetworkData(stopIntent, { metadata: { playerId: networkActions.getState().playerId } });
-        }
-      }
     }
     
     if (isFlying) {
@@ -569,19 +577,9 @@ function corePhysicsStep(world, playerRef, meshRef, camera, actionsRef, isFlying
       else _intendedSpeedY = 0;
     }
 
-
-    const RPG_TICK = 1000 / 20; // 20Hz
-    if (!window.__rpgAccumulator) window.__rpgAccumulator = 0;
-    if (!window.__lastRpgTick) window.__lastRpgTick = performance.now();
-    const now = performance.now();
-    window.__rpgAccumulator += (now - window.__lastRpgTick);
-    window.__lastRpgTick = now;
-    
-    if (window.__rpgAccumulator >= RPG_TICK) {
-        window.__rpgAccumulator -= RPG_TICK;
     // RPG Game Loop
     if (!isCreative && state.hasLoadedState && state.isWorldReady) {
-      const { playerPower, playerMaxPower, playerMana, playerMaxMana } = state;
+      const { playerMaxPower, playerMana, playerMaxMana } = state;
 
       // 1. Idle Tracking
       if (_direction.lengthSq() > 0.01 || jump || sprint) {
@@ -598,20 +596,20 @@ function corePhysicsStep(world, playerRef, meshRef, camera, actionsRef, isFlying
 
       // 3. Power Drain & Soft Regen (Passive drain -1 / 10s = 200 ticks)
       if (tickCount.current % 200 === 0) {
-        if (!state.authoritativeSkills?.includes('efficiency_1')) {
-          state.drainPower(1);
+        if (!useStore.getState().authoritativeSkills?.includes('efficiency_1')) {
+          useStore.getState().drainPower(1);
         }
       }
 
       // Emergency Idle Regen (Up to 20%)
-      if (isIdle && playerPower < playerMaxPower * 0.2) {
+      if (isIdle && useStore.getState().playerPower < playerMaxPower * 0.2) {
         if (idleTicks.current % 20 === 0) { // Fast regen while completely idle (1 power / 1s = 20 ticks)
-          state.rechargePower(1);
+          useStore.getState().rechargePower(1);
         }
       }
 
       // 4. Core Meltdown (Health Drain)
-      if (playerPower <= 0) {
+      if (useStore.getState().playerPower <= 0) {
         zeroPowerTicks.current++;
         
         if (zeroPowerTicks.current > 80) { // 4s grace period = 80 ticks
@@ -626,26 +624,20 @@ function corePhysicsStep(world, playerRef, meshRef, camera, actionsRef, isFlying
         zeroPowerTicks.current = 0;
       }
     }
-    } // End RPG Accumulator
 
     const translation = playerRef.current.translation();
     let linvel = playerRef.current.linvel();
 
-    // 1. Fail Fast & Loud Boundary Assertion
-    assertFinite3(translation, "usePlayerPhysics Tick Start - Translation");
-    assertFinite3(linvel, "usePlayerPhysics Tick Start - Linvel");
+    // 1. Boundary Assertion & Graceful Recovery
+    if (!assertFinite3(translation, "Tick Start - Translation") || !assertFinite3(linvel, "Tick Start - Linvel")) {
+        playerRef.current.setTranslation({ x: initialPos[0], y: initialPos[1] + 5, z: initialPos[2] }, true);
+        playerRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        return;
+    }
 
     // Update shared global for AI / ChunkManager
     playerPosition.set(translation.x, translation.y, translation.z);
     playerRotation.copy(camera.rotation);
-
-    const shipTransform = shipTransforms.get('default');
-    if (state.isSeated && shipTransform) {
-      // RIGIDBODY ABANDONMENT FIX: Capsule movement is now handled in useBeforePhysicsStep
-      // Skip normal walking/gravity logic!
-      playerRef.current.setGravityScale(0, true); // Ensure gravity is 0 even if transition to kinematic is delayed
-      return; 
-    }
 
     // Process Area Damage (Explosions)
     if (state.damageQueue.length > 0) {
@@ -663,14 +655,23 @@ function corePhysicsStep(world, playerRef, meshRef, camera, actionsRef, isFlying
           state.damagePlayer(req.amount);
         }
       });
+      // FIX: Was O(N×M) — for-of over Set with .some() linear scan per id.
+      // Now O(N+M): pre-build a Set of active queue IDs for O(1) lookup.
+      const _activeQueueIds = new Set(state.damageQueue.map(r => r.id));
       for (const id of processedDamageRef.current) {
-        if (!state.damageQueue.some(req => req.id === id)) {
-          processedDamageRef.current.delete(id);
-        }
+        if (!_activeQueueIds.has(id)) processedDamageRef.current.delete(id);
       }
     } else if (processedDamageRef.current.size > 0) {
       // No pending damage — clear all processed IDs without allocating sets
       processedDamageRef.current.clear();
+    }
+
+    const shipTransform = shipTransforms.get('default');
+    if (state.isSeated && shipTransform) {
+      // RIGIDBODY ABANDONMENT FIX: Capsule movement is now handled in useBeforePhysicsStep
+      // Skip normal walking/gravity logic!
+      playerRef.current.setGravityScale(0, true); // Ensure gravity is 0 even if transition to kinematic is delayed
+      return; 
     }
 
     if (!state.isWorldReady) {
@@ -694,39 +695,44 @@ function corePhysicsStep(world, playerRef, meshRef, camera, actionsRef, isFlying
       playerRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
       playerRef.current.setGravityScale(0, true);
 
-      // Calculate the precise highest solid block at our (X, Z) coordinate!
       const safeY = state.findSafeSpawnY(translation.x, translation.z);
-      if (safeY !== 400) {
-        if (safeY === -999) {
-          // Column is completely empty (e.g. over the void). Just drop them.
+      
+      // Handle High-Altitude Spawns (Ship) or Void
+      if (safeY === -999 || initialPos[1] > 380) {
+        // Cast a ray from their current frozen position to see if the Ship/Floor has loaded
+        const rayOrigin = { x: translation.x, y: initialPos[1] + 1, z: translation.z };
+        const rayDir = { x: 0, y: -1, z: 0 };
+        const hit = world && world.castRay ? world.castRay(getPhysicsCachedRay(rayOrigin, rayDir), 10.0, false) : null;
+        
+        // Timeout: if 3 seconds pass and nothing loads, just drop them
+        tickCount.current++;
+        if (hit || tickCount.current > 180) {
           playerRef.current.setGravityScale(1, true);
           hasSnappedToGround.current = true;
-          return;
+          tickCount.current = 0;
         }
+        return;
+      }
 
+      if (safeY !== 400) {
         // Data says ground is here! Teleport them safely above the ground.
-        // The block's top face is at `safeY + 1`. The capsule half-height is `0.8`.
-        // So we must spawn them at `safeY + 1.8` or higher to avoid penetration!
         playerRef.current.setTranslation(
           { x: translation.x, y: safeY + 2.5, z: translation.z },
           true
         );
 
         // CRITICAL: Prevent Spawn Clipping!
-        // The data exists, but the Rapier physics Trimesh might still be calculating in WASM.
-        // We must cast a ray down. If it hits nothing, the physics floor is not ready yet!
-        // Shift the ray X and Z by 0.5 so it hits the center of the block face, avoiding edge/vertex raycast misses!
         const rayOrigin = {
           x: Math.floor(translation.x) + 0.5,
           y: safeY + 2.5,
           z: Math.floor(translation.z) + 0.5,
         };
         const rayDir = { x: 0, y: -1, z: 0 };
-        const groundHit = world.castRay(
+        const groundHit = world && world.castRay ? world.castRay(
           getPhysicsCachedRay(rayOrigin, rayDir),
           4.0,
           false
-        );
+        ) : null;
 
         if (groundHit) {
           // Physics floor is confirmed loaded!
@@ -735,9 +741,8 @@ function corePhysicsStep(world, playerRef, meshRef, camera, actionsRef, isFlying
           // Prevent 1-frame sky blink by instantly synchronizing the camera
           camera.position.set(translation.x, safeY + 3.1, translation.z);
         }
-        // If the ray missed, but we KNOW there's a block here (safeY !== -999),
+        // If the ray missed, but we KNOW there's a block here (safeY !== 400),
         // it means the physics collider is still loading! We must WAIT!
-        // Do NOT drop them yet!
       }
       return;
     }
@@ -765,14 +770,14 @@ function corePhysicsStep(world, playerRef, meshRef, camera, actionsRef, isFlying
     // Occasional raycast straight up to check for weather/audio occlusion
     frameCounter.current++;
     if (frameCounter.current % 15 === 0) {
-      const hit = world.castRay(
+      const hit = world && world.castRay ? world.castRay(
         getPhysicsCachedRay(
           { x: translation.x, y: translation.y + 0.8, z: translation.z },
           _rayUpDir
         ),
         100,
         false
-      );
+      ) : null;
       const isUnderground = hit !== null;
       if (state.isUnderground !== isUnderground) {
         state.setIsUnderground(isUnderground);
@@ -845,9 +850,13 @@ function corePhysicsStep(world, playerRef, meshRef, camera, actionsRef, isFlying
     // Movement
     camera.getWorldDirection(_frontVector);
     _frontVector.y = 0;
-    _frontVector.normalize();
-
-    _sideVector.copy(_frontVector).cross(camera.up).normalize();
+    if (_frontVector.lengthSq() > 0) {
+      _frontVector.normalize();
+      _sideVector.copy(_frontVector).cross(camera.up).normalize();
+    } else {
+      _frontVector.set(0, 0, -1);
+      _sideVector.set(1, 0, 0);
+    }
 
     if (sprint) {
       if (state.playerPower > 0 || isCreative) {

@@ -35,11 +35,13 @@ export const createEntitySlice = (set, get) => {
     const initialChunks = useChunkStore.getState().chunks || {};
     for (const key in initialChunks) {
       if (initialChunks[key] && initialChunks[key].buffer) {
+        const sourceArray = initialChunks[key].buffer instanceof Uint32Array ? initialChunks[key].buffer : new Uint32Array(initialChunks[key].buffer);
+        const clonedArray = new Uint32Array(sourceArray);
         pathfinderWorker.postMessage({
           type: 'UPDATE_CHUNK',
           chunkKey: key,
-          buffer: initialChunks[key].buffer
-        });
+          buffer: clonedArray
+        }, [clonedArray.buffer]);
       }
     }
 
@@ -55,11 +57,13 @@ export const createEntitySlice = (set, get) => {
         if (!curr) continue;
         if (!prev || prev.buffer !== curr.buffer || prev.rebuildId !== curr.rebuildId) {
           if (curr.buffer) {
+            const sourceArray = curr.buffer instanceof Uint32Array ? curr.buffer : new Uint32Array(curr.buffer);
+            const clonedArray = new Uint32Array(sourceArray);
             pathfinderWorker.postMessage({
               type: 'UPDATE_CHUNK',
               chunkKey: key,
-              buffer: curr.buffer
-            });
+              buffer: clonedArray
+            }, [clonedArray.buffer]);
           }
         }
       }

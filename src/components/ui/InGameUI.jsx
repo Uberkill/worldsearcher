@@ -67,14 +67,14 @@ const CustomSlider = ({
   const percentage = ((value - min) / (max - min)) * 100;
   const isDanger = value >= dangerThreshold;
 
-  const activeTrackColor = isDanger ? 'bg-red-500' : 'bg-cyan-400';
+  const activeTrackColor = isDanger ? 'bg-red-500' : 'bg-slate-300';
   const thumbColor = isDanger
     ? 'bg-red-400 shadow-[0_0_8px_#f87171]'
-    : 'bg-cyan-300 shadow-[0_0_8px_#22d3ee]';
-  const valueColor = isDanger ? 'text-red-300' : 'text-cyan-200';
+    : 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]';
+  const valueColor = isDanger ? 'text-red-300' : 'text-white';
 
   return (
-    <div className="flex justify-between items-center text-sm font-light text-white/50 group w-full">
+    <div className="flex justify-between items-center text-sm font-medium text-white/50 group w-full">
       <span className="group-hover:text-white transition-colors w-24">
         {label}
       </span>
@@ -129,7 +129,7 @@ const PickupFeedItem = ({ item, onRemove }) => {
       />
       <motion.span
         key={item.count} // force re-render pop
-        initial={{ scale: 1.5, color: '#22d3ee' }}
+        initial={{ scale: 1.5, color: '#ffffff' }}
         animate={{ scale: 1, color: '#ffffff' }}
         className="text-white font-mono text-base font-bold drop-shadow-md"
       >
@@ -458,7 +458,7 @@ export default function InGameUI() {
               <span className="font-bold text-sm tracking-widest uppercase">
                 ! Save Failed: Browser Storage Full
               </span>
-              <span className="text-xs font-light text-red-100">
+              <span className="text-xs font-medium text-red-100">
                 You must press ESC to exit and free up space (Export/Delete old
                 saves, or clear C: drive space) to prevent progress loss!
               </span>
@@ -527,11 +527,11 @@ export default function InGameUI() {
             {/* Health Bar */}
             <div className="flex items-center space-x-3">
               <div className="w-5 flex justify-center">
-                <Heart size={24} className={playerHealth < 30 && gameMode?.toLowerCase() !== 'creative' ? 'text-red-500 animate-pulse drop-shadow-[0_0_8px_red]' : 'text-cyan-400 drop-shadow-[0_0_8px_#22d3ee]'} />
+                <Heart size={24} className={playerHealth < 30 && gameMode?.toLowerCase() !== 'creative' ? 'text-red-500 animate-pulse drop-shadow-[0_0_8px_red]' : 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]'} />
               </div>
               <div className="w-64 h-4 bg-black/60 rounded-full border border-white/10 overflow-hidden shadow-inner">
                 <div
-                  className={`h-full transition-all duration-300 ${playerHealth < 30 && gameMode?.toLowerCase() !== 'creative' ? 'bg-red-500/60 backdrop-blur-md shadow-[0_0_15px_rgba(239,68,68,0.4)] border-r border-red-400' : 'bg-cyan-400/50 backdrop-blur-md shadow-[0_0_15px_rgba(34,211,238,0.3)] border-r border-cyan-300/80'}`}
+                  className={`h-full transition-all duration-300 ${playerHealth < 30 && gameMode?.toLowerCase() !== 'creative' ? 'bg-red-500/60 backdrop-blur-md shadow-[0_0_15px_rgba(239,68,68,0.4)] border-r border-red-400' : 'bg-white/80 backdrop-blur-md shadow-sm border-r border-white/50'}`}
                   style={{ width: gameMode?.toLowerCase() === 'creative' ? '100%' : `${Math.max(0, (playerHealth / playerMaxHealth) * 100)}%` }}
                 />
               </div>
@@ -576,12 +576,12 @@ export default function InGameUI() {
         {/* MULTIPLAYER STATUS (Top Left) */}
           {connectionStatus !== 'disconnected' && (
             <div className="absolute top-8 left-8 flex flex-col items-start pointer-events-none">
-              <div className={`bg-black/80 backdrop-blur-xl border px-6 py-3 rounded-full shadow-2xl flex items-center space-x-3 ${connectionStatus === 'degraded' || connectionStatus === 'reconnecting' ? 'border-yellow-500/50' : 'border-cyan-500/30'}`}>
+              <div className={`bg-black/80 backdrop-blur-xl border px-6 py-3 rounded-full shadow-2xl flex items-center space-x-3 ${connectionStatus === 'degraded' || connectionStatus === 'reconnecting' ? 'border-yellow-500/50' : 'border-white/10'}`}>
                 <span className="relative flex h-3 w-3 mr-2">
-                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${connectionStatus === 'connected' ? 'bg-cyan-400' : 'bg-yellow-400'}`}></span>
-                  <span className={`relative inline-flex rounded-full h-3 w-3 ${connectionStatus === 'connected' ? 'bg-cyan-500' : 'bg-yellow-500'}`}></span>
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${connectionStatus === 'connected' ? 'bg-white/80' : 'bg-yellow-400'}`}></span>
+                  <span className={`relative inline-flex rounded-full h-3 w-3 ${connectionStatus === 'connected' ? 'bg-white' : 'bg-yellow-500'}`}></span>
                 </span>
-                <span className={`font-mono text-xs font-bold tracking-[0.2em] ${connectionStatus === 'connected' ? 'text-cyan-300' : 'text-yellow-300'}`}>
+                <span className={`font-mono text-xs font-bold tracking-[0.2em] ${connectionStatus === 'connected' ? 'text-white/90' : 'text-yellow-300'}`}>
                   {connectionStatus === 'connected' ? `ROOM: ${roomCode}` : connectionStatus.toUpperCase()}
                 </span>
                 {connectionStatus === 'connected' && (
@@ -650,7 +650,7 @@ export default function InGameUI() {
       >
         <div className="w-[800px] flex flex-col items-center">
           <div className="mb-12 flex flex-col items-center text-center">
-            <span className="px-4 py-1 rounded-full border border-cyan-500/30 bg-cyan-900/20 text-[10px] tracking-[0.4em] text-cyan-300 font-bold mb-6">
+            <span className="px-4 py-1 rounded-full border border-white/20 bg-white/5 text-[10px] tracking-[0.4em] text-white/70 font-bold mb-6">
               {gameMode?.toUpperCase()} MODE{' '}
               {connectionStatus === 'connected'
                 ? ` | MULTIPLAYER (${isHost ? 'HOST' : 'GUEST'})`
@@ -658,15 +658,15 @@ export default function InGameUI() {
                   ? ` | MULTIPLAYER (${connectionStatus.toUpperCase()})`
                   : ''}
             </span>
-            <h1 className="text-5xl font-light tracking-[0.2em] mb-2">
-              WORLD <span className="font-bold text-cyan-400">SEARCHER</span>
+            <h1 className="text-5xl font-medium tracking-[0.2em] mb-2">
+              WORLD <span className="font-bold text-white">SEARCHER</span>
             </h1>
             {connectionStatus === 'connected' && isHost ? (
-              <div className="mt-4 flex flex-col items-center bg-black/40 border border-cyan-500/50 rounded-xl p-4 backdrop-blur-md">
-                <span className="text-[10px] text-cyan-300/70 tracking-[0.3em] font-bold mb-2 uppercase">
+              <div className="mt-4 flex flex-col items-center bg-black/40 border border-white/20 rounded-xl p-4 backdrop-blur-md">
+                <span className="text-[10px] text-white/90/70 tracking-[0.3em] font-bold mb-2 uppercase">
                   Your Room Code
                 </span>
-                <span className="text-3xl font-mono text-cyan-400 tracking-[0.4em] drop-shadow-[0_0_15px_#22d3ee] select-all cursor-text">
+                <span className="text-3xl font-mono text-white tracking-[0.4em] drop-shadow-[0_0_15px_rgba(255,255,255,0.2)] select-all cursor-text">
                   {roomCode}
                 </span>
                 <span className="text-[10px] text-white/40 tracking-widest mt-2">
@@ -674,11 +674,11 @@ export default function InGameUI() {
                 </span>
               </div>
             ) : connectionStatus === 'connected' && !isHost ? (
-              <div className="mt-4 flex flex-col items-center bg-black/40 border border-cyan-500/50 rounded-xl p-4 backdrop-blur-md">
-                <span className="text-[10px] text-cyan-300/70 tracking-[0.3em] font-bold mb-2 uppercase">
+              <div className="mt-4 flex flex-col items-center bg-black/40 border border-white/20 rounded-xl p-4 backdrop-blur-md">
+                <span className="text-[10px] text-white/90/70 tracking-[0.3em] font-bold mb-2 uppercase">
                   Connected To Room
                 </span>
-                <span className="text-2xl font-mono text-cyan-400 tracking-[0.4em] drop-shadow-[0_0_15px_#22d3ee]">
+                <span className="text-2xl font-mono text-white tracking-[0.4em] drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">
                   {roomCode}
                 </span>
               </div>
@@ -692,7 +692,7 @@ export default function InGameUI() {
                   </span>
                 </div>
               ) : (
-              <p className="text-white/50 tracking-widest text-sm font-light uppercase">
+              <p className="text-white/50 tracking-widest text-sm font-medium uppercase">
                 System suspended. Awaiting input.
               </p>
             )}
@@ -704,10 +704,10 @@ export default function InGameUI() {
                 EventBus.emit('audio', { sound: 'ui_click', source: 'local' });
                 toggleMenu();
               }}
-              className="w-32 h-32 rounded-full flex flex-col items-center justify-center bg-white/5 border border-white/10 hover:border-cyan-400 hover:bg-cyan-900/20 hover:shadow-[0_0_30px_rgba(34,211,238,0.2)] transition-all duration-300 group cursor-pointer backdrop-blur-md"
+              className="w-32 h-32 rounded-full flex flex-col items-center justify-center bg-white/5 border border-white/10 hover:border-white/40 hover:bg-white/10 hover:shadow-md transition-all duration-300 group cursor-pointer backdrop-blur-md"
             >
               <Play
-                className="text-white/50 group-hover:text-cyan-400 mb-2 transition-colors ml-1"
+                className="text-white/50 group-hover:text-white mb-2 transition-colors ml-1"
                 size={24}
               />
               <span className="text-xs font-bold tracking-[0.2em] text-white/70 group-hover:text-white transition-colors text-center leading-tight">
@@ -773,25 +773,25 @@ export default function InGameUI() {
                   <KeyUI>A</KeyUI>
                   <KeyUI>S</KeyUI>
                   <KeyUI>D</KeyUI>{' '}
-                  <span className="ml-3 text-white/50 tracking-widest font-light">
+                  <span className="ml-3 text-white/50 tracking-widest font-medium">
                     Move
                   </span>
                 </div>
                 <div className="flex items-center text-sm">
                   <KeyUI>L-Click</KeyUI>{' '}
-                  <span className="ml-3 text-white/50 tracking-widest font-light">
+                  <span className="ml-3 text-white/50 tracking-widest font-medium">
                     Break / Place
                   </span>
                 </div>
                 <div className="flex items-center text-sm">
                   <KeyUI>Shift</KeyUI>{' '}
-                  <span className="ml-3 text-white/50 tracking-widest font-light">
+                  <span className="ml-3 text-white/50 tracking-widest font-medium">
                     Sprint
                   </span>
                 </div>
                 <div className="flex items-center text-sm">
                   <KeyUI>Scroll</KeyUI>{' '}
-                  <span className="ml-3 text-white/50 tracking-widest font-light">
+                  <span className="ml-3 text-white/50 tracking-widest font-medium">
                     Cycle Slots
                   </span>
                 </div>
@@ -799,7 +799,7 @@ export default function InGameUI() {
               <div className="space-y-4">
                 <div className="flex items-center text-sm">
                   <KeyUI>Space</KeyUI>{' '}
-                  <span className="ml-3 text-white/50 tracking-widest font-light">
+                  <span className="ml-3 text-white/50 tracking-widest font-medium">
                     Jump
                   </span>
                 </div>
@@ -807,20 +807,20 @@ export default function InGameUI() {
                   <KeyUI>Alt</KeyUI>{' '}
                   <span className="mx-1 text-white/30">+</span>{' '}
                   <KeyUI>Click</KeyUI>{' '}
-                  <span className="ml-3 text-white/50 tracking-widest font-light">
+                  <span className="ml-3 text-white/50 tracking-widest font-medium">
                     Force Break
                   </span>
                 </div>
                 <div className="flex items-center text-sm">
                   <KeyUI>1</KeyUI> <span className="mx-1 text-white/30">-</span>{' '}
                   <KeyUI>9</KeyUI>{' '}
-                  <span className="ml-3 text-white/50 tracking-widest font-light">
+                  <span className="ml-3 text-white/50 tracking-widest font-medium">
                     Hotbar Select
                   </span>
                 </div>
                 <div className="flex items-center text-sm">
                   <KeyUI>E</KeyUI>{' '}
-                  <span className="ml-3 text-white/50 tracking-widest font-light">
+                  <span className="ml-3 text-white/50 tracking-widest font-medium">
                     Inventory
                   </span>
                 </div>
@@ -834,12 +834,12 @@ export default function InGameUI() {
       <div
         className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ease-out ${activeOverlay === 'delete_confirm' ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}`}
       >
-        <div className="bg-[#1a0f14]/80 backdrop-blur-2xl border border-red-500/30 rounded-2xl p-8 shadow-[0_0_50px_rgba(248,113,113,0.1)] w-96 flex flex-col items-center text-center">
+        <div className="bg-[#1a0f14]/80 backdrop-blur-xl border border-red-500/30 rounded-2xl p-8 shadow-[0_0_50px_rgba(248,113,113,0.1)] w-96 flex flex-col items-center text-center">
           <AlertTriangle
             className="text-red-400 mb-4 animate-pulse"
             size={32}
           />
-          <p className="text-red-200 text-sm tracking-widest font-light mb-8">
+          <p className="text-red-200 text-sm tracking-widest font-medium mb-8">
             Exit to Title Screen?
           </p>
           <div className="flex w-full space-x-4">
@@ -882,14 +882,14 @@ export default function InGameUI() {
       <div
         className={`absolute inset-0 flex items-center justify-center transition-all duration-[500ms] ease-[cubic-bezier(0.23,1,0.32,1)] ${activeOverlay === 'ingame_settings' ? 'opacity-100 pointer-events-auto scale-100' : 'opacity-0 pointer-events-none scale-105'}`}
       >
-        <div className="bg-[#0b0c10]/80 backdrop-blur-3xl border border-white/10 rounded-2xl w-[600px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="bg-[#0b0c10]/80 backdrop-blur-md border border-white/10 rounded-2xl w-[600px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
           <div className="flex items-center justify-between p-6 border-b border-white/5">
-            <h3 className="text-xl font-light tracking-[0.3em] text-white">
+            <h3 className="text-xl font-medium tracking-[0.3em] text-white">
               SETTINGS
             </h3>
             <button
               onClick={() => setSettingsOpen(false)}
-              className="p-2 text-white/40 hover:text-cyan-400 hover:bg-white/5 rounded-full transition-colors cursor-pointer"
+              className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-full transition-colors cursor-pointer"
             >
               <X size={20} />
             </button>
@@ -897,7 +897,7 @@ export default function InGameUI() {
           <div className="p-8 overflow-y-auto space-y-10 scrollbar-hide">
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold tracking-[0.3em] text-cyan-400/70">
+                <span className="text-[10px] font-bold tracking-[0.3em] text-white/50">
                   AUDIO
                 </span>
                 <span className="px-3 py-1 bg-white/5 rounded-full text-xs font-mono text-white/50 flex items-center border border-white/5">
@@ -921,7 +921,7 @@ export default function InGameUI() {
               />
             </div>
             <div className="space-y-6">
-              <span className="text-[10px] font-bold tracking-[0.3em] text-cyan-400/70 block">
+              <span className="text-[10px] font-bold tracking-[0.3em] text-white/50 block">
                 GRAPHICS
               </span>
               <CustomSlider
@@ -933,20 +933,20 @@ export default function InGameUI() {
                 suffix=" ch"
                 dangerThreshold={16}
               />
-              <div className="flex justify-between items-center text-sm font-light text-white/50 w-full">
+              <div className="flex justify-between items-center text-sm font-medium text-white/50 w-full">
                 <span className="w-24 group-hover:text-white transition-colors">
                   Shadows
                 </span>
                 <div className="flex-1 mx-4 flex bg-black/40 border border-white/10 rounded-lg p-1">
                   <button
                     onClick={() => setShadowQuality('performance')}
-                    className={`flex-1 py-1.5 text-xs font-bold tracking-widest rounded-md transition-all ${shadowQuality === 'performance' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50' : 'text-white/40 hover:text-white border border-transparent hover:bg-white/5'}`}
+                    className={`flex-1 py-1.5 text-xs font-bold tracking-widest rounded-md transition-all ${shadowQuality === 'performance' ? 'bg-white/10 text-white border border-white/30' : 'text-white/40 hover:text-white border border-transparent hover:bg-white/5'}`}
                   >
                     PERFORMANCE
                   </button>
                   <button
                     onClick={() => setShadowQuality('visual')}
-                    className={`flex-1 py-1.5 text-xs font-bold tracking-widest rounded-md transition-all ${shadowQuality === 'visual' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50' : 'text-white/40 hover:text-white border border-transparent hover:bg-white/5'}`}
+                    className={`flex-1 py-1.5 text-xs font-bold tracking-widest rounded-md transition-all ${shadowQuality === 'visual' ? 'bg-white/10 text-white border border-white/30' : 'text-white/40 hover:text-white border border-transparent hover:bg-white/5'}`}
                   >
                     VISUAL
                   </button>
@@ -954,16 +954,16 @@ export default function InGameUI() {
               </div>
             </div>
             <div className="space-y-4 pt-4 border-t border-white/5">
-              <span className="text-[10px] font-bold tracking-[0.3em] text-cyan-400/70 block mb-4">
+              <span className="text-[10px] font-bold tracking-[0.3em] text-white/50 block mb-4">
                 DATA MANAGEMENT
               </span>
               <button
                 onClick={() => showToast('Export feature in development...')}
-                className="w-full py-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-cyan-400/50 transition-all flex items-center justify-center group cursor-pointer"
+                className="w-full py-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/30/50 transition-all flex items-center justify-center group cursor-pointer"
               >
                 <Upload
                   size={16}
-                  className="text-white/40 group-hover:text-cyan-400 mr-3 transition-colors"
+                  className="text-white/40 group-hover:text-white mr-3 transition-colors"
                 />
                 <span className="text-xs font-bold tracking-[0.2em] text-white/70 group-hover:text-white transition-colors">
                   EXPORT SAVE
@@ -971,11 +971,11 @@ export default function InGameUI() {
               </button>
               <button
                 onClick={() => showToast('Import feature in development...')}
-                className="w-full py-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-cyan-400/50 transition-all flex items-center justify-center group cursor-pointer"
+                className="w-full py-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/30/50 transition-all flex items-center justify-center group cursor-pointer"
               >
                 <Download
                   size={16}
-                  className="text-white/40 group-hover:text-cyan-400 mr-3 transition-colors"
+                  className="text-white/40 group-hover:text-white mr-3 transition-colors"
                 />
                 <span className="text-xs font-bold tracking-[0.2em] text-white/70 group-hover:text-white transition-colors">
                   IMPORT SAVE
@@ -986,7 +986,7 @@ export default function InGameUI() {
           <div className="p-6 border-t border-white/5">
             <button
               onClick={() => setSettingsOpen(false)}
-              className="w-full py-4 rounded-xl bg-cyan-900/30 border border-cyan-400/50 hover:bg-cyan-900/50 hover:border-cyan-400 transition-all text-xs font-bold tracking-[0.2em] text-cyan-100 cursor-pointer"
+              className="w-full py-4 rounded-xl bg-slate-800/50 border border-white/10 hover:bg-white/10 hover:border-white/30 transition-all text-xs font-bold tracking-[0.2em] text-white/80 cursor-pointer"
             >
               DONE
             </button>
@@ -996,7 +996,7 @@ export default function InGameUI() {
 
       {/* Toast Notification */}
       <div
-        className={`fixed bottom-12 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md border border-cyan-400/50 text-cyan-200 px-6 py-3 rounded-full text-xs tracking-widest font-bold transition-all duration-300 z-[100] ${toastMessage ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'}`}
+        className={`fixed bottom-12 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md border border-white/20 text-white/80 px-6 py-3 rounded-full text-xs tracking-widest font-bold transition-all duration-300 z-[100] ${toastMessage ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'}`}
       >
         {toastMessage}
       </div>

@@ -1017,6 +1017,8 @@ export const createPlayerSlice = (set, get) => ({
 
   setPlayerChunk: (cx, cz) => set({ playerChunkX: cx, playerChunkZ: cz }),
   setWorldReady: () => set({ isWorldReady: true }),
+  spawnPhysicsPending: false,
+  setSpawnPhysicsPending: (val) => set({ spawnPhysicsPending: val }),
   setLoadingProgress: (p) => set({ loadingProgress: p }),
 
   addCoins: (amount) => set((prev) => ({ coins: prev.coins + amount })),

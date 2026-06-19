@@ -12,6 +12,7 @@ import { getSeed } from '../worldSeed';
 import { tickFluids, wakeFluidsAround } from '../utils/fluidSystem';
 
 import { EventBus } from '../utils/EventBus';
+import { pendingRenderKeys } from '../utils/chunkRenderSignal';
 
 
 // Module-level guard: prevents two concurrent async calls from double-generating
@@ -260,14 +261,13 @@ export const worldActions = (rawSet, rawGet) => {
           }
         }
         const existingChunkData = useChunkStore.getState().chunks[nextMount.chunkKey] || {};
-        const finalMeshArrays = {
-          ...tightMeshArrays
-        };
         nextChunks[nextMount.chunkKey] = {
           ...existingChunkData,
-          meshArrays: finalMeshArrays,
+          meshArrays: tightMeshArrays,
           rebuildId: nextMount.rebuildId ?? (existingChunkData.rebuildId || 0)
         };
+        // Signal ChunkRenderer.useFrame: this chunk has fresh meshArrays
+        pendingRenderKeys.add(nextMount.chunkKey);
       }
       const buffersToRecycle = [];
       for (const group of Object.values(toRecycle)) {
@@ -686,7 +686,7 @@ export const worldActions = (rawSet, rawGet) => {
           }
         }
       }
-      return 400; // Fallback if column is entirely empty
+      return -999; // Fallback if column is entirely empty (drop them)
     },
     clearVisualMeshArrays: chunkKey => (() => {
       const prev = getCombinedState(rawGet);
@@ -699,6 +699,30 @@ export const worldActions = (rawSet, rawGet) => {
         if (keys.length === 0 || keys.every(k => k === '__physics' || k === '_physics' || k === '__meta' || k === '__flora')) {
           return prev; // Bypass state update to prevent infinite loops in Chunk.jsx
         }
+
+        // ── Recycle visual buffers before dropping them ──────────────────────────────
+        // Only recycle when NOT currently mounted in Three.js. If _isMounted=true,
+        // ChunkRenderer's disposeGeometries() owns the recycle call — recycling here
+        // while mounted causes the double-free corruption in terrain-rendering-and-physics-fixes.md.
+        const isMounted = chunk.meshArrays._isMounted === true;
+        if (!isMounted) {
+          const _toRecycle = [];
+          const _skipKeys = new Set(['__physics', '_physics', '__meta', '__flora']);
+          for (const [_k, _group] of Object.entries(chunk.meshArrays)) {
+            if (_skipKeys.has(_k) || !Array.isArray(_group)) continue;
+            for (const _sub of _group) {
+              if (!_sub) continue;
+              ['pos', 'norm', 'color', 'uv', 'idx'].forEach(_attr => {
+                const _arr = _sub[_attr];
+                if (_arr && _arr.buffer && _arr.buffer.byteLength > 0) _toRecycle.push(_arr.buffer);
+              });
+            }
+          }
+          if (_toRecycle.length > 0 && typeof rawGet().queueBuffersForRecycling === 'function') {
+            rawGet().queueBuffersForRecycling(_toRecycle);
+          }
+        }
+        // ─────────────────────────────────────────────────────────────────────────
 
         // We KEEP the __physics array because Rapier TrimeshCollider relies on it
         const newMeshArrays = {};
@@ -1364,11 +1388,7 @@ export const worldActions = (rawSet, rawGet) => {
                 get().recycleChunkDataInternal(workerResult);
                 return prev;
               }
-              const finalMeshArrays = {
-                ...meshArrays
-              };
-
-              // PHYSICS BVH CACHING OPTIMIZATION:
+                            // PHYSICS BVH CACHING OPTIMIZATION:
               // If this chunk's blocks weren't modified (it was only rebuilt to propagate light),
               // its rebuildId hasn't changed since the last physics build.
               // Physics preservation caching has been deprecated; we rely on exact
@@ -1376,7 +1396,7 @@ export const worldActions = (rawSet, rawGet) => {
               return {
                 pendingMeshMounts: [...prev.pendingMeshMounts, {
                   chunkKey,
-                  meshArrays: finalMeshArrays,
+                  meshArrays: meshArrays,
                   rebuildId: targetRebuildId
                 }],
                 chunks: {
@@ -1636,7 +1656,7 @@ export const worldActions = (rawSet, rawGet) => {
           chunkData = await chunkWorkerPool.generatePass2(cx, cz, pass1Data.buffer, pass1Data.getSurfaceHeightMap, chunkSeed);
           if (chunkData?.error) {
             inFlightChunks.delete(chunkKey);
-            if (chunkData.error === 'CANCELLED') {
+            if (chunkData.error === 'CANCELLED' || chunkData.error === 'CANCELLED_IN_FLIGHT') {
               return 'CANCELLED';
             }
             pass1Cache.delete(chunkKey);

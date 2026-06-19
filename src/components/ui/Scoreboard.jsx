@@ -77,22 +77,22 @@ export const Scoreboard = ({ isVisible }) => {
     <div className="absolute inset-0 z-[70] flex items-center justify-center pointer-events-none">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
 
-      <div className="bg-black/80 backdrop-blur-2xl border border-white/20 rounded-2xl w-[600px] shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-cyan-900/20 to-transparent pointer-events-none" />
+      <div className="bg-black/80 backdrop-blur-xl border border-white/20 rounded-2xl w-[600px] shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent pointer-events-none" />
 
         {/* Header */}
         <div className="p-6 border-b border-white/10 flex items-center justify-between relative z-10">
           <div>
-            <h2 className="text-xl font-light tracking-[0.3em] text-white mb-1">
+            <h2 className="text-xl font-medium tracking-[0.3em] text-white mb-1">
               SCOREBOARD
             </h2>
             <div className="flex space-x-4">
               {connectionStatus === 'connected' && (
-                <span className="text-[10px] tracking-widest text-cyan-400 font-bold uppercase">
+                <span className="text-[10px] tracking-widest text-white font-bold uppercase">
                   Room: {roomCode}
                 </span>
               )}
-              <span className="text-[10px] tracking-widest text-cyan-400/50 font-bold uppercase">
+              <span className="text-[10px] tracking-widest text-white/50 font-bold uppercase">
                 Seed: {getSeed()}
               </span>
             </div>
@@ -118,7 +118,7 @@ export const Scoreboard = ({ isVisible }) => {
               key={p.id || `fallback-${index}`}
               className={`grid grid-cols-12 gap-4 px-4 py-3 rounded-xl items-center transition-colors border ${
                 p.isMe
-                  ? 'bg-cyan-900/30 border-cyan-500/50 shadow-[inset_0_0_20px_rgba(34,211,238,0.1)]'
+                  ? 'bg-black/40 border-white/20 shadow-inner'
                   : 'bg-white/5 border-white/5'
               }`}
             >
@@ -129,11 +129,11 @@ export const Scoreboard = ({ isVisible }) => {
                   {p.name.charAt(0).toUpperCase()}
                 </div>
                 <span
-                  className={`font-bold tracking-wider ${p.isMe ? 'text-cyan-300' : 'text-white/90'}`}
+                  className={`font-bold tracking-wider ${p.isMe ? 'text-white/90' : 'text-white/90'}`}
                 >
                   {p.name}{' '}
                   {p.isMe && (
-                    <span className="text-[10px] text-cyan-400/50 ml-2">
+                    <span className="text-[10px] text-white/50 ml-2">
                       (YOU)
                     </span>
                   )}

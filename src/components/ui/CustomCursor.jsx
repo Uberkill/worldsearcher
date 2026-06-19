@@ -45,8 +45,8 @@ export default function CustomCursor() {
         transition: 'opacity 0.3s ease-out',
       }}
     >
-      <div className="w-1 h-1 bg-cyan-300 rounded-full animate-ping absolute" />
-      <div className="w-4 h-4 border border-cyan-400 rounded-full opacity-50" />
+      <div className="w-1 h-1 bg-white rounded-full animate-ping absolute" />
+      <div className="w-4 h-4 border border-white/50 rounded-full opacity-50" />
     </div>
   );
 }

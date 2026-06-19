@@ -20,3 +20,11 @@
 - [COMBAT.md](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/systems/COMBAT.md): Host-authoritative hitscans, enemy AI, and damage calculation.
 - [GAME_MODES.md](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/systems/GAME_MODES.md): Information about different game modes.
 - [COMMANDS.md](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/systems/COMMANDS.md): Host server admin commands and debugging.
+
+## TypeScript Migration (ACTIVE)
+> **If you are an AI agent continuing the TypeScript migration, START HERE:**
+- [AGENT_BRIEFING.md](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/migration/AGENT_BRIEFING.md): **READ THIS FIRST** — Step-by-step instructions, rules, and recovery procedures.
+- [MIGRATION_TRACKER.md](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/migration/MIGRATION_TRACKER.md): Current stage, progress, and per-stage checklists.
+- [TYPE_CONVENTIONS.md](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/migration/TYPE_CONVENTIONS.md): Naming patterns, import conventions, anti-patterns.
+- [DECISIONS.md](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/migration/DECISIONS.md): Why we made each decision.
+- [STAGE_LOG.md](file:///C:/Users/oob/.gemini/antigravity/scratch/Worldsearchyou/docs/migration/STAGE_LOG.md): Chronological completion log.

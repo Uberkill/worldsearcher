@@ -3,7 +3,7 @@
 ## 1. Engine & Rendering
 - **32-Bit ECS Chunks:** All block data (Texture, Health, Light, AO) is bit-packed into a single `Uint32Array` buffer to eliminate object allocation.
 - **Multi-Threaded Generation:** Procedural generation and greedy meshing run entirely in WebWorkers (`chunkWorkerPool.js`).
-- **Imperative InstancedMesh Pipeline:** `ChunkRenderer.jsx` bypasses React's Virtual DOM to push matrices directly to WebGL buffers.
+- **Imperative InstancedMesh Pipeline:** `ChunkRenderer.jsx` bypasses React's Virtual DOM to push matrices directly to WebGL buffers. Frustum culling visibility is managed natively inside `ChunkRenderer.jsx` by checking against `useChunkStore.getState().overflowChunks`.
 - **Zero-Allocation Math Loops:** Critical render and physics loops hoist `THREE.Vector3` and `rapier.Ray` to module-scope variables to eliminate V8 Garbage Collection stuttering.
 
 ## 2. Physics & Vehicles (The Hybrid System)
@@ -27,5 +27,8 @@
 ---
 
 ## Pending Roadmap
-1. Refine multithreaded lighting synchronization to resolve edge-case cross-chunk flickers.
-2. Expand E2E testing to cover multi-player collision and packet failure scenarios under simulated latency.
+1. **Purge IIFE Closures:** Refactor `worldActions.js` via an AST parser to purge the legacy `__patch` closures.
+2. **VRAM Ghost Geometry Optimization:** `ChunkRenderer` currently allocates native Three.js geometry and uploads buffers to VRAM for *all* chunks, even those hidden by `overflowChunks`. The renderer must be updated to skip `buildGeometryNatively` entirely for `overflowChunks`.
+3. **Double-Free Memory Corruption Fix Validation:** We proactively fixed a massive memory corruption bug where `worldActions.js` and `ChunkRenderer.jsx` were both queuing the exact same ArrayBuffers for Web Worker recycling. We must test to ensure memory leaks have been fully mitigated.
+4. Refine multithreaded lighting synchronization to resolve edge-case cross-chunk flickers.
+5. Expand E2E testing to cover multi-player collision and packet failure scenarios under simulated latency.

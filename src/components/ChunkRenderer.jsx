@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react';
+import { pendingRenderKeys } from '../utils/chunkRenderSignal';
 import { useThree, useFrame } from '@react-three/fiber';
 import { useChunkStore } from '../stores/chunkSlice';
 import { useStore } from '../stores/useStore';
@@ -38,126 +39,134 @@ const buildGeometryNatively = (meshArrays, chunkKey, shadowsEnabled) => {
 
   const disposeQueue = [];
   const instMeshQueue = [];
+  try {
+    for (const [name, data] of Object.entries(meshArrays)) {
+      if (name === '__meta' || name === '__flora' || name === '__physics' || name === '_physics') continue;
+      if (!Array.isArray(data)) continue;
 
-  for (const [name, data] of Object.entries(meshArrays)) {
-    if (name === '__meta' || name === '__flora' || name === '__physics' || name === '_physics') continue;
-    if (!Array.isArray(data)) continue;
+      const isTransparent = name === 'transparent';
+      const mat = materialCache.get(isTransparent ? 'transparent' : 'solid');
 
-    const isTransparent = name === 'transparent';
-    const mat = materialCache.get(isTransparent ? 'transparent' : 'solid');
+      for (const subChunk of data) {
+        const { pos, norm, color, uv, idx } = subChunk;
+        if (!pos || pos.length === 0) continue;
 
-    for (const subChunk of data) {
-      const { pos, norm, color, uv, idx } = subChunk;
-      if (!pos || pos.length === 0) continue;
-
-      let maxIdx = 0;
-      for (let i = 0; i < idx.length; i++) {
-        if (idx[i] > maxIdx) maxIdx = idx[i];
-      }
-      if (maxIdx >= pos.length / 3) {
-        console.error(`Chunk geometry error in ${name}! maxIdx: ${maxIdx}, pos.count: ${pos.length / 3}. Skipping.`);
-        continue;
-      }
-
-      const g = new THREE.BufferGeometry();
-      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      g.setAttribute('normal', new THREE.BufferAttribute(norm, 3, false));
-      if (color && color.length > 0) g.setAttribute('packedData', new THREE.BufferAttribute(color, 1));
-      if (uv && uv.length > 0) g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-      g.setIndex(new THREE.Uint32BufferAttribute(idx, 1));
-      
-      if (group.userData.boundingBox) {
-          g.boundingBox = group.userData.boundingBox.clone();
-          g.boundingSphere = new THREE.Sphere();
-          g.boundingBox.getBoundingSphere(g.boundingSphere);
-      } else {
-          g.computeBoundingSphere();
-      }
-
-      const mesh = new THREE.Mesh(g, mat);
-      mesh.castShadow = !isTransparent && shadowsEnabled;
-      mesh.receiveShadow = shadowsEnabled;
-      mesh.frustumCulled = true;
-      mesh.onBeforeRender = (_renderer, _scene, camera) => {
-        if (window.__DEBUG_STATS__ && camera.type === 'PerspectiveCamera') {
-          window.__DEBUG_STATS__.chunksRendered++;
+        let maxIdx = 0;
+        for (let i = 0; i < idx.length; i++) {
+          if (idx[i] > maxIdx) maxIdx = idx[i];
         }
-      };
-      group.add(mesh);
-      disposeQueue.push(g);
+        if (maxIdx >= pos.length / 3) {
+          console.error(`Chunk geometry error in ${name}! maxIdx: ${maxIdx}, pos.count: ${pos.length / 3}. Skipping.`);
+          continue;
+        }
+
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        g.setAttribute('normal', new THREE.BufferAttribute(norm, 3, false));
+        if (color && color.length > 0) g.setAttribute('packedData', new THREE.BufferAttribute(color, 1));
+        if (uv && uv.length > 0) g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+        g.setIndex(new THREE.Uint32BufferAttribute(idx, 1));
+        
+        if (group.userData.boundingBox) {
+            g.boundingBox = group.userData.boundingBox.clone();
+            g.boundingSphere = new THREE.Sphere();
+            g.boundingBox.getBoundingSphere(g.boundingSphere);
+        } else {
+            g.computeBoundingSphere();
+        }
+
+        const mesh = new THREE.Mesh(g, mat);
+        mesh.castShadow = !isTransparent && shadowsEnabled;
+        mesh.receiveShadow = shadowsEnabled;
+        mesh.frustumCulled = true;
+        // Only wire the debug callback in dev builds — saves 200+ JS→native callbacks/frame in prod
+        if (import.meta.env.DEV) {
+          mesh.onBeforeRender = (_renderer, _scene, camera) => {
+            if (window.__DEBUG_STATS__ && camera.type === 'PerspectiveCamera') {
+              window.__DEBUG_STATS__.chunksRendered++;
+            }
+          };
+        }
+        group.add(mesh);
+        disposeQueue.push(g);
+      }
     }
-  }
 
-  // Flora
-  if (meshArrays.__flora && meshArrays.__flora.packed && meshArrays.__flora.packed.length > 0) {
-    const floraData = meshArrays.__flora;
-    const count = floraData.packed.length;
-    const geom = floraBaseGeometry.clone();
-    geom.setAttribute('packedData', new THREE.InstancedBufferAttribute(floraData.packed, 1));
-    
-    const mat = materialCache.get('flora');
-    const instMesh = new THREE.InstancedMesh(geom, mat, count);
-    instMesh.instanceMatrix.array.set(floraData.matrices);
-    instMesh.instanceMatrix.needsUpdate = true;
-    instMesh.computeBoundingSphere();
-    instMesh.castShadow = shadowsEnabled;
-    instMesh.receiveShadow = shadowsEnabled;
-    instMesh.frustumCulled = true;
-    
-    group.add(instMesh);
-    disposeQueue.push(geom);
-    instMeshQueue.push(instMesh);
-  }
+    // Flora
+    if (meshArrays.__flora && meshArrays.__flora.packed && meshArrays.__flora.packed.length > 0) {
+      const floraData = meshArrays.__flora;
+      const count = floraData.packed.length;
+      const geom = floraBaseGeometry.clone();
+      geom.setAttribute('packedData', new THREE.InstancedBufferAttribute(floraData.packed, 1));
+      
+      const mat = materialCache.get('flora');
+      const instMesh = new THREE.InstancedMesh(geom, mat, count);
+      instMesh.instanceMatrix.array.set(floraData.matrices);
+      instMesh.instanceMatrix.needsUpdate = true;
+      instMesh.computeBoundingSphere();
+      instMesh.castShadow = shadowsEnabled;
+      instMesh.receiveShadow = shadowsEnabled;
+      instMesh.frustumCulled = true;
+      
+      group.add(instMesh);
+      disposeQueue.push(geom);
+      instMeshQueue.push(instMesh);
+    }
 
-  group.userData.disposeGeometries = () => {
+    group.userData.disposeGeometries = () => {
+      disposeQueue.forEach(g => g.dispose());
+      instMeshQueue.forEach(m => m.dispose());
+
+      const currentChunkData = useChunkStore.getState().chunks[chunkKey];
+      const buffersToRecycle = [];
+      for (const [name, data] of Object.entries(meshArrays)) {
+        if (name === '__meta') {
+          if (data.heightmap && data.heightmap.buffer.byteLength > 0) {
+            const isReused = currentChunkData?.meshArrays?.[name] === data;
+            if (!isReused) buffersToRecycle.push(data.heightmap.buffer);
+          }
+          continue;
+        }
+        
+        const isReused = currentChunkData?.meshArrays?.[name] === data;
+        if (isReused) continue;
+
+        if (name === '__physics' || name === '_physics') {
+           if (!Array.isArray(data)) continue;
+           for (const subChunk of data) {
+             if (subChunk.pos && subChunk.pos.buffer.byteLength > 0) buffersToRecycle.push(subChunk.pos.buffer);
+             if (subChunk.idx && subChunk.idx.buffer.byteLength > 0) buffersToRecycle.push(subChunk.idx.buffer);
+           }
+           continue;
+        }
+        if (name === '__flora') {
+           if (data.packed && data.packed.buffer.byteLength > 0) buffersToRecycle.push(data.packed.buffer);
+           if (data.matrices && data.matrices.buffer.byteLength > 0) buffersToRecycle.push(data.matrices.buffer);
+           continue;
+        }
+        
+        if (!Array.isArray(data)) continue;
+        
+        for (const subChunk of data) {
+           if (subChunk.pos && subChunk.pos.buffer.byteLength > 0) buffersToRecycle.push(subChunk.pos.buffer);
+           if (subChunk.norm && subChunk.norm.buffer.byteLength > 0) buffersToRecycle.push(subChunk.norm.buffer);
+           if (subChunk.color && subChunk.color.buffer.byteLength > 0) buffersToRecycle.push(subChunk.color.buffer);
+           if (subChunk.uv && subChunk.uv.buffer.byteLength > 0) buffersToRecycle.push(subChunk.uv.buffer);
+           if (subChunk.idx && subChunk.idx.buffer.byteLength > 0) buffersToRecycle.push(subChunk.idx.buffer);
+        }
+      }
+      
+      if (buffersToRecycle.length > 0) {
+          useStore.getState().queueBuffersForRecycling(buffersToRecycle);
+      }
+    };
+
+    return group;
+  } catch (err) {
     disposeQueue.forEach(g => g.dispose());
     instMeshQueue.forEach(m => m.dispose());
-
-    const currentChunkData = useChunkStore.getState().chunks[chunkKey];
-    const buffersToRecycle = [];
-    for (const [name, data] of Object.entries(meshArrays)) {
-      if (name === '__meta') {
-        if (data.heightmap && data.heightmap.buffer.byteLength > 0) {
-          const isReused = currentChunkData?.meshArrays?.[name] === data;
-          if (!isReused) buffersToRecycle.push(data.heightmap.buffer);
-        }
-        continue;
-      }
-      
-      const isReused = currentChunkData?.meshArrays?.[name] === data;
-      if (isReused) continue;
-
-      if (name === '__physics' || name === '_physics') {
-         if (!Array.isArray(data)) continue;
-         for (const subChunk of data) {
-           if (subChunk.pos && subChunk.pos.buffer.byteLength > 0) buffersToRecycle.push(subChunk.pos.buffer);
-           if (subChunk.idx && subChunk.idx.buffer.byteLength > 0) buffersToRecycle.push(subChunk.idx.buffer);
-         }
-         continue;
-      }
-      if (name === '__flora') {
-         if (data.packed && data.packed.buffer.byteLength > 0) buffersToRecycle.push(data.packed.buffer);
-         if (data.matrices && data.matrices.buffer.byteLength > 0) buffersToRecycle.push(data.matrices.buffer);
-         continue;
-      }
-      
-      if (!Array.isArray(data)) continue;
-      
-      for (const subChunk of data) {
-         if (subChunk.pos && subChunk.pos.buffer.byteLength > 0) buffersToRecycle.push(subChunk.pos.buffer);
-         if (subChunk.norm && subChunk.norm.buffer.byteLength > 0) buffersToRecycle.push(subChunk.norm.buffer);
-         if (subChunk.color && subChunk.color.buffer.byteLength > 0) buffersToRecycle.push(subChunk.color.buffer);
-         if (subChunk.uv && subChunk.uv.buffer.byteLength > 0) buffersToRecycle.push(subChunk.uv.buffer);
-         if (subChunk.idx && subChunk.idx.buffer.byteLength > 0) buffersToRecycle.push(subChunk.idx.buffer);
-      }
-    }
-    
-    if (buffersToRecycle.length > 0) {
-        useStore.getState().queueBuffersForRecycling(buffersToRecycle);
-    }
-  };
-
-  return group;
+    throw err;
+  }
 };
 
 export const ChunkRenderer = () => {
@@ -168,6 +177,8 @@ export const ChunkRenderer = () => {
   // Zero-allocation cache for overflow chunks
   const overflowSetRef = useRef(new Set());
   const lastOverflowRef = useRef(null);
+  // FIX BUG-7: Track chunks that failed geometry build to prevent infinite per-frame retry.
+  const failedChunksRef = useRef(new Set());
 
   useEffect(() => {
     return () => {
@@ -205,18 +216,32 @@ export const ChunkRenderer = () => {
     }
 
     // 2. Mount new or updated chunks (staggered creation)
+    // Optimization: Instead of scanning ALL chunks every frame (O(n) at 400+ chunks = ~24k
+    // ref-checks/second at steady-state), we drain only keys signalled as dirty by
+    // worldActions.mountNextMesh() via the pendingRenderKeys module-level Set.
+    // The unmount scan above already covers activeMeshes → store parity without touching this path.
     let builtThisFrame = 0;
     const MAX_BUILDS_PER_FRAME = 2; // Keep at 2 to minimize framerate drops during load
 
-    for (const key in store.chunks) {
+    for (const key of pendingRenderKeys) {
+      // Always remove from the signal set first — even if we defer due to budget,
+      // the key stays absent so the next frame checks it via activeMeshes diff.
+      pendingRenderKeys.delete(key);
+
       const chunkData = store.chunks[key];
       if (!chunkData || !chunkData.meshArrays) continue;
+      // FIX BUG-7: Skip chunks that previously failed geometry build.
+      if (failedChunksRef.current.has(key)) continue;
 
       const existingGroup = activeMeshes.current.get(key);
 
       // Diff check: if the meshArrays object reference changed, we must rebuild
       if (!existingGroup || existingGroup.userData.meshArrays !== chunkData.meshArrays) {
-        if (builtThisFrame >= MAX_BUILDS_PER_FRAME) continue;
+        if (builtThisFrame >= MAX_BUILDS_PER_FRAME) {
+          // Re-queue for next frame — budget exhausted
+          pendingRenderKeys.add(key);
+          continue;
+        }
         builtThisFrame++;
 
         if (existingGroup) {
@@ -235,7 +260,10 @@ export const ChunkRenderer = () => {
             activeMeshes.current.set(key, newGroup);
           } catch (e) {
             console.error('[ChunkRenderer] buildGeometryNatively failed for chunk', key, e);
-            chunkData.meshArrays._isMounted = true; // Mark as mounted to prevent infinite retry loop
+            // FIX BUG-7: Do NOT set _isMounted=true here — that would block recycleChunkDataInternal
+            // from cleaning up the buffers later. Instead, mark this key as failed so we stop
+            // retrying every frame, and let the normal unload path recycle the buffers.
+            failedChunksRef.current.add(key);
           }
       }
     }

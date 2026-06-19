@@ -23,6 +23,7 @@ import {
 import * as THREE from 'three';
 import { useStore } from '../../stores/useStore';
 import { networkActions } from '../../stores/networkActions';
+import { useConnectionStore } from '../../stores/connectionSlice';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { clearSlotDB, exportSlot, importSlot, exportSlotBlob, importSlotBlob } from '../../utils/db';
 import { gameAudio } from '../../audio/GameAudio';
@@ -48,14 +49,14 @@ const CustomSlider = ({
   const percentage = ((value - min) / (max - min)) * 100;
   const isDanger = value >= dangerThreshold;
 
-  const activeTrackColor = isDanger ? 'bg-red-500' : 'bg-cyan-400';
+  const activeTrackColor = isDanger ? 'bg-red-500' : 'bg-white/80';
   const thumbColor = isDanger
     ? 'bg-red-400 shadow-[0_0_8px_#f87171]'
-    : 'bg-cyan-300 shadow-[0_0_8px_#22d3ee]';
-  const valueColor = isDanger ? 'text-red-300' : 'text-cyan-200';
+    : 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)]';
+  const valueColor = isDanger ? 'text-red-300' : 'text-white/80';
 
   return (
-    <div className="flex justify-between items-center text-sm font-light text-white/50 group w-full">
+    <div className="flex justify-between items-center text-sm font-medium text-white/50 group w-full">
       <span className="group-hover:text-white transition-colors w-24">
         {label}
       </span>
@@ -104,26 +105,26 @@ const LoadingScreen = ({ isActive, type, onComplete }) => {
       className={`fixed inset-0 z-[60] backdrop-blur-[40px] bg-black/20 transition-all duration-1000 flex flex-col items-center justify-center ${isActive ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
     >
       <div
-        className={`bg-white/5 border border-white/10 rounded-2xl p-8 w-96 flex flex-col items-center shadow-[0_0_50px_rgba(34,211,238,0.05)] transition-all duration-1000 delay-300 ${isActive ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}
+        className={`bg-white/5 border border-white/10 rounded-2xl p-8 w-96 flex flex-col items-center shadow-[0_0_50px_rgba(255,255,255,0.04)] transition-all duration-1000 delay-300 ${isActive ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0'}`}
       >
-        <h2 className="text-xl font-light tracking-[0.3em] text-cyan-400 mb-6 uppercase text-center">
+        <h2 className="text-xl font-medium tracking-[0.3em] text-white/80 mb-6 uppercase text-center">
           {type === 'new' ? 'Scanning Biosphere' : 'Restoring Systems'}
         </h2>
         <div className="w-full h-[2px] bg-white/10 rounded-full mb-2 overflow-hidden relative">
           <div
-            className="absolute h-full bg-cyan-400 shadow-[0_0_15px_#22d3ee] transition-all duration-100 ease-out"
+            className="absolute h-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)] transition-all duration-100 ease-out"
             style={{ width: `${progress}%` }}
           />
         </div>
         <div className="flex justify-between w-full text-[10px] text-white/50 font-mono mb-8 uppercase tracking-widest">
           <span>Loading Chunks...</span>
-          <span className="text-cyan-300">{Math.floor(progress)}%</span>
+          <span className="text-white">{Math.floor(progress)}%</span>
         </div>
         <div className="border-t border-white/10 pt-5 w-full text-center">
-          <span className="text-[9px] tracking-[0.4em] text-cyan-400/50 font-bold block mb-2">
+          <span className="text-[9px] tracking-[0.4em] text-white/50 font-bold block mb-2">
             SYSTEM TIP
           </span>
-          <span className="text-xs text-white/60 italic font-light">
+          <span className="text-xs text-white/60 italic font-medium">
             "If I can be of any use to you, activate me."
           </span>
         </div>
@@ -316,8 +317,8 @@ export default function TitleScreen({ onStartNew, onContinue }) {
     }
   };
 
-  const { hostGame, joinGame, connectionStatus, setPlayerName } =
-    networkActions();
+  const { hostGame, joinGame, setPlayerName } = networkActions();
+  const connectionStatus = useConnectionStore(state => state.connectionStatus);
 
   const handleJoin = async () => {
     if (roomCodeInput.length < 6 || !playerNameInput) return;
@@ -333,7 +334,7 @@ export default function TitleScreen({ onStartNew, onContinue }) {
   useEffect(() => {
     if (
       connectionStatus === 'connected' &&
-      !networkActions.getState().isHost
+      !useConnectionStore.getState().isHost
     ) {
       // Connected as guest! Boot into game.
       onContinue('multiplayer_guest');
@@ -695,16 +696,16 @@ export default function TitleScreen({ onStartNew, onContinue }) {
         <div className="flex space-x-12">
           <button
             onClick={() => setActiveMenu('multiplayer_host')}
-            className="group w-80 h-96 bg-cyan-900/20 backdrop-blur-md border border-cyan-500/30 rounded-3xl hover:bg-cyan-800/40 hover:border-cyan-400 transition-all flex flex-col items-center justify-center shadow-2xl hover:shadow-[0_0_50px_rgba(34,211,238,0.2)]"
+            className="group w-80 h-96 bg-slate-900/40 backdrop-blur-md border border-white/10 rounded-3xl hover:bg-white/5 hover:border-white/30 transition-all flex flex-col items-center justify-center shadow-2xl hover:shadow-[0_0_50px_rgba(255,255,255,0.05)]"
           >
             <Zap
-              className="text-cyan-400 mb-6 group-hover:scale-110 transition-transform"
+              className="text-white/50 mb-6 group-hover:text-white group-hover:scale-110 transition-all"
               size={64}
             />
-            <span className="text-3xl font-light tracking-widest text-white mb-2">
+            <span className="text-3xl font-medium tracking-widest text-white mb-2">
               HOST
             </span>
-            <span className="text-sm font-bold tracking-[0.2em] text-cyan-200">
+            <span className="text-sm font-bold tracking-[0.2em] text-white/50 group-hover:text-white/80 transition-colors">
               CREATE A SERVER
             </span>
           </button>
@@ -716,7 +717,7 @@ export default function TitleScreen({ onStartNew, onContinue }) {
               className="text-white/50 group-hover:text-white mb-6 group-hover:scale-110 transition-transform"
               size={64}
             />
-            <span className="text-3xl font-light tracking-widest text-white mb-2">
+            <span className="text-3xl font-medium tracking-widest text-white mb-2">
               JOIN
             </span>
             <span className="text-sm font-bold tracking-[0.2em] text-white/50 group-hover:text-white/80">
@@ -729,10 +730,10 @@ export default function TitleScreen({ onStartNew, onContinue }) {
           className="group flex items-center mt-12 p-4 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 transition-all cursor-none"
         >
           <ChevronLeft
-            className="text-white/50 group-hover:text-cyan-400 transition-colors mr-2"
+            className="text-white/50 group-hover:text-white transition-colors mr-2"
             size={20}
           />
-          <span className="tracking-widest font-light text-white/50 group-hover:text-white transition-colors">
+          <span className="tracking-widest font-medium text-white/50 group-hover:text-white transition-colors">
             BACK TO MENU
           </span>
         </button>
@@ -742,8 +743,8 @@ export default function TitleScreen({ onStartNew, onContinue }) {
       <div
         className={`absolute inset-0 z-30 flex flex-col items-center justify-center transition-all duration-[600ms] ease-[cubic-bezier(0.23,1,0.32,1)] ${activeMenu === 'multiplayer_join' ? 'opacity-100 pointer-events-auto scale-100' : 'opacity-0 pointer-events-none scale-105'}`}
       >
-        <div className="bg-black/40 backdrop-blur-xl border border-white/10 p-12 rounded-3xl flex flex-col items-center shadow-[0_0_80px_rgba(0,0,0,0.8)] w-[500px]">
-          <h2 className="text-3xl font-light tracking-widest text-white mb-8">
+        <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 p-12 rounded-3xl flex flex-col items-center shadow-[0_0_80px_rgba(0,0,0,0.8)] w-[500px]">
+          <h2 className="text-3xl font-medium tracking-widest text-white mb-8">
             JOIN SERVER
           </h2>
 
@@ -761,7 +762,7 @@ export default function TitleScreen({ onStartNew, onContinue }) {
                     e.target.value.replace(/[^a-zA-Z0-9_ ]/g, '')
                   )
                 }
-                className="bg-black/60 border border-white/10 rounded-lg p-4 text-center tracking-[0.2em] text-white outline-none focus:border-cyan-400/50"
+                className="bg-black/60 border border-white/10 rounded-lg p-4 text-center tracking-[0.2em] text-white outline-none focus:border-white/20"
                 placeholder="ENTER NAME"
               />
             </div>
@@ -775,7 +776,7 @@ export default function TitleScreen({ onStartNew, onContinue }) {
                 maxLength={6}
                 value={roomCodeInput}
                 onChange={(e) => setRoomCodeInput(e.target.value.toUpperCase())}
-                className="bg-black/60 border border-white/10 rounded-lg p-4 text-center tracking-[0.4em] text-white outline-none focus:border-cyan-400/50 uppercase"
+                className="bg-black/60 border border-white/10 rounded-lg p-4 text-center tracking-[0.4em] text-white outline-none focus:border-white/20 uppercase"
                 placeholder="6-DIGIT CODE"
               />
             </div>
@@ -794,7 +795,7 @@ export default function TitleScreen({ onStartNew, onContinue }) {
               </div>
             )}
           {connectionStatus === 'connecting' && (
-            <div className="mt-6 text-cyan-400 text-xs tracking-widest font-bold animate-pulse">
+            <div className="mt-6 text-white text-xs tracking-widest font-bold animate-pulse">
               CONNECTING...
             </div>
           )}
@@ -806,7 +807,7 @@ export default function TitleScreen({ onStartNew, onContinue }) {
               !playerNameInput ||
               connectionStatus === 'connecting'
             }
-            className="mt-10 w-full py-4 bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 rounded-xl hover:bg-cyan-500/40 transition-all tracking-widest font-bold text-lg disabled:opacity-30 disabled:pointer-events-none"
+            className="mt-10 w-full py-4 bg-white/10 text-white border border-white/30 rounded-xl hover:bg-white/20 transition-all tracking-widest font-bold text-lg disabled:opacity-30 disabled:pointer-events-none"
           >
             CONNECT
           </button>
@@ -816,10 +817,10 @@ export default function TitleScreen({ onStartNew, onContinue }) {
           className="group flex items-center mt-8 p-4 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 transition-all cursor-none"
         >
           <ChevronLeft
-            className="text-white/50 group-hover:text-cyan-400 transition-colors mr-2"
+            className="text-white/50 group-hover:text-white transition-colors mr-2"
             size={20}
           />
-          <span className="tracking-widest font-light text-white/50 group-hover:text-white transition-colors">
+          <span className="tracking-widest font-medium text-white/50 group-hover:text-white transition-colors">
             BACK TO MULTIPLAYER
           </span>
         </button>
@@ -833,17 +834,17 @@ export default function TitleScreen({ onStartNew, onContinue }) {
           <div className="flex justify-between items-end mb-12">
             <div>
               <h2
-                className={`text-4xl font-light tracking-[0.2em] mb-2 transition-colors duration-700 ${isNight ? 'text-white' : 'text-[#0b0c10]'}`}
+                className={`text-4xl font-medium tracking-[0.2em] mb-2 transition-colors duration-700 ${isNight ? 'text-white' : 'text-[#0b0c10]'}`}
               >
                 WORLD{' '}
                 <span
-                  className={`font-bold transition-colors duration-700 ${isNight ? 'text-cyan-400' : 'text-cyan-800'}`}
+                  className={`font-bold transition-colors duration-700 ${isNight ? 'text-white' : 'text-slate-800'}`}
                 >
                   SEARCHER
                 </span>
               </h2>
               <p
-                className={`tracking-widest text-sm font-light uppercase transition-colors duration-700 ${isNight ? 'text-white/50' : 'text-[#0b0c10]/70'}`}
+                className={`tracking-widest text-sm font-medium uppercase transition-colors duration-700 ${isNight ? 'text-white/50' : 'text-[#0b0c10]/70'}`}
               >
                 {activeMenu === 'multiplayer_host'
                   ? 'Enter a Host Name and select a Save Slot to Host.'
@@ -853,7 +854,7 @@ export default function TitleScreen({ onStartNew, onContinue }) {
             <div className="flex items-end space-x-8">
               {activeMenu === 'multiplayer_host' && (
                 <div className="flex flex-col items-end mr-8">
-                  <span className="text-[10px] text-cyan-400 tracking-[0.2em] font-bold mb-2">
+                  <span className="text-[10px] text-white tracking-[0.2em] font-bold mb-2">
                     YOUR HOST NAME
                   </span>
                   <div className="flex space-x-2">
@@ -866,7 +867,7 @@ export default function TitleScreen({ onStartNew, onContinue }) {
                           e.target.value.replace(/[^a-zA-Z0-9_ ]/g, '')
                         )
                       }
-                      className="bg-black/40 border border-cyan-500/30 rounded-lg p-2 w-48 text-center tracking-[0.2em] text-cyan-100 outline-none focus:border-cyan-400/80"
+                      className="bg-black/40 border border-white/10 rounded-lg p-2 w-48 text-center tracking-[0.2em] text-white outline-none focus:border-white/50"
                       placeholder="ENTER NAME"
                     />
                   </div>
@@ -875,27 +876,27 @@ export default function TitleScreen({ onStartNew, onContinue }) {
 
               <div className="flex flex-col items-end">
                 <span className="text-[10px] text-white/50 tracking-[0.2em] font-bold mb-2 flex items-center">
-                  <Zap size={12} className="mr-1.5 text-cyan-400" /> ENGINE
+                  <Zap size={12} className="mr-1.5 text-white" /> ENGINE
                   PERFORMANCE
                 </span>
                 <div className="flex bg-black/40 border border-white/10 rounded-lg p-1 backdrop-blur-md">
                   <button
                     onClick={() => setRenderDistance(4)}
-                    className={`px-4 py-1.5 text-xs font-bold tracking-widest rounded-md transition-all ${renderDistance <= 4 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50' : 'text-white/40 hover:text-white/80 border border-transparent hover:bg-white/5'}`}
+                    className={`px-4 py-1.5 text-xs font-bold tracking-widest rounded-md transition-all ${renderDistance <= 4 ? 'bg-white/10 text-white border border-white/30' : 'text-white/40 hover:text-white/80 border border-transparent hover:bg-white/5'}`}
                   >
                     LOW
                   </button>
                   <button
                     onClick={() => setRenderDistance(8)}
-                    className={`px-4 py-1.5 text-xs font-bold tracking-widest rounded-md transition-all ${renderDistance === 8 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50' : 'text-white/40 hover:text-white/80 border border-transparent hover:bg-white/5'}`}
+                    className={`px-4 py-1.5 text-xs font-bold tracking-widest rounded-md transition-all ${renderDistance === 8 ? 'bg-white/10 text-white border border-white/30' : 'text-white/40 hover:text-white/80 border border-transparent hover:bg-white/5'}`}
                   >
-                    MID
+                    NORMAL
                   </button>
                   <button
                     onClick={() => setRenderDistance(12)}
-                    className={`px-4 py-1.5 text-xs font-bold tracking-widest rounded-md transition-all ${renderDistance >= 12 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50' : 'text-white/40 hover:text-white/80 border border-transparent hover:bg-white/5'}`}
+                    className={`px-4 py-1.5 text-xs font-bold tracking-widest rounded-md transition-all ${renderDistance >= 12 ? 'bg-white/10 text-white border border-white/30' : 'text-white/40 hover:text-white/80 border border-transparent hover:bg-white/5'}`}
                   >
-                    ULTRA
+                    FAR
                   </button>
                 </div>
               </div>
@@ -908,10 +909,10 @@ export default function TitleScreen({ onStartNew, onContinue }) {
                 className="group flex items-center p-4 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 transition-all cursor-none mb-0"
               >
                 <ChevronLeft
-                  className="text-white/50 group-hover:text-cyan-400 transition-colors mr-2"
+                  className="text-white/50 group-hover:text-white transition-colors mr-2"
                   size={20}
                 />
-                <span className="tracking-widest font-light text-white/50 group-hover:text-white transition-colors">
+                <span className="tracking-widest font-medium text-white/50 group-hover:text-white transition-colors">
                   BACK
                 </span>
               </button>
@@ -923,10 +924,10 @@ export default function TitleScreen({ onStartNew, onContinue }) {
             <div className="flex justify-end mb-4">
               <button
                 onClick={() => setActiveMenu('auth')}
-                className="group flex items-center p-3 rounded-xl bg-cyan-900/20 backdrop-blur-md border border-cyan-500/30 hover:border-cyan-400 hover:bg-cyan-800/40 transition-all shadow-[0_0_15px_rgba(34,211,238,0.1)]"
+                className="group flex items-center p-3 rounded-xl bg-white/5 backdrop-blur-md border border-white/10 hover:border-white/30 hover:bg-white/10 transition-all shadow-sm"
               >
-                <Cloud className="text-cyan-400 mr-2 group-hover:scale-110 transition-transform" size={20} />
-                <span className="text-sm font-bold tracking-[0.2em] text-cyan-200">
+                <Cloud className="text-white mr-2 group-hover:scale-110 transition-transform" size={20} />
+                <span className="text-sm font-bold tracking-[0.2em] text-white/80">
                   {isAuthenticated ? 'CLOUD SYNC MANAGER' : 'LOGIN TO CLOUD'}
                 </span>
               </button>
@@ -945,24 +946,24 @@ export default function TitleScreen({ onStartNew, onContinue }) {
                   )
                 }
                 className={`group relative overflow-hidden rounded-2xl border transition-all duration-300 text-left cursor-pointer h-64 p-6 flex flex-col justify-between
-                  ${save.isEmpty ? 'bg-black/20 border-white/5 hover:border-white/20 hover:bg-white/5 items-center justify-center text-center border-dashed' : 'bg-white/5 border-white/10 hover:border-cyan-400 hover:bg-cyan-900/20 hover:shadow-[0_0_30px_rgba(34,211,238,0.15)] backdrop-blur-md'}
+                  ${save.isEmpty ? 'bg-black/20 border-white/5 hover:border-white/20 hover:bg-white/5 items-center justify-center text-center border-dashed' : 'bg-white/5 border-white/10 hover:border-white/40 hover:bg-white/10 hover:shadow-md backdrop-blur-md'}
                   ${activeMenu === 'multiplayer_host' && !playerNameInput ? 'opacity-50 pointer-events-none grayscale' : ''}
                 `}
               >
-                <div className="absolute inset-0 bg-gradient-to-b from-cyan-400/0 to-cyan-400/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-b from-white/0 to-white/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
                 {!save.isEmpty && (
                   <div className="absolute top-4 right-4 z-20 flex space-x-2 opacity-0 group-hover:opacity-100 transition-all">
                     <button
                       onClick={(e) => handleExportSave(e, save.id)}
-                      className="p-2 bg-cyan-500/10 hover:bg-cyan-500/30 text-cyan-400/50 hover:text-cyan-400 border border-cyan-500/20 rounded-lg transition-all"
+                      className="p-2 bg-white/5 hover:bg-white/20 text-white/50 hover:text-white border border-white/10 rounded-lg transition-all"
                       title="Export .vx file"
                     >
                       <Download size={16} />
                     </button>
                     <button
                       onClick={(e) => handleDeleteSave(e, save.id)}
-                      className="p-2 bg-red-500/10 hover:bg-red-500/30 text-red-400/50 hover:text-red-400 border border-red-500/20 rounded-lg transition-all"
+                      className="p-2 bg-white/5 hover:bg-red-500/30 text-white/50 hover:text-red-400 border border-white/10 hover:border-red-500/30 rounded-lg transition-all"
                       title="Delete Save"
                     >
                       <Trash2 size={16} />
@@ -974,13 +975,13 @@ export default function TitleScreen({ onStartNew, onContinue }) {
                   <>
                     <button
                       onClick={(e) => handleImportClick(e, save.id)}
-                      className="absolute top-4 right-4 z-20 p-2 bg-cyan-500/10 hover:bg-cyan-500/30 text-cyan-400/50 hover:text-cyan-400 border border-cyan-500/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                      className="absolute top-4 right-4 z-20 p-2 bg-white/5 hover:bg-white/20 text-white/50 hover:text-white border border-white/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                       title="Import .vx file"
                     >
                       <Upload size={16} />
                     </button>
                     <Plus
-                      className="text-white/20 group-hover:text-cyan-400 mb-4 transition-colors pointer-events-none"
+                      className="text-white/20 group-hover:text-white mb-4 transition-colors pointer-events-none"
                       size={48}
                     />
                     <span className="text-sm font-bold tracking-[0.2em] text-white/50 group-hover:text-white transition-colors pointer-events-none">
@@ -994,7 +995,7 @@ export default function TitleScreen({ onStartNew, onContinue }) {
                   <>
                     <div className="pointer-events-none">
                       <div className="flex justify-between items-start mb-4">
-                        <span className="px-3 py-1 bg-black/40 rounded-full border border-white/10 text-[10px] font-mono text-cyan-300 tracking-widest uppercase">
+                        <span className="px-3 py-1 bg-black/40 rounded-full border border-white/10 text-[10px] font-mono text-white/90 tracking-widest uppercase">
                           Slot {save.id}
                         </span>
                         <File
@@ -1002,7 +1003,7 @@ export default function TitleScreen({ onStartNew, onContinue }) {
                           size={20}
                         />
                       </div>
-                      <h3 className="text-2xl font-light tracking-wider text-white group-hover:text-cyan-200 transition-colors">
+                      <h3 className="text-2xl font-medium tracking-wider text-white group-hover:text-white/80 transition-colors">
                         {save.name}
                       </h3>
                       <span className="text-xs text-white/50 font-bold tracking-[0.2em] uppercase block mt-1">
@@ -1038,7 +1039,7 @@ export default function TitleScreen({ onStartNew, onContinue }) {
           className={`flex items-center space-x-8 transition-all duration-700 ${isNight ? 'drop-shadow-2xl' : 'drop-shadow-[0_20px_60px_rgba(0,0,0,0.4)]'}`}
         >
           <div
-            className={`w-24 h-24 border-[4px] rounded-xl flex items-center justify-center transition-colors duration-700 ${isNight ? 'border-cyan-400' : 'border-cyan-700'}`}
+            className={`w-24 h-24 border-[4px] rounded-xl flex items-center justify-center transition-colors duration-700 ${isNight ? 'border-white/50' : 'border-white/10'}`}
           >
             <div
               className={`w-10 h-10 rotate-45 transition-all duration-700 ${isNight ? 'bg-white shadow-[0_0_20px_#fff]' : 'bg-[#0b0c10] shadow-[0_0_40px_rgba(0,0,0,0.6)]'}`}
@@ -1046,12 +1047,12 @@ export default function TitleScreen({ onStartNew, onContinue }) {
           </div>
           <div className="transition-colors duration-700">
             <h1
-              className={`text-7xl font-light tracking-[0.3em] mb-2 transition-colors duration-700 ${isNight ? 'text-white' : 'text-[#0b0c10]'}`}
+              className={`text-7xl font-medium tracking-[0.3em] mb-2 transition-colors duration-700 ${isNight ? 'text-white' : 'text-[#0b0c10]'}`}
             >
               WORLD
             </h1>
             <h2
-              className={`text-2xl font-bold tracking-[0.5em] transition-colors duration-700 ${isNight ? 'text-cyan-300' : 'text-cyan-800'}`}
+              className={`text-2xl font-bold tracking-[0.5em] transition-colors duration-700 ${isNight ? 'text-white/90' : 'text-slate-800'}`}
             >
               SEARCHER
             </h2>
@@ -1059,7 +1060,7 @@ export default function TitleScreen({ onStartNew, onContinue }) {
         </div>
 
         <div className="flex justify-between items-end w-full relative h-full">
-          <div className="text-white/30 text-[10px] tracking-[0.3em] font-light hidden md:block">
+          <div className="text-white/30 text-[10px] tracking-[0.3em] font-medium hidden md:block">
             v0.8.4 // ATMOSPHERIC SCANNERS ACTIVE
           </div>
 
@@ -1084,29 +1085,29 @@ export default function TitleScreen({ onStartNew, onContinue }) {
               </div>
               <button
                 onClick={() => setActiveMenu('save_select')}
-                className="group relative flex items-center justify-end w-64 p-4 rounded-xl bg-white/10 backdrop-blur-xl border border-white/20 hover:border-cyan-400/50 hover:bg-white/20 transition-all duration-300"
+                className="group relative flex items-center justify-end w-64 p-4 rounded-xl bg-white/10 backdrop-blur-xl border border-white/20 hover:border-white/30/50 hover:bg-white/20 transition-all duration-300"
               >
-                <span className="text-lg font-light tracking-widest mr-4 group-hover:text-cyan-200 transition-colors">
+                <span className="text-lg font-medium tracking-widest mr-4 group-hover:text-white transition-colors">
                   SOLO PLAY
                 </span>
-                <PlaySquare className="text-cyan-400" size={24} />
+                <PlaySquare className="text-white" size={24} />
               </button>
 
               <button
                 onClick={() => setActiveMenu('multiplayer')}
-                className="group relative flex items-center justify-end w-64 p-4 rounded-xl bg-cyan-900/30 backdrop-blur-xl border border-cyan-500/30 hover:border-cyan-400 hover:bg-cyan-800/40 transition-all duration-300"
+                className="group relative flex items-center justify-end w-64 p-4 rounded-xl bg-black/40 backdrop-blur-xl border border-white/10 hover:border-white/30 hover:bg-white/10 transition-all duration-300"
               >
-                <span className="text-lg font-light tracking-widest mr-4 text-cyan-200 group-hover:text-cyan-100 transition-colors">
+                <span className="text-lg font-medium tracking-widest mr-4 text-white group-hover:text-white/80 transition-colors">
                   MULTIPLAYER
                 </span>
-                <Zap className="text-cyan-400" size={24} />
+                <Zap className="text-white" size={24} />
               </button>
 
               <button
                 onClick={() => setActiveMenu('settings')}
-                className="group relative flex items-center justify-end w-64 p-4 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 hover:border-white/40 hover:bg-white/15 transition-all duration-300"
+                className="group relative flex items-center justify-end w-64 p-4 rounded-xl bg-slate-900/40 backdrop-blur-md border border-white/10 hover:border-white/40 hover:bg-white/15 transition-all duration-300"
               >
-                <span className="text-lg font-light tracking-widest mr-4 group-hover:text-white transition-colors">
+                <span className="text-lg font-medium tracking-widest mr-4 group-hover:text-white transition-colors">
                   TITLE SETTINGS
                 </span>
                 <Settings
@@ -1117,9 +1118,9 @@ export default function TitleScreen({ onStartNew, onContinue }) {
 
               <button
                 onClick={() => window.close()}
-                className="group relative flex items-center justify-end w-64 p-4 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 hover:border-red-400 hover:bg-red-900/20 hover:shadow-[0_0_30px_rgba(248,113,113,0.2)] transition-all duration-300"
+                className="group relative flex items-center justify-end w-64 p-4 rounded-xl bg-slate-900/40 backdrop-blur-md border border-white/10 hover:border-red-400/50 hover:bg-red-900/20 transition-all duration-300"
               >
-                <span className="text-lg font-light tracking-widest mr-4 text-red-200 group-hover:text-red-100 transition-colors">
+                <span className="text-lg font-medium tracking-widest mr-4 text-red-200 group-hover:text-red-100 transition-colors">
                   QUIT TO DESKTOP
                 </span>
                 <Power
@@ -1133,12 +1134,12 @@ export default function TitleScreen({ onStartNew, onContinue }) {
             <div
               className={`absolute bottom-0 right-0 w-80 flex flex-col transition-all duration-[600ms] ease-[cubic-bezier(0.23,1,0.32,1)] ${activeMenu === 'settings' ? 'opacity-100 translate-x-0 pointer-events-auto delay-100' : 'opacity-0 translate-x-12 pointer-events-none'}`}
             >
-              <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl p-6 shadow-2xl space-y-8">
+              <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl space-y-8">
                 <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                  <h3 className="text-xl font-light tracking-widest text-white">
+                  <h3 className="text-xl font-medium tracking-widest text-white">
                     SETTINGS
                   </h3>
-                  <Settings className="text-cyan-400" size={20} />
+                  <Settings className="text-white/50" size={20} />
                 </div>
                 <div className="space-y-8">
                   <div className="space-y-4">
@@ -1175,18 +1176,18 @@ export default function TitleScreen({ onStartNew, onContinue }) {
                       suffix=" ch"
                       dangerThreshold={16}
                     />
-                    <div className="flex justify-between items-center text-sm font-light text-white/50 w-full">
+                    <div className="flex justify-between items-center text-sm font-medium text-white/50 w-full">
                       <span className="w-24">SHADOWS</span>
                       <div className="flex bg-black/40 border border-white/10 rounded-lg p-1">
                         <button
                           onClick={() => setShadowQuality('performance')}
-                          className={`px-4 py-1 text-xs font-bold tracking-widest rounded-md transition-all ${shadowQuality === 'performance' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50' : 'text-white/40 hover:text-white border border-transparent hover:bg-white/5'}`}
+                          className={`px-4 py-1 text-xs font-bold tracking-widest rounded-md transition-all ${shadowQuality === 'performance' ? 'bg-white/10 text-white border border-white/30' : 'text-white/40 hover:text-white border border-transparent hover:bg-white/5'}`}
                         >
                           PERF.
                         </button>
                         <button
                           onClick={() => setShadowQuality('visual')}
-                          className={`px-4 py-1 text-xs font-bold tracking-widest rounded-md transition-all ${shadowQuality === 'visual' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50' : 'text-white/40 hover:text-white border border-transparent hover:bg-white/5'}`}
+                          className={`px-4 py-1 text-xs font-bold tracking-widest rounded-md transition-all ${shadowQuality === 'visual' ? 'bg-white/10 text-white border border-white/30' : 'text-white/40 hover:text-white border border-transparent hover:bg-white/5'}`}
                         >
                           VISUAL
                         </button>
@@ -1200,10 +1201,10 @@ export default function TitleScreen({ onStartNew, onContinue }) {
                 className="group flex items-center self-end mt-4 p-3 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 transition-all cursor-none"
               >
                 <ChevronLeft
-                  className="text-white/50 group-hover:text-cyan-400 transition-colors mr-2"
+                  className="text-white/50 group-hover:text-white transition-colors mr-2"
                   size={20}
                 />
-                <span className="tracking-widest font-light text-white/50 group-hover:text-white transition-colors">
+                <span className="tracking-widest font-medium text-white/50 group-hover:text-white transition-colors">
                   BACK
                 </span>
               </button>
@@ -1220,9 +1221,9 @@ export default function TitleScreen({ onStartNew, onContinue }) {
           {isAuthenticated ? (
             /* SYNC MANAGER */
             <div className="w-full flex flex-col items-center">
-              <Cloud className="text-cyan-400 mb-4" size={48} />
-              <h2 className="text-2xl font-light tracking-widest text-white mb-2">CLOUD MANAGER</h2>
-              <span className="text-xs font-bold tracking-[0.2em] text-cyan-200 mb-8 uppercase">LOGGED IN AS {authUsername}</span>
+              <Cloud className="text-white mb-4" size={48} />
+              <h2 className="text-2xl font-medium tracking-widest text-white mb-2">CLOUD MANAGER</h2>
+              <span className="text-xs font-bold tracking-[0.2em] text-white/80 mb-8 uppercase">LOGGED IN AS {authUsername}</span>
               
               <div className="w-full bg-black/60 border border-white/10 rounded-xl p-6 mb-8 flex flex-col items-center">
                 <span className="text-xs font-bold tracking-[0.2em] text-white/50 mb-4">TARGET SLOT</span>
@@ -1231,17 +1232,17 @@ export default function TitleScreen({ onStartNew, onContinue }) {
                     <button
                       key={slot}
                       onClick={() => setSyncTargetSlot(slot)}
-                      className={`w-16 h-16 rounded-lg font-mono text-xl border transition-all ${syncTargetSlot === slot ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10'}`}
+                      className={`w-16 h-16 rounded-lg font-mono text-xl border transition-all ${syncTargetSlot === slot ? 'bg-white/20 border-white/50 text-white shadow-md' : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10'}`}
                     >
                       {slot}
                     </button>
                   ))}
                 </div>
 
-                <div className="flex space-x-6 w-full">
-                  <button onClick={handleCloudUpload} disabled={isAuthLoading} className="flex-1 flex flex-col items-center p-4 rounded-xl bg-cyan-900/30 border border-cyan-500/30 hover:border-cyan-400 hover:bg-cyan-800/50 transition-all disabled:opacity-50">
-                    <UploadCloud className="text-cyan-400 mb-2" size={24} />
-                    <span className="text-sm tracking-widest font-bold text-cyan-200">UPLOAD</span>
+                <div className="flex space-x-4">
+                  <button onClick={handleCloudUpload} disabled={isAuthLoading} className="flex-1 flex flex-col items-center p-4 rounded-xl bg-white/5 border border-white/10 hover:border-white/30 hover:bg-white/10 transition-all disabled:opacity-50">
+                    <UploadCloud className="text-white mb-2" size={24} />
+                    <span className="text-sm tracking-widest font-bold text-white/80">UPLOAD</span>
                   </button>
                   <button onClick={handleCloudDownload} disabled={isAuthLoading} className="flex-1 flex flex-col items-center p-4 rounded-xl bg-white/5 border border-white/10 hover:border-white/30 hover:bg-white/10 transition-all disabled:opacity-50">
                     <DownloadCloud className="text-white/70 mb-2" size={24} />
@@ -1250,7 +1251,7 @@ export default function TitleScreen({ onStartNew, onContinue }) {
                 </div>
               </div>
 
-              {syncMessage && <span className="text-cyan-300 font-mono text-xs tracking-widest mb-4">{syncMessage}</span>}
+              {syncMessage && <span className="text-white/90 font-mono text-xs tracking-widest mb-4">{syncMessage}</span>}
 
               <div className="flex justify-between w-full mt-4">
                 <button onClick={() => setActiveMenu('save_select')} className="text-xs tracking-widest text-white/50 hover:text-white transition-colors">BACK</button>
@@ -1264,21 +1265,23 @@ export default function TitleScreen({ onStartNew, onContinue }) {
                 /* RECOVERY PHRASE DISPLAY */
                 <>
                   <Key className="text-yellow-400 mb-4" size={48} />
-                  <h2 className="text-2xl font-light tracking-widest text-white mb-2 text-center">RECOVERY PHRASE</h2>
+                  <h2 className="text-2xl font-medium tracking-widest text-white mb-2 text-center">RECOVERY PHRASE</h2>
                   <p className="text-xs text-white/50 tracking-widest text-center mb-6 max-w-xs">SAVE THIS 16-CHARACTER CODE. IT IS THE ONLY WAY TO RECOVER YOUR ACCOUNT IF YOU FORGET YOUR PASSWORD.</p>
                   
                   <div className="bg-black/60 border border-yellow-500/30 p-6 rounded-xl w-full text-center mb-8">
                     <span className="font-mono text-xl text-yellow-300 tracking-[0.3em]">{recoveryPhrase}</span>
                   </div>
 
-                  <button onClick={() => setAuthMode('login')} className="w-full py-4 bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 rounded-xl hover:bg-cyan-500/40 transition-all tracking-widest font-bold">
-                    I HAVE SAVED IT
+                  <div className="mt-8 text-center">
+                  <button onClick={() => setAuthMode('login')} className="w-full py-4 bg-white/10 text-white border border-white/30 rounded-xl hover:bg-white/20 transition-all tracking-widest font-bold">
+                    SIGN IN TO ACCOUNT
                   </button>
+                  </div>
                 </>
               ) : (
                 <>
-                  <Cloud className="text-cyan-400 mb-6" size={48} />
-                  <h2 className="text-2xl font-light tracking-widest text-white mb-8 uppercase">
+                  <Cloud className="text-white mb-6" size={48} />
+                  <h2 className="text-2xl font-medium tracking-widest text-white mb-8 uppercase">
                     {authMode === 'login' ? 'CLOUD LOGIN' : authMode === 'register' ? 'CREATE ACCOUNT' : 'RECOVER ACCOUNT'}
                   </h2>
 
@@ -1288,7 +1291,7 @@ export default function TitleScreen({ onStartNew, onContinue }) {
                       placeholder="USERNAME"
                       value={authUsernameInput}
                       onChange={(e) => setAuthUsernameInput(e.target.value)}
-                      className="w-full bg-black/60 border border-white/10 rounded-lg p-4 text-center tracking-[0.2em] text-white outline-none focus:border-cyan-400/50 uppercase"
+                      className="w-full bg-black/60 border border-white/10 rounded-lg p-4 text-center tracking-[0.2em] text-white outline-none focus:border-white/20 uppercase"
                     />
 
                     {authMode === 'recover' ? (
@@ -1305,7 +1308,7 @@ export default function TitleScreen({ onStartNew, onContinue }) {
                           placeholder="NEW PASSWORD"
                           value={authPasswordInput}
                           onChange={(e) => setAuthPasswordInput(e.target.value)}
-                          className="w-full bg-black/60 border border-white/10 rounded-lg p-4 text-center tracking-[0.4em] text-white outline-none focus:border-cyan-400/50"
+                          className="w-full bg-black/60 border border-white/10 rounded-lg p-4 text-center tracking-[0.4em] text-white outline-none focus:border-white/20"
                         />
                       </>
                     ) : (
@@ -1314,18 +1317,18 @@ export default function TitleScreen({ onStartNew, onContinue }) {
                         placeholder="PASSWORD"
                         value={authPasswordInput}
                         onChange={(e) => setAuthPasswordInput(e.target.value)}
-                        className="w-full bg-black/60 border border-white/10 rounded-lg p-4 text-center tracking-[0.4em] text-white outline-none focus:border-cyan-400/50"
+                        className="w-full bg-black/60 border border-white/10 rounded-lg p-4 text-center tracking-[0.4em] text-white outline-none focus:border-white/20"
                       />
                     )}
                   </div>
 
                   {authError && <span className="text-red-400 text-xs tracking-widest font-bold mb-4">{authError}</span>}
-                  {syncMessage && <span className="text-cyan-300 font-mono text-xs tracking-widest mb-4">{syncMessage}</span>}
+                  {syncMessage && <span className="text-white/90 font-mono text-xs tracking-widest mb-4">{syncMessage}</span>}
 
                   <button
+                    type="submit" disabled={isAuthLoading}
                     onClick={handleAuthSubmit}
-                    disabled={isAuthLoading || !authUsernameInput || !authPasswordInput || (authMode === 'recover' && !authRecoveryInput)}
-                    className="w-full py-4 bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 rounded-xl hover:bg-cyan-500/40 transition-all tracking-widest font-bold mb-4 disabled:opacity-30"
+                    className="w-full py-4 bg-white/10 text-white border border-white/30 rounded-xl hover:bg-white/20 transition-all tracking-widest font-bold mb-4 disabled:opacity-30"
                   >
                     {isAuthLoading ? 'CONNECTING...' : authMode === 'login' ? 'LOGIN' : authMode === 'register' ? 'REGISTER' : 'RESET PASSWORD'}
                   </button>
@@ -1335,11 +1338,11 @@ export default function TitleScreen({ onStartNew, onContinue }) {
                     {authMode === 'login' && (
                       <div className="flex space-x-4">
                         <button onClick={() => setAuthMode('recover')} className="text-white/30 hover:text-white transition-colors">FORGOT?</button>
-                        <button onClick={() => setAuthMode('register')} className="text-cyan-400/50 hover:text-cyan-400 transition-colors">CREATE ACCOUNT</button>
+                        <button onClick={() => setAuthMode('register')} className="text-white/50 hover:text-white transition-colors">CREATE ACCOUNT</button>
                       </div>
                     )}
-                    {authMode === 'register' && <button onClick={() => setAuthMode('login')} className="text-cyan-400/50 hover:text-cyan-400 transition-colors">ALREADY HAVE ACCOUNT?</button>}
-                    {authMode === 'recover' && <button onClick={() => setAuthMode('login')} className="text-cyan-400/50 hover:text-cyan-400 transition-colors">BACK TO LOGIN</button>}
+                    {authMode === 'register' && <button onClick={() => setAuthMode('login')} className="text-white/50 hover:text-white transition-colors">ALREADY HAVE ACCOUNT?</button>}
+                    {authMode === 'recover' && <button onClick={() => setAuthMode('login')} className="text-white/50 hover:text-white transition-colors">BACK TO LOGIN</button>}
                   </div>
                 </>
               )}

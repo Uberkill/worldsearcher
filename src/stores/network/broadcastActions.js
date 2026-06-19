@@ -166,9 +166,19 @@ export const createBroadcastActions = (set, get) => ({
           view.setUint16(61, window.__sendSeq % 65535, true);
           
           if (state.isHost) {
-             state.unreliableConnections.forEach(c => { try { c.send(buffer); } catch(e) { console.warn("[Network] Send error:", e.message); } });
+             // Host broadcasts to all guests
+             state.connections.forEach(conn => {
+                // Prefer unreliable channel if available for this specific peer
+                const moveConn = state.unreliableConnections.find(c => c.peer === conn.peer);
+                const targetConn = moveConn || conn;
+                try { targetConn.send(buffer); } catch(e) { console.warn("[Network] Send error:", e.message); }
+             });
           } else {
-             state.connections.forEach(c => { try { c.send(buffer); } catch(e) { console.warn("[Network] Send error:", e.message); } });
+             // Guest sends to host
+             const hostConn = state.unreliableConnections[0] || state.connections[0];
+             if (hostConn) {
+                try { hostConn.send(buffer); } catch(e) { console.warn("[Network] Send error:", e.message); }
+             }
           }
        }
     }

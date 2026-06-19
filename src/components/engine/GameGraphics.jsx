@@ -15,7 +15,7 @@ export const GameGraphics = () => {
       <AudioPoolManager />
       <AutoSaveManager />
       <DebugTracker />
-      <fogExp2 attach="fog" args={['#301040', 1.0 / (renderDistance * 14)]} />
+      <fog attach="fog" args={['#301040', renderDistance * 16 * 0.4, renderDistance * 16 * 0.95]} />
       <DynamicSky />
       <WeatherSystem />
       <FPV />

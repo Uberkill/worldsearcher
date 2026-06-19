@@ -59,11 +59,11 @@ export const QuestTracker = () => {
             animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
             exit={{ opacity: 0, scale: 0.95, filter: "blur(4px)", transition: { duration: 0.2 } }}
             key={quest.id} 
-            className="bg-zinc-950/40 backdrop-blur-md border-l-2 border-cyan-400 p-4 rounded-r-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] flex flex-col gap-1 pointer-events-auto"
+            className="bg-zinc-950/40 backdrop-blur-md border-l-2 border-white/50 p-4 rounded-r-xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] flex flex-col gap-1 pointer-events-auto"
           >
             <div className="flex justify-between items-start mb-1">
               <h4 className="text-sm font-semibold text-gray-100 tracking-wide drop-shadow">{quest.title}</h4>
-              {quest.autoComplete && <span className="text-[9px] text-cyan-400 border border-cyan-800 bg-cyan-900/30 px-1 rounded uppercase tracking-widest">Auto</span>}
+              {quest.autoComplete && <span className="text-[9px] text-white border border-white/20 bg-black/40 px-1 rounded uppercase tracking-widest">Auto</span>}
             </div>
             
             <div className="flex flex-col gap-3 mt-1">
@@ -83,7 +83,7 @@ export const QuestTracker = () => {
                     {/* CSS Progress Bar */}
                     <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden mt-0.5">
                       <div 
-                        className={`h-full transition-all duration-500 ${isDone ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-cyan-400 shadow-[0_0_8px_theme(colors.cyan.400)]'}`}
+                        className={`h-full transition-all duration-500 ${isDone ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-white shadow-sm'}`}
                         style={{ width: `${percentage}%` }}
                       />
                     </div>

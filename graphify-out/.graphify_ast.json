@@ -1,0 +1,188 @@
+{
+  "nodes": [
+    {
+      "id": "src_gameengine_gameengine",
+      "label": "GameEngine",
+      "file_type": "code",
+      "source_file": "src/GameEngine.jsx",
+      "source_location": "L25"
+    },
+    {
+      "id": "components_hostcombat_hostcombat",
+      "label": "HostCombat",
+      "file_type": "code",
+      "source_file": "src/components/HostCombat.jsx",
+      "source_location": "L14"
+    },
+    {
+      "id": "components_shipphysics_runshipframe",
+      "label": "runShipFrame",
+      "file_type": "code",
+      "source_file": "src/components/ShipPhysics.jsx",
+      "source_location": "L283"
+    },
+    {
+      "id": "components_shipphysics_runshipphysicsstep",
+      "label": "runShipPhysicsStep",
+      "file_type": "code",
+      "source_file": "src/components/ShipPhysics.jsx",
+      "source_location": "L395"
+    },
+    {
+      "id": "components_weathersystem_weathersystem",
+      "label": "WeatherSystem",
+      "file_type": "code",
+      "source_file": "src/components/WeatherSystem.jsx",
+      "source_location": "L88"
+    },
+    {
+      "id": "ui_ingameui_ingameui",
+      "label": "InGameUI",
+      "file_type": "code",
+      "source_file": "src/components/ui/InGameUI.jsx",
+      "source_location": "L142"
+    },
+    {
+      "id": "hooks_usedebugoverlayupdate_usedebugoverlayupdate",
+      "label": "useDebugOverlayUpdate",
+      "file_type": "code",
+      "source_file": "src/hooks/useDebugOverlayUpdate.js",
+      "source_location": "L15"
+    },
+    {
+      "id": "hooks_useplayerphysics_useplayerphysics",
+      "label": "usePlayerPhysics",
+      "file_type": "code",
+      "source_file": "src/hooks/usePlayerPhysics.js",
+      "source_location": "L56"
+    },
+    {
+      "id": "hooks_useworldlighting_useworldlighting",
+      "label": "useWorldLighting",
+      "file_type": "code",
+      "source_file": "src/hooks/useWorldLighting.js",
+      "source_location": "L9"
+    },
+    {
+      "id": "registry_blockregistry_blockregistry",
+      "label": "BlockRegistry",
+      "file_type": "code",
+      "source_file": "src/registry/BlockRegistry.js",
+      "source_location": "L3"
+    }
+  ],
+  "edges": [
+    {
+      "source": "components_debugoverlay",
+      "target": "hooks_usedebugoverlayupdate_usedebugoverlayupdate",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/DebugOverlay.jsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "components_dynamicsky",
+      "target": "hooks_useworldlighting_useworldlighting",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/DynamicSky.jsx",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "components_player",
+      "target": "hooks_useplayerphysics_useplayerphysics",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/Player.jsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "components_player",
+      "target": "registry_blockregistry_blockregistry",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/Player.jsx",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "engine_gamegraphics",
+      "target": "components_weathersystem_weathersystem",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/engine/GameGraphics.jsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "engine_gamephysicsentities",
+      "target": "components_hostcombat_hostcombat",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/components/engine/GamePhysicsEntities.jsx",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "hooks_useplayerphysics",
+      "target": "registry_blockregistry_blockregistry",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/hooks/usePlayerPhysics.js",
+      "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "stores_worldactions",
+      "target": "registry_blockregistry_blockregistry",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/stores/worldActions.js",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "utils_chunkdata",
+      "target": "registry_blockregistry_blockregistry",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/utils/chunkData.js",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "utils_structuralphysics",
+      "target": "registry_blockregistry_blockregistry",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "src/utils/structuralPhysics.js",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "engine_shipphysics_test",
+      "target": "components_shipphysics_runshipphysicsstep",
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/engine/ShipPhysics.test.js",
+      "source_location": "L2",
+      "weight": 1.0
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}
