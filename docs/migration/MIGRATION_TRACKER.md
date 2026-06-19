@@ -107,11 +107,11 @@
 - `[x]` src/utils/workerPool.js → .ts
 
 ### Stage 6 — Core Engine
-- [ ] ECS bitpacking utils → .ts
-- [ ] lighting.js → .ts
-- [ ] greedyMesh.js → .ts
-- [ ] chunkGenerator.js → .ts
-- [ ] ChunkMaterial.js → .ts
+- [x] ECS bitpacking utils → .ts  (chunkData.js → chunkData.ts)
+- [x] lighting.js → .ts
+- [x] greedyMesh.js → .ts
+- [x] chunkGenerator.js → .ts
+- [x] ChunkMaterial.js → .ts
 
 ### Stage 7 — State Management
 **Migration order (smallest → largest):**
