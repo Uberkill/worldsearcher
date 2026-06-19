@@ -3,9 +3,9 @@ import { QuestsRegistry as questsRegistry } from '../registry/QuestsRegistry';
 import { get as getIDB, set as setIDB } from 'idb-keyval';
 import { playerPosition } from '../globals';
 
-let saveTimeout = null;
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
-export const createQuestSlice = (set, get) => ({
+export const createQuestSlice = (set: any, get: any): Record<string, any> => ({
   syncLevel: 1, // Main quest progression level
   mainQuestProgress: {
     questId: "mq_01",
@@ -45,12 +45,12 @@ export const createQuestSlice = (set, get) => ({
     }, 2000);
   },
 
-  setMainQuestSync: (syncLevel, progress) => {
+  setMainQuestSync: (syncLevel: number, progress: any) => {
     set({ syncLevel, mainQuestProgress: progress });
     get().saveQuestState();
   },
 
-  giveMainQuestRewards: (questId) => {
+  giveMainQuestRewards: (questId: string) => {
     const activeMainQuest = questsRegistry.main_quests.find(q => q.id === questId);
     if (activeMainQuest) {
       if (activeMainQuest.rewards.data && get().addData) {
@@ -106,7 +106,7 @@ export const createQuestSlice = (set, get) => ({
     }
   },
 
-  updateObjectiveProgress: (type, target, amount = 1) => {
+  updateObjectiveProgress: (type: string, target: string, amount: number = 1) => {
     const state = get();
     const typeLower = type.toLowerCase();
 
@@ -221,7 +221,7 @@ export const createQuestSlice = (set, get) => ({
     }
   },
 
-  acceptSideQuest: (questId) => {
+  acceptSideQuest: (questId: string) => {
     set(state => {
        const exists = state.sideQuests.find(sq => sq.questId === questId && !sq.completed);
        if (exists) return {};
