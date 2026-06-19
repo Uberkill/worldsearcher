@@ -22,7 +22,7 @@ describe('Engine GC Memory Allocation', () => {
   });
 
   it('reuses _sharedPhysicsSet in ChunkManager to prevent 20Hz Set allocations', () => {
-    const code = fs.readFileSync(path.join(__dirname, '../../src/components/ChunkManager.jsx'), 'utf8');
+    const code = fs.readFileSync(path.join(__dirname, '../../src/components/ChunkManager.tsx'), 'utf-8');
     
     // Extract the body of updatePhysicsGrid
     const startIdx = code.indexOf('const updatePhysicsGrid');
