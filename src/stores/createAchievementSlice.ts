@@ -1,10 +1,10 @@
 import { get as getIDB, set as setIDB } from 'idb-keyval';
 
-export const createAchievementSlice = (set, get) => ({
+export const createAchievementSlice = (set: any, get: any): Record<string, any> => ({
   achievements: {},
   recentAchievement: null,
 
-  unlockAchievement: (id, title, desc, icon) => {
+  unlockAchievement: (id: string, title: string, desc: string, icon: string) => {
     const state = get();
     if (state.achievements[id]) return; // already unlocked
 
