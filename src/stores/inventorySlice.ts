@@ -1,6 +1,17 @@
 import { create } from 'zustand';
 
-export const useInventoryStore = create((set, get) => ({
+interface InventorySlice {
+  chests: Record<string, any>;       // TODO(ts-migration): type chest contents
+  machines: Record<string, any>;    // TODO(ts-migration): type machine contents
+  droppedItems: any[];              // TODO(ts-migration): type dropped items
+  tombstones: any[];
+  debris: any[];
+  fallingStructures: any[];
+  shadowSetState: (newState: Partial<Pick<InventorySlice, 'chests' | 'machines' | 'droppedItems' | 'tombstones' | 'debris' | 'fallingStructures'>>) => void;
+  validateStateParity: (oldState: Partial<InventorySlice>) => void;
+}
+
+export const useInventoryStore = create<InventorySlice>((set, get) => ({
   chests: {},
   machines: {},
   droppedItems: [],
@@ -9,7 +20,7 @@ export const useInventoryStore = create((set, get) => ({
   fallingStructures: [],
 
   shadowSetState: (newState) => {
-    const updates = {};
+    const updates: Partial<InventorySlice> = {};
     if (newState.chests !== undefined) updates.chests = newState.chests;
     if (newState.machines !== undefined) updates.machines = newState.machines;
     if (newState.droppedItems !== undefined) updates.droppedItems = newState.droppedItems;

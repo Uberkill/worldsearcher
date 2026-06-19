@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 
-const load = (key, fallback) => {
+const load = (key: string, fallback: any): any => {
   try {
     const v = localStorage.getItem(key);
     return v !== null ? JSON.parse(v) : fallback;
@@ -10,7 +10,18 @@ const load = (key, fallback) => {
   }
 };
 
-export const useAudioStore = create(
+interface AudioSlice {
+  masterVolume: number;
+  sfxVolume: number;
+  musicVolume: number;
+  isMuted: boolean;
+  setMasterVolume: (v: number) => void;
+  setSfxVolume: (v: number) => void;
+  setMusicVolume: (v: number) => void;
+  toggleMute: () => void;
+}
+
+export const useAudioStore = create<AudioSlice>()(
   subscribeWithSelector((set, get) => ({
     masterVolume: load('setting_masterVolume', 0.8),
     sfxVolume: load('setting_sfxVolume', 1.0),
