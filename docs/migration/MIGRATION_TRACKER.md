@@ -19,7 +19,7 @@
 | 6 | Core Engine | ⬜ NOT STARTED | — | 40% |
 | 7 | State Management | ✅ COMPLETE | 20 | 45% |
 | 8 | Networking | ✅ COMPLETE | 12 | 30% |
-| 9 | Audio & Systems | ⬜ NOT STARTED | — | 15% |
+| 9 | Audio & Systems | ✅ COMPLETE | 7 | 15% |
 | 10 | React Hooks | ⬜ NOT STARTED | — | 10% |
 | 11 | React Components | ⬜ NOT STARTED | — | 25% |
 | 12 | Tests | ⬜ NOT STARTED | — | 10% |
@@ -127,8 +127,8 @@
 - [x] systems/network/ → .ts (7 files)
 
 ### Stage 9 — Audio & Systems
-- [ ] audio/ → .ts (3 files)
-- [ ] systems/ remaining → .ts
+- [x] audio/ → .ts (3 files)
+- [x] systems/ remaining → .ts
 
 ### Stage 10 — React Hooks
 - [ ] hooks/ → .ts (4 files)
