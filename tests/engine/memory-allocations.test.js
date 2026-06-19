@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 
 describe('Engine GC Memory Allocation', () => {
   it('prevents GC stutter by avoiding allocations in runVisualTick (144Hz)', () => {
-    const code = fs.readFileSync(path.join(__dirname, '../../src/hooks/usePlayerPhysics.js'), 'utf8');
+    const code = fs.readFileSync(path.join(__dirname, '../../src/hooks/usePlayerPhysics.ts'), 'utf-8');
     
     // Extract the body of runVisualTick
     const startIdx = code.indexOf('function runVisualTick');
