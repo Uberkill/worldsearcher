@@ -1,7 +1,18 @@
 import { create } from 'zustand';
 
+type ModalId = string | null;
 
-export const useUIStore = create((set, get) => ({
+interface UISlice {
+  activeModal: ModalId;
+  modalData: any | null; // TODO(ts-migration): discriminated union per modal
+  openModal: (modalId: string, data?: any) => void;
+  closeModal: () => void;
+  toggleModal: (modalId: string, data?: any) => void;
+  isModalOpen: (modalId: string) => boolean;
+  getAnyUIOpen: () => boolean;
+}
+
+export const useUIStore = create<UISlice>((set, get) => ({
   activeModal: null,
   modalData: null,
 
@@ -29,7 +40,7 @@ export const useUIStore = create((set, get) => ({
   }),
 
   isModalOpen: (modalId) => get().activeModal === modalId,
-  
+
   getAnyUIOpen: () => get().activeModal !== null,
 }));
 
