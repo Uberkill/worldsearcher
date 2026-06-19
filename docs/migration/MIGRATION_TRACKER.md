@@ -1,6 +1,6 @@
 # TypeScript Migration Tracker
 
-> **Current Stage:** 1 — Pre-Migration Refactoring
+> **Current Stage:** 13 — Strictness & Config
 > **Status:** IN PROGRESS
 > **Started:** 2026-06-19
 > **Last Updated:** 2026-06-19
@@ -23,7 +23,7 @@
 | 10 | React Hooks | ✅ COMPLETE | 4 | 10% |
 | 11 | React Components | ✅ COMPLETE | 79 | 25% |
 | 12 | Tests | ✅ COMPLETE | 15 | 10% |
-| 13 | Strictness & Config | ⬜ NOT STARTED | — | 30% |
+| 13 | Strictness & Config | 🟡 IN PROGRESS | 2 | 30% |
 | 14 | Final Verification | ⬜ NOT STARTED | — | 5% |
 
 ## Stage Details
@@ -145,12 +145,15 @@
 - [x] Playwright config + e2e tests → .ts
 
 ### Stage 13 — Strictness & Config
-- [ ] vite.config.js → .ts
-- [ ] eslint.config.js → .ts
+- [x] vite.config.js → .ts
+- [x] eslint.config.js → .ts
 - [ ] Remove allowJs: true
-- [ ] Enable strict: true → fix all errors
+- [ ] Enable strict: true → fix all errors (Current Blast Radius: 3,861 errors)
 - [ ] Enable noUncheckedIndexedAccess
 - [ ] Audit and eliminate remaining `any`
+
+> [!WARNING]
+> **Block Breaking Bug Discovered**: During Stage 11/12 migrations, breaking blocks with left-click broke. It fails silently. Suspected cause is related to the `useChunkStore` migration and how `chunkOperations.ts` maps `__patch` state updates. **FIX THIS FIRST** before proceeding with type fixing.
 
 ### Stage 14 — Final Verification
 - [ ] Full test suite passes
