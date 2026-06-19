@@ -16,11 +16,11 @@ const SHIP_BASE_Y = Math.floor(SHIP_SIZE_Y / 2) - 2;
 // 32x32x32 ship = 8 sub-chunks of 16x16x16
 export const SHIP_VOLUME = SHIP_SIZE_X * SHIP_SIZE_Y * SHIP_SIZE_Z;
 
-export const getShipIndex = (x, y, z) => {
+export const getShipIndex = (x: number, y: number, z: number): number => {
   return y * (SHIP_SIZE_X * SHIP_SIZE_Z) + z * SHIP_SIZE_X + x;
 };
 
-export const createShipSlice = (set, get) => ({
+export const createShipSlice = (set: any, get: any): Record<string, any> => ({
   shipBuffer: new Uint32Array(SHIP_VOLUME),
   shipVisualOffset: [0, 50, 0], // The offset of the visual Ghost Ship
   isShipActive: false, // Tracks if a ship exists in the world
@@ -28,16 +28,16 @@ export const createShipSlice = (set, get) => ({
   
   // Piloting State
   shipHelmPlayerId: null,
-  setShipHelmPlayerId: (id) => set({ shipHelmPlayerId: id }),
+  setShipHelmPlayerId: (id: string | null) => set({ shipHelmPlayerId: id }),
   seatOffset: null,
-  setSeatOffset: (offset) => set({ seatOffset: offset }),
+  setSeatOffset: (offset: any) => set({ seatOffset: offset }),
 
   // Health Tracking
   shipHealth: 100,
   shipMaxHealth: 100,
   lastDamageTime: 0,
   
-  damageShip: (amount) => set((state) => {
+  damageShip: (amount: number) => set((state) => {
       const now = Date.now();
       if (now - state.lastDamageTime < 1000) return state; // 1-second debounce
       
@@ -53,7 +53,7 @@ export const createShipSlice = (set, get) => ({
       
       return newState;
     }),
-    healShip: (amount) => set((state) => {
+    healShip: (amount: number) => set((state) => {
       const newHealth = Math.min(state.shipMaxHealth, state.shipHealth + amount);
       NetworkEventBus.emit('OUTBOUND_SHIP_HEAL', { amount, newHealth });
       return { shipHealth: newHealth };
@@ -68,14 +68,14 @@ export const createShipSlice = (set, get) => ({
   
   // Warp Drive Internal Storage
   shipVoidCanisters: 0,
-  setShipVoidCanisters: (val) => set({ shipVoidCanisters: val }),
+  setShipVoidCanisters: (val: number) => set({ shipVoidCanisters: val }),
   
   // Void Defense Minigame
   activeFires: [],
-  spawnFire: (id, pos) => set((state) => ({ 
+  spawnFire: (id: string, pos: any) => set((state) => ({ 
       activeFires: [...state.activeFires, { id, pos }] 
   })),
-  extinguishFire: (id) => set((state) => ({ 
+  extinguishFire: (id: string) => set((state) => ({ 
       activeFires: state.activeFires.filter(f => f.id !== id) 
   })),
   clearFires: () => set({ activeFires: [] }),
@@ -85,11 +85,11 @@ export const createShipSlice = (set, get) => ({
   toggleTransitMode: () => set((state) => ({ isTransitMode: !state.isTransitMode })),
   
   isLongWarping: false,
-  setLongWarping: (val) => set({ isLongWarping: val }),
+  setLongWarping: (val: boolean) => set({ isLongWarping: val }),
 
   // Ship Transform Data (Decoupled UI from 60fps Physics)
   shipRegion: { x: 0, z: 0 },
-  setShipRegion: (x, z) => set({ shipRegion: { x, z } }),
+  setShipRegion: (x: number, z: number) => set({ shipRegion: { x, z } }),
   setShipTransform: (shipId, position, rotation, forceTeleport = false) => {
     // Legacy support for networkActions calling this. Just mutate global.
     if (!shipTransforms.has(shipId)) {

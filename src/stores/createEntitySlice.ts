@@ -19,7 +19,7 @@ if (import.meta.hot) {
   });
 }
 
-export const createEntitySlice = (set, get) => {
+export const createEntitySlice = (set: any, get: any): Record<string, any> => {
   if (pathfinderWorker) {
     pathfinderWorker.onmessage = (e) => {
       if (e.data.type === 'PATH_RESULT') {
@@ -82,7 +82,7 @@ export const createEntitySlice = (set, get) => {
   }
 
   return {
-    spawnLoot: (data) => {
+    spawnLoot: (data: any) => {
       // data: { id, itemId, amount, position }
       const newItem = {
         key: data.id,
@@ -95,18 +95,18 @@ export const createEntitySlice = (set, get) => {
         droppedItems: [...(prev.droppedItems || []), newItem],
       }));
     },
-    despawnLoot: (id) => {
+    despawnLoot: (id: string) => {
       useInventoryStore.setState((prev) => ({
         droppedItems: (prev.droppedItems || []).filter((item) => item.key !== id),
       }));
     },
-    batchDespawnLoot: (keys) => {
+    batchDespawnLoot: (keys: string[]) => {
       const keysSet = new Set(keys);
       useInventoryStore.setState((prev) => ({
         droppedItems: (prev.droppedItems || []).filter((item) => !keysSet.has(item.key)),
       }));
     },
-    updateLootAmount: (id, newCount) => {
+    updateLootAmount: (id: string, newCount: number) => {
       useInventoryStore.setState((prev) => ({
         droppedItems: (prev.droppedItems || []).map((item) =>
           item.key === id ? { ...item, count: newCount } : item
@@ -117,15 +117,15 @@ export const createEntitySlice = (set, get) => {
     spawnQueue: [],
     damageQueue: [],
     directDamageQueue: [],
-    damageEnemy: (id, amount, type) =>
+    damageEnemy: (id: string, amount: number, type: string) =>
       set((prev) => ({
         directDamageQueue: [...prev.directDamageQueue, { id, amount, type }],
       })),
-    shiftDirectDamageQueue: (id) =>
+    shiftDirectDamageQueue: (id: string) =>
       set((prev) => ({
         directDamageQueue: prev.directDamageQueue.filter((q) => q.id !== id),
       })),
-    shiftDirectDamageQueueBulk: (ids) =>
+    shiftDirectDamageQueueBulk: (ids: string[]) =>
       set((prev) => {
         const idSet = new Set(ids);
         return {
@@ -137,7 +137,7 @@ export const createEntitySlice = (set, get) => {
 
     resolvedPaths: {}, // { [entityId]: { sequenceID, pathBuffer, length } }
 
-    requestPath: (id, sequenceID, startPos, endPos) => {
+    requestPath: (id: string, sequenceID: number, startPos: any, endPos: any) => {
       if (!pathfinderWorker) return;
 
       pathfinderWorker.postMessage({
@@ -149,9 +149,9 @@ export const createEntitySlice = (set, get) => {
       });
     },
 
-    setHoverTarget: (pos, info = null) => set({ hoverTarget: pos, hoverBlockInfo: info }),
+    setHoverTarget: (pos: any, info: any = null) => set({ hoverTarget: pos, hoverBlockInfo: info }),
 
-    collectDroppedItem: (key, texture, count = 1) => {
+    collectDroppedItem: (key: string, texture: any, count: number = 1) => {
       const inv = get().inventory;
       // Check if we can stack (less than 64) or find an empty slot
       const canFit = inv.some(
@@ -200,7 +200,7 @@ export const createEntitySlice = (set, get) => {
     },
 
     // NEW: Added to fix memory leak for items that aren't picked up
-    removeDroppedItem: (key) => {
+    removeDroppedItem: (key: string) => {
       useInventoryStore.setState((prev) => ({
         droppedItems: (prev.droppedItems || []).filter((item) => item.key !== key),
       }));
@@ -216,11 +216,11 @@ export const createEntitySlice = (set, get) => {
       }
     },
 
-    requestSpawn: (type, pos, level = 1) =>
+    requestSpawn: (type: string, pos: any, level: number = 1) =>
       set((prev) => ({
         spawnQueue: [...prev.spawnQueue, { id: uuidV4(), type, pos, level }],
       })),
-    shiftSpawnQueue: (id) =>
+    shiftSpawnQueue: (id: string) =>
       set((prev) => ({
         spawnQueue: prev.spawnQueue.filter((q) => q.id !== id),
       })),
