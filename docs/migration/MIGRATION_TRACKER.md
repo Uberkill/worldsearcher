@@ -20,7 +20,7 @@
 | 7 | State Management | ✅ COMPLETE | 20 | 45% |
 | 8 | Networking | ✅ COMPLETE | 12 | 30% |
 | 9 | Audio & Systems | ✅ COMPLETE | 7 | 15% |
-| 10 | React Hooks | ⬜ NOT STARTED | — | 10% |
+| 10 | React Hooks | ✅ COMPLETE | 4 | 10% |
 | 11 | React Components | ⬜ NOT STARTED | — | 25% |
 | 12 | Tests | ⬜ NOT STARTED | — | 10% |
 | 13 | Strictness & Config | ⬜ NOT STARTED | — | 30% |
@@ -131,7 +131,7 @@
 - [x] systems/ remaining → .ts
 
 ### Stage 10 — React Hooks
-- [ ] hooks/ → .ts (4 files)
+- [x] hooks/ → .ts (4 files)
 
 ### Stage 11 — React Components
 - [ ] 11A: Small UI components → .tsx
