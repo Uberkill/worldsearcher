@@ -14,7 +14,7 @@
     "prepare": "husky",
     "test:unit": "vitest run --environment jsdom",
     "test:engine": "vitest run --environment jsdom tests/engine",
-    "test:godmode": "vitest run --environment jsdom tests/engine tests/ChunkWorker.test.js tests/TransitManager.test.js tests/ai-canary.test.js",
+    "test:godmode": "vitest run --environment jsdom tests/engine tests/ChunkWorker.test.ts tests/TransitManager.test.ts tests/ai-canary.test.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
