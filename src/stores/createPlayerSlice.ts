@@ -17,7 +17,7 @@ import { useChunkStore } from './chunkSlice';
 import { SkillsRegistry as skillsData } from '../registry/SkillsRegistry';
 import { useUIStore } from './useUIStore';
 
-export const createPlayerSlice = (set, get) => ({
+export const createPlayerSlice = (set: any, get: any): Record<string, any> => ({
   version: 1,
   forceTeleportPos: null,
   executeTeleport: (pos) => { playerPosition.set(pos[0], pos[1], pos[2]); set({ forceTeleportPos: pos }); },
