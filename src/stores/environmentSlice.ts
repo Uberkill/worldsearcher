@@ -1,15 +1,24 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 
+interface EnvironmentSlice {
+  worldTime: number;
+  daysElapsed: number;
+  isRaining: boolean;
+  isNightTime: boolean;
+  setWorldTime: (time: number, day: number, isRainingOverride?: boolean) => boolean | undefined;
+  validateStateParity: (oldState: Partial<EnvironmentSlice>) => void;
+}
+
 // The new modular slice for Environment logic
-export const useEnvironmentStore = create(subscribeWithSelector((set, get) => ({
+export const useEnvironmentStore = create<EnvironmentSlice>()(subscribeWithSelector((set, get) => ({
   worldTime: 12.0,
   daysElapsed: 1,
   isRaining: false,
   isNightTime: false,
 
   setWorldTime: (time, day, isRainingOverride = undefined) => {
-    let newRaining;
+    let newRaining: boolean | undefined;
     set((state) => {
       newRaining = isRainingOverride !== undefined ? isRainingOverride : state.isRaining;
       if (isRainingOverride === undefined && Math.floor(time) !== Math.floor(state.worldTime)) {
@@ -21,7 +30,7 @@ export const useEnvironmentStore = create(subscribeWithSelector((set, get) => ({
     });
     return newRaining;
   },
-  
+
   // Shadow state validator
   validateStateParity: (oldState) => {
     const state = get();

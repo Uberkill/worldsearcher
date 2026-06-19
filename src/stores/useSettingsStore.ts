@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 
-const load = (key, fallback) => {
+const load = (key: string, fallback: any): any => {
   try {
     const v = localStorage.getItem(key);
     return v !== null ? JSON.parse(v) : fallback;
@@ -10,8 +10,35 @@ const load = (key, fallback) => {
   }
 };
 
-export const useSettingsStore = create(
-  subscribeWithSelector((set, get) => ({
+type GameMode = 'survival' | 'creative' | 'hardcore';
+type ShadowQuality = 'visual' | 'performance';
+
+interface SettingsSlice {
+  // Debug State
+  spectorData: any | null;
+  setSpectorData: (data: any) => void;
+  // Game Mode
+  gameMode: GameMode;
+  // Graphics
+  renderDistance: number;
+  shadowQuality: ShadowQuality;
+  // UI & Debug
+  isSettingsOpen: boolean;
+  debugLighting: boolean;
+  debugPhysics: boolean;
+  debugShadows: boolean;
+  setGameMode: (mode: GameMode) => void;
+  setRenderDistance: (v: number) => void;
+  setShadowQuality: (v: ShadowQuality) => void;
+  openSettings: () => void;
+  closeSettings: () => void;
+  toggleDebugLighting: () => void;
+  toggleDebugPhysics: () => void;
+  toggleDebugShadows: () => void;
+}
+
+export const useSettingsStore = create<SettingsSlice>()(
+  subscribeWithSelector((set, _get) => ({
     // Debug State
     spectorData: null,
     setSpectorData: (data) => set({ spectorData: data }),
