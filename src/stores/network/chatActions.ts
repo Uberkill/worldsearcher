@@ -2,7 +2,7 @@ import { getGameStore } from '../storeLinker';
 import { useEnvironmentStore } from '../environmentSlice';
 import { playerPosition } from '../../globals';
 
-export const createChatActions = (set, get) => ({
+export const createChatActions = (set: any, get: any): Record<string, any> => ({
     setTyping: (val) => set({ isTyping: val }),
     
     addChatMessage: (text, type = 'chat', sender = 'System') => set(state => {

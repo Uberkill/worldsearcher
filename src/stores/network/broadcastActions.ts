@@ -2,8 +2,8 @@
 const movementBuffer = new ArrayBuffer(64);
 const movementView = new DataView(movementBuffer);
 
-export const createBroadcastActions = (set, get) => ({
-  broadcastMovement: (playerId, x, y, z, rx, ry, rz) => {
+export const createBroadcastActions = (set: any, get: any): Record<string, any> => ({
+  broadcastMovement: (playerId: string, x: number, y: number, z: number, rx: number, ry: number, rz: number) => {
     // Phase 2: NaN Network Contagion Preventer
     if (
       !Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z) ||
@@ -53,7 +53,7 @@ export const createBroadcastActions = (set, get) => ({
     });
   },
 
-  broadcastEntityState: (subType, entities) => {
+  broadcastEntityState: (subType: number, entities: any[]) => {
     const { unreliableConnections, isHost } = get();
     if (unreliableConnections.length === 0 || !isHost) return;
     
@@ -85,7 +85,7 @@ export const createBroadcastActions = (set, get) => ({
     });
   },
   
-  broadcastEvent: (data) => {
+  broadcastEvent: (data: any) => {
     const { connections } = get();
     if (connections.length === 0) return;
     connections.forEach(conn => {
@@ -93,7 +93,7 @@ export const createBroadcastActions = (set, get) => ({
     });
   },
   
-  broadcastDelta: (chunkKey, deltas) => {
+  broadcastDelta: (chunkKey: string, deltas: number[]) => {
      const { connections } = get();
      if (connections.length === 0) return;
      
@@ -143,7 +143,7 @@ export const createBroadcastActions = (set, get) => ({
      }
   },
 
-  sendBinary: (type, data) => {
+  sendBinary: (type: number, data: any) => {
        const state = get();
        if (type === 1) { // PLAYER_MOVE
           const buffer = new ArrayBuffer(63);

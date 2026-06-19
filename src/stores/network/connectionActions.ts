@@ -31,7 +31,7 @@ const generateRoomCode = () => {
   return code;
 };
 
-export const createConnectionActions = (set, get) => ({
+export const createConnectionActions = (set: any, get: any): Record<string, any> => ({
   removePlayer: (id) => set(state => {
     const newPlayers = { ...state.players };
     delete newPlayers[id];
