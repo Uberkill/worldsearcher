@@ -22,7 +22,7 @@
 | 9 | Audio & Systems | ✅ COMPLETE | 7 | 15% |
 | 10 | React Hooks | ✅ COMPLETE | 4 | 10% |
 | 11 | React Components | ✅ COMPLETE | 79 | 25% |
-| 12 | Tests | ⬜ NOT STARTED | — | 10% |
+| 12 | Tests | ✅ COMPLETE | 15 | 10% |
 | 13 | Strictness & Config | ⬜ NOT STARTED | — | 30% |
 | 14 | Final Verification | ⬜ NOT STARTED | — | 5% |
 
@@ -141,8 +141,8 @@
 - [x] Update index.html script src
 
 ### Stage 12 — Tests
-- [ ] Vitest setup + unit tests → .ts
-- [ ] Playwright config + e2e tests → .ts
+- [x] Vitest setup + unit tests → .ts
+- [x] Playwright config + e2e tests → .ts
 
 ### Stage 13 — Strictness & Config
 - [ ] vite.config.js → .ts
