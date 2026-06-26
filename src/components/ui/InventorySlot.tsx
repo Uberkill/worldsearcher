@@ -72,11 +72,11 @@ export const InventorySlot = memo(({ index, containerId }) => {
   if (reg) {
     fallbackColor = reg.color || '#ffffff';
     if (reg.texture) {
-      imgSrc = `/textures/blocks/${reg.texture}`;
+      imgSrc = `${import.meta.env.BASE_URL}textures/blocks/${reg.texture}`;
     } else if (reg.textures) {
-      imgSrc = `/textures/blocks/${reg.textures.side || reg.textures.top}`;
+      imgSrc = `${import.meta.env.BASE_URL}textures/blocks/${reg.textures.side || reg.textures.top}`;
     } else {
-      imgSrc = `/textures/items/${item.texture}.png`;
+      imgSrc = `${import.meta.env.BASE_URL}textures/items/${item.texture}.png`;
     }
   }
 

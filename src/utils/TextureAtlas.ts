@@ -78,7 +78,7 @@ export const getTextureAtlas = () => {
       texture.needsUpdate = true;
     };
     // Trigger load from public dir
-    img.src = `/textures/blocks/${filename}`;
+    img.src = `${import.meta.env.BASE_URL}textures/blocks/${filename}`;
   });
 
   generatedAtlas = texture;

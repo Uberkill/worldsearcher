@@ -78,11 +78,11 @@ export const CreativeInventory = ({ active, onClose }) => {
               const tooltipName = reg ? (reg.name || texture) : texture;
               const fallbackColor = reg?.color || '#333333';
               
-              let imgSrc = `/textures/items/${texture}.png`;
+              let imgSrc = `${import.meta.env.BASE_URL}textures/items/${texture}.png`;
               if (reg?.texture) {
-                imgSrc = `/textures/blocks/${reg.texture}`;
+                imgSrc = `${import.meta.env.BASE_URL}textures/blocks/${reg.texture}`;
               } else if (reg?.textures) {
-                imgSrc = `/textures/blocks/${reg.textures.side || reg.textures.top}`;
+                imgSrc = `${import.meta.env.BASE_URL}textures/blocks/${reg.textures.side || reg.textures.top}`;
               }
               
               return (

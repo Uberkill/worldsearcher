@@ -1,5 +1,44 @@
 // @ts-nocheck
-import { get, del, setMany, keys } from 'idb-keyval';
+import { get as idbGet, del as idbDel, setMany as idbSetMany, keys as idbKeys } from 'idb-keyval';
+
+const memoryFallback = new Map();
+let isFallbackActive = false;
+
+const safeGet = async (key) => {
+  if (isFallbackActive) return memoryFallback.get(key);
+  try { return await idbGet(key); } catch (e) {
+    console.warn("IndexedDB blocked! Using memory fallback in worker.", e);
+    isFallbackActive = true;
+    return memoryFallback.get(key);
+  }
+};
+
+const safeSetMany = async (entries) => {
+  if (isFallbackActive) { 
+    for (const [k, v] of entries) memoryFallback.set(k, v); 
+    return; 
+  }
+  try { await idbSetMany(entries); } catch (e) {
+    isFallbackActive = true;
+    for (const [k, v] of entries) memoryFallback.set(k, v);
+  }
+};
+
+const safeDel = async (key) => {
+  if (isFallbackActive) { memoryFallback.delete(key); return; }
+  try { await idbDel(key); } catch (e) {
+    isFallbackActive = true;
+    memoryFallback.delete(key);
+  }
+};
+
+const safeKeys = async () => {
+  if (isFallbackActive) return Array.from(memoryFallback.keys());
+  try { return await idbKeys(); } catch (e) {
+    isFallbackActive = true;
+    return Array.from(memoryFallback.keys());
+  }
+};
 import { BlockIds } from '../registry/BlockRegistry';
 import type { DBWorkerRequest } from '../types/workers';
 
@@ -142,7 +181,7 @@ const flushWAL = async () => {
   flushPromise = (async () => {
     const entries = Array.from(walCache.entries());
     try {
-      await setMany(entries);
+      await safeSetMany(entries);
       entries.forEach(([key, data]) => {
         if (walCache.get(key) === data) {
           walCache.delete(key);
@@ -195,7 +234,7 @@ self.onmessage = async (e: MessageEvent<DBWorkerRequest>) => {
           self.postMessage({ id, result: { buffer: arr, isMigrated: true } }, [arr.buffer]);
         }
       } else {
-        const res = await get(key);
+        const res = await safeGet(key);
         if (res) {
           if (res.rleBuffer) {
             const arr = decompressRLE(res.rleBuffer);
@@ -222,7 +261,7 @@ self.onmessage = async (e: MessageEvent<DBWorkerRequest>) => {
       const { chunkKey, slotPrefix, seed } = data.payload;
       const key = `${slotPrefix}_chunk_v14_${seed}_${chunkKey}`;
       if (walCache.has(key)) walCache.delete(key);
-      await del(key);
+      await safeDel(key);
       self.postMessage({ id, result: true });
     } else if (data.type === 'CLEAR_DB') {
       const { slotId, isSlotPrefix } = data.payload;
@@ -231,15 +270,15 @@ self.onmessage = async (e: MessageEvent<DBWorkerRequest>) => {
         clearTimeout(walTimer);
         walTimer = null;
       }
-      const allKeys = await keys();
+      const allKeys = await safeKeys();
       for (const k of allKeys) {
         if (isSlotPrefix) {
           if (k.startsWith(`${slotId}_`) || k === `saveState_${slotId}`) {
-            await del(k);
+            await safeDel(k);
           }
         } else {
           if (k.startsWith(`${slotId}_`) || k === `saveState_slot${slotId}`) {
-            await del(k);
+            await safeDel(k);
           }
         }
       }

@@ -617,7 +617,7 @@ export default function InGameUI() {
       {!isDead && isWorldReady && playerPower < 20 && (
         <div 
           className="pointer-events-none fixed inset-0 z-[40] mix-blend-screen opacity-20 bg-cover bg-center animate-pulse"
-          style={{ backgroundImage: "url('/textures/ui/static.gif')" }} 
+          style={{ backgroundImage: `url('${import.meta.env.BASE_URL}textures/ui/static.gif')` }} 
         />
       )}
 

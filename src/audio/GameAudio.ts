@@ -194,7 +194,7 @@ class GameAudioSystem {
     for (const name of sfxFiles) {
       try {
         const buffer = await this.audioLoader.loadAsync(
-          `/assets/audio/${name}.wav`
+          `${import.meta.env.BASE_URL}assets/audio/${name}.wav`
         );
         this.buffers.set(name, buffer);
 
@@ -213,7 +213,7 @@ class GameAudioSystem {
     const musicFiles = ['drone', 'crystalline', 'neon', 'starlight'];
     for (const name of musicFiles) {
       const el = document.createElement('audio');
-      el.src = `/assets/audio/${name}.wav`;
+      el.src = `${import.meta.env.BASE_URL}assets/audio/${name}.wav`;
       el.preload = 'none';
       el.loop = true;
 

@@ -1,6 +1,42 @@
 // @ts-nocheck
 /* eslint-disable no-unused-vars */
-import { get, set, del, keys } from 'idb-keyval';
+import { get as idbGet, set as idbSet, del as idbDel, keys as idbKeys } from 'idb-keyval';
+
+const memoryFallback = new Map();
+let isFallbackActive = false;
+
+const safeGet = async (key) => {
+  if (isFallbackActive) return memoryFallback.get(key);
+  try { return await idbGet(key); } catch (e) {
+    console.warn("IndexedDB blocked! Using memory fallback.", e);
+    isFallbackActive = true;
+    return memoryFallback.get(key);
+  }
+};
+
+const safeSet = async (key, val) => {
+  if (isFallbackActive) { memoryFallback.set(key, val); return; }
+  try { await idbSet(key, val); } catch (e) {
+    isFallbackActive = true;
+    memoryFallback.set(key, val);
+  }
+};
+
+const safeDel = async (key) => {
+  if (isFallbackActive) { memoryFallback.delete(key); return; }
+  try { await idbDel(key); } catch (e) {
+    isFallbackActive = true;
+    memoryFallback.delete(key);
+  }
+};
+
+const safeKeys = async () => {
+  if (isFallbackActive) return Array.from(memoryFallback.keys());
+  try { return await idbKeys(); } catch (e) {
+    isFallbackActive = true;
+    return Array.from(memoryFallback.keys());
+  }
+};
 import './chunkData';
 import { playerPosition, playerRotation } from '../globals';
 
@@ -138,24 +174,24 @@ export const clearSlotDB = async (slotId) => {
 // --- WORLD ENTITIES EXPORTER ---
 export const saveWorldEntities = async (data) => {
   const prefix = getSlotPrefix();
-  await set(`${prefix}_world_entities`, data);
+  await safeSet(`${prefix}_world_entities`, data);
 };
 
 export const loadWorldEntities = async () => {
   const prefix = getSlotPrefix();
-  return await get(`${prefix}_world_entities`);
+  return await safeGet(`${prefix}_world_entities`);
 };
 
 // --- SHIP BUFFER PERSISTENCE ---
 const saveShipToDB = async (shipBuffer) => {
   const prefix = getSlotPrefix();
   // shipBuffer is a Uint32Array, we can just save it
-  await set(`${prefix}_ship_buffer`, shipBuffer);
+  await safeSet(`${prefix}_ship_buffer`, shipBuffer);
 };
 
 export const loadShipFromDB = async () => {
   const prefix = getSlotPrefix();
-  const buffer = await get(`${prefix}_ship_buffer`);
+  const buffer = await safeGet(`${prefix}_ship_buffer`);
   if (buffer) {
     if (buffer.rleBuffer) {
       return await decompressRLE(buffer.rleBuffer); // Legacy cleanup
@@ -173,7 +209,7 @@ export const loadShipFromDB = async () => {
 // --- WORLD EXPORTER (.vx Blob) ---
 
 export const exportSlotBlob = async (slotId) => {
-  const allKeys = await keys();
+  const allKeys = await safeKeys();
   const slotKeys = allKeys.filter((k) => k.startsWith(`${slotId}_`));
 
   const exportData = {
@@ -184,7 +220,7 @@ export const exportSlotBlob = async (slotId) => {
   };
 
   for (const k of slotKeys) {
-    const data = await get(k);
+    const data = await safeGet(k);
     if (k.endsWith('_ship_buffer')) {
       exportData.chunks[k] = Array.from(await compressRLE(data));
     } else if (data && data.rleBuffer) {
@@ -226,9 +262,9 @@ export const importSlotBlob = async (slotId, exportData) => {
       const targetKey = `${slotId}${key.substring(firstUnderscore)}`;
       if (targetKey.endsWith('_ship_buffer')) {
         const decompressed = await decompressRLE(rleArray);
-        await set(targetKey, decompressed);
+        await safeSet(targetKey, decompressed);
       } else {
-        await set(targetKey, { rleBuffer: rleArray });
+        await safeSet(targetKey, { rleBuffer: rleArray });
       }
     }
   }
@@ -237,7 +273,7 @@ export const importSlotBlob = async (slotId, exportData) => {
     for (const [key, data] of Object.entries(exportData.otherData)) {
       const firstUnderscore = key.indexOf('_');
       const targetKey = `${slotId}${key.substring(firstUnderscore)}`;
-      await set(targetKey, data);
+      await safeSet(targetKey, data);
     }
   }
 };
