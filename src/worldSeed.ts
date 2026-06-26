@@ -5,9 +5,25 @@
 // Change this number for a completely different world.
 let WORLD_SEED: number = 123456789;
 
+// cyrb53 hash function for string seeds
+const cyrb53 = (str: string, seed = 0) => {
+  let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+  for (let i = 0, ch; i < str.length; i++) {
+    ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+};
+
 export const setWorldSeed = (seed: number | string): void => {
   if (typeof seed === 'string') {
-    WORLD_SEED = parseInt(seed, 10);
+    const parsed = Number(seed);
+    WORLD_SEED = Number.isNaN(parsed) ? cyrb53(seed) : parsed;
+  } else if (Number.isNaN(seed)) {
+    WORLD_SEED = Math.floor(Math.random() * 1000000000);
   } else {
     WORLD_SEED = seed;
   }
@@ -27,14 +43,16 @@ export const initWorldSeed = (): void => {
 
   try {
     const meta = JSON.parse(metaStr);
-    if (meta.seed) {
-      WORLD_SEED = meta.seed;
+    if (meta.seed !== undefined) {
+      setWorldSeed(meta.seed);
     } else {
       // Legacy save that existed before seed was added to metadata
       const legacySeed = localStorage.getItem('WORLD_SEED');
-      WORLD_SEED = legacySeed
-        ? parseInt(legacySeed, 10)
-        : Math.floor(Math.random() * 1000000000);
+      if (legacySeed) {
+         setWorldSeed(legacySeed);
+      } else {
+         WORLD_SEED = Math.floor(Math.random() * 1000000000);
+      }
     }
   } catch (_e) {
     WORLD_SEED = Math.floor(Math.random() * 1000000000);

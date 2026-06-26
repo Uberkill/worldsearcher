@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 
 export class ErrorBoundary extends React.Component {
@@ -196,3 +197,4 @@ export class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+

@@ -1,4 +1,4 @@
-import type { ShipWorkerRequest, ShipWorkerResponse } from '../types/workers';
+import type { ShipWorkerRequest } from '../types/workers';
 
 const SHIP_SIZE = 32;
 const SHIP_CENTER = Math.floor(SHIP_SIZE / 2);
@@ -12,10 +12,15 @@ const internalBuffers = new Map<string, Uint32Array>();
 // Debounce map for meshing
 const meshTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 
-const runMeshing = (shipId: string, buffer: Uint32Array, bounds: any, jobId: number) => {
+const runMeshing = (shipId: string, buffer: Uint32Array, bounds: { startX?: number, startY?: number, startZ?: number, endX?: number, endY?: number, endZ?: number }, jobId: number) => {
   visited.fill(0);
   const volumes = [];
-  const { startX, startY, startZ, endX, endY, endZ } = bounds;
+  const startX = bounds.startX ?? 0;
+  const startY = bounds.startY ?? 0;
+  const startZ = bounds.startZ ?? 0;
+  const endX = bounds.endX ?? 32;
+  const endY = bounds.endY ?? 32;
+  const endZ = bounds.endZ ?? 32;
   
   // Greedy Meshing Algorithm (X -> Z -> Y)
   for (let y = startY; y < endY; y++) {
@@ -25,11 +30,11 @@ const runMeshing = (shipId: string, buffer: Uint32Array, bounds: any, jobId: num
            if (visited[idx]) continue;
            
            const val = buffer[idx];
-           if ((val & 0xFF) === 0) continue; // Skip air
+           if (val === undefined || (val & 0xFF) === 0) continue; // Skip air
            
            // Expand along X
            let w = 1;
-           while (x + w < endX && (buffer[getIdx(x + w, y, z)] & 0xFF) !== 0 && !visited[getIdx(x + w, y, z)]) {
+           while (x + w < endX && buffer[getIdx(x + w, y, z)] !== undefined && (buffer[getIdx(x + w, y, z)]! & 0xFF) !== 0 && !visited[getIdx(x + w, y, z)]) {
               w++;
            }
            
@@ -38,7 +43,7 @@ const runMeshing = (shipId: string, buffer: Uint32Array, bounds: any, jobId: num
            let canExtendZ = true;
            while (z + d < endZ && canExtendZ) {
               for (let i = 0; i < w; i++) {
-                 if ((buffer[getIdx(x + i, y, z + d)] & 0xFF) === 0 || visited[getIdx(x + i, y, z + d)]) {
+                 if (buffer[getIdx(x + i, y, z + d)] === undefined || (buffer[getIdx(x + i, y, z + d)]! & 0xFF) === 0 || visited[getIdx(x + i, y, z + d)]) {
                     canExtendZ = false;
                     break;
                  }
@@ -52,7 +57,7 @@ const runMeshing = (shipId: string, buffer: Uint32Array, bounds: any, jobId: num
            while (y + h < endY && canExtendY) {
               for (let j = 0; j < d; j++) {
                  for (let i = 0; i < w; i++) {
-                    if ((buffer[getIdx(x + i, y + h, z + j)] & 0xFF) === 0 || visited[getIdx(x + i, y + h, z + j)]) {
+                    if (buffer[getIdx(x + i, y + h, z + j)] === undefined || (buffer[getIdx(x + i, y + h, z + j)]! & 0xFF) === 0 || visited[getIdx(x + i, y + h, z + j)]) {
                        canExtendY = false;
                        break;
                     }
@@ -88,6 +93,7 @@ const runMeshing = (shipId: string, buffer: Uint32Array, bounds: any, jobId: num
 };
 
 self.onmessage = function(e: MessageEvent<ShipWorkerRequest>) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const payload = e.data as any;
   const shipId = payload.shipId || 'default';
   const jobId = payload.jobId || 0;

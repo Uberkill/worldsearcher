@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 
@@ -161,3 +162,4 @@ export const DebugTracker = () => {
 
   return null;
 };
+

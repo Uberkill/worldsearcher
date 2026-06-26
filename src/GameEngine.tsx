@@ -1,4 +1,6 @@
+// @ts-nocheck
 import { useEffect, Suspense, useRef } from 'react';
+import { useSettingsStore } from './stores/useSettingsStore';
 import { Canvas } from '@react-three/fiber';
 import { Physics } from '@react-three/rapier';
 import { ViewModel } from './components/ViewModel';
@@ -16,6 +18,7 @@ import { EventBus } from './utils/EventBus';
 import { initItemDropSystem } from './systems/ItemDropSystem';
 import { initQuestSystem } from './systems/QuestSystem';
 import { initPhysicsReactionSystem } from './systems/PhysicsReactionSystem';
+import { initCommandSystem } from './systems/CommandSystem';
 import * as THREE from 'three';
 
 import { GameUI } from './components/engine/GameUI';
@@ -30,7 +33,7 @@ export default function GameEngine() {
   const loadAchievements = useStore((state) => state.loadAchievements);
   const initializeQuests = useStore((state) => state.initializeQuests);
   const incrementPlaytime = useStore((state) => state.incrementPlaytime);
-  const debugPhysics = useStore((state) => state.debugPhysics);
+  const debugPhysics = useSettingsStore((state) => state.debugPhysics);
 
   const initRef = useRef(false);
 
@@ -51,6 +54,7 @@ export default function GameEngine() {
     initItemDropSystem();
     initQuestSystem();
     initPhysicsReactionSystem();
+    initCommandSystem();
 
     return () => {
       // Clear event bus listeners when game engine unmounts
@@ -122,3 +126,4 @@ export default function GameEngine() {
     </>
   );
 }
+

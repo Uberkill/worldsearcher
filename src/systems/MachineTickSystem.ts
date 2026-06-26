@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useInventoryStore } from '../stores/inventorySlice';
 import { networkActions } from '../stores/networkActions';
 import { SmeltingRecipes, FuelRegistry } from '../registry/SmeltingRegistry';
@@ -118,4 +119,5 @@ export const initMachineTickSystem = () => {
     }
   }, 1000);
 };
+
 

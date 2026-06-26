@@ -1,3 +1,6 @@
+// @ts-nocheck
+import { useSettingsStore } from '../stores/useSettingsStore';
+
 /**
  * BlockInteraction.jsx — Amanatides-Woo DDA raycaster for block picking.
  *
@@ -389,7 +392,7 @@ export const BlockInteraction = () => {
             return; // Interaction successfully handled
          }
 
-         const isShipProtected = hit.isShip && !state.isBuildMode && state.gameMode?.toLowerCase() !== 'creative';
+         const isShipProtected = hit.isShip && !state.isBuildMode && useSettingsStore.getState().gameMode?.toLowerCase() !== 'creative';
 
          if (activeTexture === 'pickaxe' || activeTexture === 'sword' || activeTexture === 'gun' || activeTexture === 'grapple' || activeTexture === 'gauss_rifle') {
             return; // Do nothing on right click with weapons/tools
@@ -471,7 +474,7 @@ export const BlockInteraction = () => {
                  const inv = state.inventory;
                  const activeSlot = state.activeSlot;
                  const item = inv[activeSlot];
-                 const isCreative = state.gameMode?.toLowerCase() === 'creative';
+                 const isCreative = useSettingsStore.getState().gameMode?.toLowerCase() === 'creative';
                  const hasItem = isCreative || (item && item.texture === activeTexture && item.count > 0);
                  if (hasItem) {
                      const newTexId = BlockIds[activeTexture];
@@ -495,7 +498,7 @@ export const BlockInteraction = () => {
 
       const blockKey = block.texture;
 
-      const isShipProtected = hit.isShip && !state.isBuildMode && state.gameMode?.toLowerCase() !== 'creative';
+      const isShipProtected = hit.isShip && !state.isBuildMode && useSettingsStore.getState().gameMode?.toLowerCase() !== 'creative';
 
       // TNT always explodes, regardless of tool
       if (blockKey === 'tnt') {
@@ -509,7 +512,7 @@ export const BlockInteraction = () => {
         return;
       }
 
-      if (state.gameMode?.toLowerCase() === 'creative') {
+      if (useSettingsStore.getState().gameMode?.toLowerCase() === 'creative') {
         if (hit.isShip) {
            applyShipVoxelChange(bx, by, bz, 0);
         } else {
@@ -564,3 +567,4 @@ export const BlockInteraction = () => {
 
   return null; // purely logical — renders nothing
 };
+

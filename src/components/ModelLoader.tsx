@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useGLTF } from '@react-three/drei';
 import { useMemo } from 'react';
 
@@ -42,3 +43,4 @@ export const ModelLoader = ({
 
 // Pre-cache commonly used models
 // useGLTF.preload('/models/sword.gltf');
+

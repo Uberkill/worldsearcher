@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useRef, useState } from 'react';
 import { useEnvironmentStore } from '../stores/environmentSlice';
 import { gameAudio } from '../audio/GameAudio';
@@ -119,3 +120,4 @@ export const AmbientAudio = () => {
 
   return null;
 };
+

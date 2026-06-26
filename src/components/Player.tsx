@@ -23,9 +23,9 @@ import { GlobalRegistry } from '../registry/Registry';
 import { networkActions } from '../stores/networkActions';
 import { BODY_GEO, HEAD_GEO, LIMB_GEO, VISOR_GEO, BODY_MAT, HEAD_MAT, VISOR_MAT } from '../utils/playerModels';
 
-const LocalAvatar = ({ isSeated }) => {
-   const groupRef = useRef();
-   const headGroupRef = useRef();
+const LocalAvatar = ({ isSeated }: { isSeated: boolean }) => {
+   const groupRef = useRef<import('three').Group>(null);
+   const headGroupRef = useRef<import('three').Group>(null);
    const { camera } = useThree();
    const seatOffsetEuler = useMemo(() => new Euler(), []);
    const seatOffsetVec = useMemo(() => new Vector3(), []);
@@ -147,8 +147,8 @@ const _seatOffsetVec = new Vector3();
 export const Player = () => {
   const { camera } = useThree();
   const actionsRef = useKeyboard();
-  const playerRef = useRef();
-  const meshRef = useRef();
+  const playerRef = useRef<any>(null); // Type any for rapier RigidBody
+  const meshRef = useRef<import('three').Mesh>(null);
   const { isFlying, isSeated, initialPos } = usePlayerPhysics(playerRef, meshRef, camera, actionsRef);
 
   const spawnPhysicsPending = useStore((state) => state.spawnPhysicsPending);
@@ -182,7 +182,7 @@ export const Player = () => {
         position={initialPos}
         lockRotations
         friction={0}
-        gravityScale={isSeated || isFlying ? 0 : 1}
+        gravityScale={isSeated || isFlying || spawnPhysicsPending ? 0 : 1}
         collisionGroups={CollisionLayers.PLAYER}
         userData={{ type: 'player', id: networkActions.getState().playerId }}
       >

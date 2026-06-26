@@ -1,61 +1,16 @@
-import { getNetworkStore } from '../storeLinker';
 import { useEnvironmentStore } from '../environmentSlice';
 import { useFlareStore } from '../flareSlice';
 import { useChunkStore } from '../chunkSlice';
 import { useInventoryStore } from '../inventorySlice';
-import { saveChunkToDB, loadChunkFromDB, clearDB, cancelLoadFromDB, flushWAL } from '../../utils/db';
-import { BlockRegistry, BlockById, BlockKeyById, BlockIds } from '../../registry/BlockRegistry';
-import { setBlock, getIndex, getTextureId, CHUNK_Y_MIN, CHUNK_Y_MAX, getIsHidden, getHealth } from '../../utils/chunkData';
 import { chunkWorkerPool } from '../../utils/workerPool';
-import { getSeed } from '../../worldSeed';
-import { tickFluids, wakeFluidsAround } from '../../utils/fluidSystem';
-import { EventBus } from '../../utils/EventBus';
 import { pendingRenderKeys } from '../../utils/chunkRenderSignal';
-import {
-  inFlightChunks, inFlightPromises, cancelledChunks, processingNetworkDeltas,
-  dirtyChunkSet, inFlightRebuildSet, pass1Cache, pendingUnloads, flareLightMap,
-  bufferRecycleQueue, worldState, getChunkKey, getBlockKey
-} from './sharedState';
 import { getCombinedState } from './stranglerInterceptors';
-
 // mirrors isWorldReady — set below once store is live
 
-const flushDirtyChunks = (get, rawGet, rawSet) => {
-  rafRebuildHandle = null;
-  if (dirtyChunkSet.size === 0) return;
 
-  // Drain the set — snapshot it so any new additions during async work go into the next frame
-  const toRebuild = [...dirtyChunkSet];
-  dirtyChunkSet.clear();
-  for (const chunkKey of toRebuild) {
-    if (inFlightRebuildSet.has(chunkKey)) {
-      // Worker already running for this chunk — re-dirty it so it rebuilds again after completion
-      dirtyChunkSet.add(chunkKey);
-      continue;
-    }
-    _executeRebuild(chunkKey, get, rawGet, rawSet);
-  }
-};
-const scheduleRafFlush = (get, rawGet, rawSet) => {
-  if (rafRebuildHandle !== null) return; // Already scheduled
-  rafRebuildHandle = requestAnimationFrame(() => flushDirtyChunks(get, rawGet, rawSet));
-};
-const flushBufferRecycleQueue = () => {
-  if (bufferRecycleQueue.length > 0) {
-    const validBuffers = new Set();
-    for (let i = 0; i < bufferRecycleQueue.length; i++) {
-      if (bufferRecycleQueue[i] && bufferRecycleQueue[i].byteLength > 0) {
-        validBuffers.add(bufferRecycleQueue[i]);
-      }
-    }
-    if (validBuffers.size > 0) {
-      chunkWorkerPool.recycleBuffers(Array.from(validBuffers));
-    }
-    bufferRecycleQueue.length = 0;
-  }
-};
+import type { RootState } from '../../types/store';
 
-export const createMeshMounting = (rawSet, rawGet) => {
+export const createMeshMounting = (rawSet: any, rawGet: any) => {
   const set = rawSet;
   const get = rawGet;
   return {
@@ -64,11 +19,22 @@ mountNextMesh: (batchSize = 1) => {
   if (!chunkState.pendingMeshMounts || chunkState.pendingMeshMounts.length === 0) return;
   const actualBatchSize = Math.min(batchSize, chunkState.pendingMeshMounts.length);
   const batch = chunkState.pendingMeshMounts.slice(0, actualBatchSize);
-  const nextChunks = {};
-  const addedOverflow = [];
-  const toRecycle = {};
+  const nextChunks: Record<string, any> = {};
+  const addedOverflow: string[] = [];
+  const toRecycle: Record<string, any> = {};
   for (const nextMount of batch) {
     const existingChunk = useChunkStore.getState().chunks[nextMount.chunkKey];
+    
+    // Global Safety Net: If the queued mesh is older than the chunk's current state, discard it to prevent visual flicker!
+    if (existingChunk && nextMount.rebuildId !== undefined && nextMount.rebuildId < (existingChunk.rebuildId || 0)) {
+      if (nextMount.meshArrays) {
+        for (const [key, group] of Object.entries(nextMount.meshArrays)) {
+          if (!group._isCached) toRecycle[`${nextMount.chunkKey}_${key}_stale`] = group;
+        }
+      }
+      continue;
+    }
+
     if (!existingChunk) {
       if (nextMount.meshArrays) {
         for (const [key, group] of Object.entries(nextMount.meshArrays)) {
@@ -88,37 +54,8 @@ mountNextMesh: (batchSize = 1) => {
         }
       }
     }
-    let tightMeshArrays = null;
+    const tightMeshArrays = nextMount.meshArrays || null;
     if (nextMount.meshArrays) {
-      tightMeshArrays = {};
-
-      // Zero-copy transfer: The Web Worker already transferred the ArrayBuffer ownership to the main thread.
-      // Slicing it here duplicates memory on the JS heap, causing massive GC pauses!
-      for (const [key, group] of Object.entries(nextMount.meshArrays)) {
-        if (group && group._isCached) {
-          tightMeshArrays[key] = group;
-        } else if (group && group.buffer && group.byteLength !== undefined) {
-          // It's a direct TypedArray (like __flora)
-          tightMeshArrays[key] = group;
-        } else if (Array.isArray(group)) {
-          tightMeshArrays[key] = group.map(subGroup => {
-            if (subGroup && subGroup._isCached) return subGroup;
-            const sub = {};
-            for (const prop in subGroup) {
-              sub[prop] = subGroup[prop];
-            }
-            return sub;
-          });
-        } else if (group) {
-          // It's an object containing TypedArrays (like solid, transparent)
-          tightMeshArrays[key] = {};
-          for (const prop in group) {
-            tightMeshArrays[key][prop] = group[prop];
-          }
-        } else {
-          tightMeshArrays[key] = group;
-        }
-      }
       if (!addedOverflow.includes(nextMount.chunkKey)) {
         addedOverflow.push(nextMount.chunkKey);
       }
@@ -127,12 +64,12 @@ mountNextMesh: (batchSize = 1) => {
     nextChunks[nextMount.chunkKey] = {
       ...existingChunkData,
       meshArrays: tightMeshArrays,
-      rebuildId: nextMount.rebuildId ?? (existingChunkData.rebuildId || 0)
+      physicsRebuildId: (existingChunkData.physicsRebuildId || 0) + 1
     };
     // Signal ChunkRenderer.useFrame: this chunk has fresh meshArrays
     pendingRenderKeys.add(nextMount.chunkKey);
   }
-  const buffersToRecycle = [];
+  const buffersToRecycle: ArrayBuffer[] = [];
   for (const group of Object.values(toRecycle)) {
     if (!group) continue;
     if (Array.isArray(group)) {
@@ -167,7 +104,7 @@ mountNextMesh: (batchSize = 1) => {
     for (const k of addedOverflow) {
       if (!nextOverflow.includes(k)) nextOverflow.push(k);
     }
-    const __patch = (prev => ({
+    const __patch = ((prev: RootState) => ({
       pendingMeshMounts: nextPending,
       overflowChunks: nextOverflow,
       chunks: {
@@ -202,14 +139,13 @@ mountNextMesh: (batchSize = 1) => {
         isNightTime: __patch.isNightTime,
         isRaining: __patch.isRaining,
         skyColor: __patch.skyColor,
-        fogDensity: __patch.fogDensity
+        fogDensity: (__patch as any).fogDensity
       });
     }
-    if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-      const rawPatch = {};
-      if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-      if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-      if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
+    if ((__patch as any).isResetting !== undefined || (__patch as any).batcherVersion !== undefined) {
+      const rawPatch: any = {};
+      if ((__patch as any).isResetting !== undefined) rawPatch.isResetting = (__patch as any).isResetting;
+      if ((__patch as any).batcherVersion !== undefined) rawPatch.batcherVersion = (__patch as any).batcherVersion;
       rawSet(rawPatch);
     }
   })();

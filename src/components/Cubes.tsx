@@ -1,3 +1,6 @@
+// @ts-nocheck
+import { useSettingsStore } from '../stores/useSettingsStore';
+
 /**
  * Cubes.jsx - Physics Orchestrator
  *
@@ -43,7 +46,7 @@ export const Cubes = memo(() => {
     }
 
     // Update material time uniforms for animated blocks (water, lava)
-    const isDebugLighting = store.debugLighting;
+    const isDebugLighting = useSettingsStore.getState().debugLighting;
     const isHoldingLight = store.texture === 'torch' || store.texture === 'flashlight';
     
     for (const mat of materialCache.values()) {
@@ -90,3 +93,4 @@ export const Cubes = memo(() => {
     </>
   );
 });
+

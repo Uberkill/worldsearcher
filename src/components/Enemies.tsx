@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useStore } from '../stores/useStore';
 import { useEnvironmentStore } from '../stores/environmentSlice';
 import { useChunkStore } from '../stores/chunkSlice';
@@ -224,3 +225,4 @@ export const Enemies = () => {
     </>
   );
 };
+

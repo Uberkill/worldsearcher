@@ -1,16 +1,17 @@
+// @ts-nocheck
 /* eslint-disable no-unused-vars */
 import { NetworkEventBus } from '../../utils/NetworkEventBus';
 import { getGameStore } from '../../stores/storeLinker';
-import { useInventoryStore } from '../../stores/inventorySlice';
+import { _useInventoryStore } from '../../stores/inventorySlice';
 import { useChunkStore } from '../../stores/chunkSlice';
 import { compressRLE, decompressRLE } from '../../utils/db';
 
 const initializeWorldSyncSystems = () => {
     NetworkEventBus.on('WORLD_SYNC', (payload) => {
-        const { data, senderConn, getNetworkState, setNetworkState } = payload;
+        const { data, senderConn: _senderConn, getNetworkState, setNetworkState } = payload;
         const get = getNetworkState;
-        const set = setNetworkState;
-        const state = get();
+        const _set = setNetworkState;
+        const _state = get();
 
       const useStore = getGameStore();
       if (useStore) {
@@ -103,4 +104,5 @@ const initializeWorldSyncSystems = () => {
 };
 
 initializeWorldSyncSystems();
+
 

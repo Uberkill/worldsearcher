@@ -1,7 +1,22 @@
-export type EventCallback<T = any> = (payload: T) => void;
+interface EventMap {
+  'audio': { sound: string; source: 'local' | 'remote' };
+  'EVENT_BLOCK_DESTROYED': {
+    x: number;
+    y: number;
+    z: number;
+    texName: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    chestItems?: any[];
+    causedByGravity?: boolean;
+    initiatedByPlayerId?: string;
+  };
+}
+
+type EventCallback<K extends keyof EventMap> = (payload: EventMap[K]) => void;
 
 class IdempotentEventBus {
-  private listeners: Map<string, Map<string, EventCallback>>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private listeners: Map<keyof EventMap, Map<string, any>>;
 
   constructor() {
     this.listeners = new Map(); // EventName -> Map(ListenerKey -> Callback)
@@ -15,7 +30,7 @@ class IdempotentEventBus {
    * @param callback The function to call
    * @returns unsubscribe function
    */
-  on<T = any>(event: string, key: string, callback: EventCallback<T>): () => void {
+  on<K extends keyof EventMap>(event: K, key: string, callback: EventCallback<K>): () => void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Map());
     }
@@ -28,7 +43,7 @@ class IdempotentEventBus {
   /**
    * Unsubscribe a specific key.
    */
-  off(event: string, key: string): void {
+  off<K extends keyof EventMap>(event: K, key: string): void {
     if (this.listeners.has(event)) {
       this.listeners.get(event)!.delete(key);
     }
@@ -38,11 +53,11 @@ class IdempotentEventBus {
    * Emit an event to all registered listeners.
    * Safeguarded against cascading listener failures.
    */
-  emit<T = any>(event: string, payload?: T): void {
+  emit<K extends keyof EventMap>(event: K, payload: EventMap[K]): void {
     const eventListeners = this.listeners.get(event);
     if (!eventListeners) return;
 
-    for (const [key, callback] of eventListeners.entries()) {
+    for (const [key, callback] of eventListeners) {
       try {
         callback(payload);
       } catch (error) {

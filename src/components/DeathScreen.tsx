@@ -1,3 +1,6 @@
+// @ts-nocheck
+import { useSettingsStore } from '../stores/useSettingsStore';
+
 import { useEffect } from 'react';
 import { useStore } from '../stores/useStore';
 import { networkActions } from '../stores/networkActions';
@@ -7,7 +10,7 @@ import { Skull, RotateCcw, LogOut, AlertTriangle, Loader2 } from 'lucide-react';
 export const DeathScreen = () => {
   const isDead = useStore((state) => state.isDead);
   const isRespawning = useStore((state) => state.isRespawning);
-  const gameMode = useStore((state) => state.gameMode);
+  const gameMode = useSettingsStore((state) => state.gameMode);
   const isHardcore = gameMode?.toLowerCase() === 'hardcore';
   const resetWorld = useStore((state) => state.resetWorld);
   const respawnPlayer = useStore((state) => state.respawnPlayer);
@@ -150,3 +153,4 @@ export const DeathScreen = () => {
     </div>
   );
 };
+

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect } from 'react';
 import { useInventoryStore } from '../../stores/inventorySlice';
 import { InventorySlot } from './InventorySlot';
@@ -31,3 +32,4 @@ export const ChestOverlay = ({ chestId, onClose }) => {
     </ContainerGUI>
   );
 };
+

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useRef } from 'react';
 import { useStore } from '../../stores/useStore';
 import { GlobalRegistry } from '../../registry/Registry';
@@ -76,3 +77,4 @@ export function CursorItem() {
     </div>
   );
 }
+

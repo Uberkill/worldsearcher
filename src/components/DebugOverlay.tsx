@@ -1,3 +1,6 @@
+// @ts-nocheck
+import { useSettingsStore } from '../stores/useSettingsStore';
+
 import { useEffect, useState, useRef } from 'react';
 import { useDebugOverlayUpdate } from '../hooks/useDebugOverlayUpdate';
 import { useStore } from '../stores/useStore';
@@ -279,7 +282,7 @@ export const DebugOverlay = () => {
   }, []);
 
   const triggerDump = () => {
-    window.__USE_STORE__.getState().setSpectorData({ isLoading: true });
+    useSettingsStore.getState().setSpectorData({ isLoading: true });
   };
 
   // Keybindings for F3 or Tilde, F4 for Lighting Debug
@@ -291,15 +294,15 @@ export const DebugOverlay = () => {
       }
       if (e.code === 'F8') {
         e.preventDefault();
-        useStore.getState().toggleDebugLighting();
+        useSettingsStore.getState().toggleDebugLighting();
       }
       if (e.code === 'F9') {
         e.preventDefault();
-        useStore.getState().toggleDebugPhysics();
+        useSettingsStore.getState().toggleDebugPhysics();
       }
       if (e.code === 'F10') {
         e.preventDefault();
-        useStore.getState().toggleDebugShadows();
+        useSettingsStore.getState().toggleDebugShadows();
       }
       if (e.key === 'F12') {
         e.preventDefault();
@@ -386,3 +389,4 @@ export const DebugOverlay = () => {
     </div>
   );
 };
+

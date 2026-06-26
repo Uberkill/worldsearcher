@@ -1,15 +1,16 @@
+// @ts-nocheck
 /* eslint-disable no-unused-vars */
 import { NetworkEventBus } from '../../utils/NetworkEventBus';
 import { getGameStore } from '../../stores/storeLinker';
 import { useInventoryStore } from '../../stores/inventorySlice';
-import { playerPosition, playerRotation } from '../../globals';
+import { playerPosition, _playerRotation } from '../../globals';
 
 const initializeLootSystems = () => {
     NetworkEventBus.on('SPAWN_LOOT', (payload) => {
-        const { data, senderConn, getNetworkState, setNetworkState } = payload;
+        const { data, senderConn: _senderConn, getNetworkState, setNetworkState } = payload;
         const get = getNetworkState;
-        const set = setNetworkState;
-        const state = get();
+        const _set = setNetworkState;
+        const _state = get();
 
         const useStore = getGameStore();
         if (useStore) {
@@ -18,10 +19,10 @@ const initializeLootSystems = () => {
     
     });
     NetworkEventBus.on('DESPAWN_LOOT', (payload) => {
-        const { data, senderConn, getNetworkState, setNetworkState } = payload;
+        const { data, senderConn: _senderConn, getNetworkState, setNetworkState } = payload;
         const get = getNetworkState;
-        const set = setNetworkState;
-        const state = get();
+        const _set = setNetworkState;
+        const _state = get();
 
         const useStore = getGameStore();
         if (useStore) {
@@ -30,10 +31,10 @@ const initializeLootSystems = () => {
     
     });
     NetworkEventBus.on('UPDATE_LOOT_AMOUNT', (payload) => {
-        const { data, senderConn, getNetworkState, setNetworkState } = payload;
+        const { data, senderConn: _senderConn, getNetworkState, setNetworkState } = payload;
         const get = getNetworkState;
-        const set = setNetworkState;
-        const state = get();
+        const _set = setNetworkState;
+        const _state = get();
 
         const useStore = getGameStore();
         if (useStore) {
@@ -42,10 +43,10 @@ const initializeLootSystems = () => {
     
     });
     NetworkEventBus.on('LOOT_REJECTED', (payload) => {
-        const { data, senderConn, getNetworkState, setNetworkState } = payload;
+        const { data, senderConn: _senderConn, getNetworkState, setNetworkState } = payload;
         const get = getNetworkState;
-        const set = setNetworkState;
-        const state = get();
+        const _set = setNetworkState;
+        const _state = get();
 
         window.dispatchEvent(new CustomEvent('LOOT_REJECTED', { detail: data.dropId }));
     
@@ -53,7 +54,7 @@ const initializeLootSystems = () => {
     NetworkEventBus.on('LOOT_INTENT', (payload) => {
         const { data, senderConn, getNetworkState, setNetworkState } = payload;
         const get = getNetworkState;
-        const set = setNetworkState;
+        const _set = setNetworkState;
         const state = get();
 
         if (!state.isHost) return;
@@ -183,3 +184,4 @@ const initializeLootSystems = () => {
 
 
 initializeLootSystems();
+

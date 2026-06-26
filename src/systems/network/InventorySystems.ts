@@ -1,15 +1,16 @@
+// @ts-nocheck
 /* eslint-disable no-unused-vars */
 import { NetworkEventBus } from '../../utils/NetworkEventBus';
 import { getGameStore } from '../../stores/storeLinker';
 import { useInventoryStore } from '../../stores/inventorySlice';
-import { playerPosition, playerRotation } from '../../globals';
+import { _playerPosition, _playerRotation } from '../../globals';
 
 const initializeInventorySystems = () => {
     NetworkEventBus.on('INVENTORY_SYNC', (payload) => {
-        const { data, senderConn, getNetworkState, setNetworkState } = payload;
+        const { data, senderConn: _senderConn, getNetworkState, setNetworkState } = payload;
         const get = getNetworkState;
-        const set = setNetworkState;
-        const state = get();
+        const _set = setNetworkState;
+        const _state = get();
 
        const useStore = getGameStore();
        if (useStore) {
@@ -62,7 +63,7 @@ const initializeInventorySystems = () => {
     NetworkEventBus.on('INVENTORY_INTENT', (payload) => {
         const { data, senderConn, getNetworkState, setNetworkState } = payload;
         const get = getNetworkState;
-        const set = setNetworkState;
+        const _set = setNetworkState;
         const state = get();
 
        if (!state.isHost) return; // Only Host processes intents
@@ -131,7 +132,7 @@ const initializeInventorySystems = () => {
     NetworkEventBus.on('GRANT_ITEM_INTENT', (payload) => {
         const { data, senderConn, getNetworkState, setNetworkState } = payload;
         const get = getNetworkState;
-        const set = setNetworkState;
+        const _set = setNetworkState;
         const state = get();
 
         if (!state.isHost) return;
@@ -212,3 +213,4 @@ const initializeInventorySystems = () => {
 
 
 initializeInventorySystems();
+

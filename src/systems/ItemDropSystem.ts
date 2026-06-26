@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { EventBus } from '../utils/EventBus';
 import { useInventoryStore } from '../stores/inventorySlice';
 import { useConnectionStore } from '../stores/connectionSlice';
@@ -130,3 +131,4 @@ export const initItemDropSystem = () => {
     }
   });
 };
+

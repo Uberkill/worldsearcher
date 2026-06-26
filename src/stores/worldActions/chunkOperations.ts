@@ -14,9 +14,11 @@ import { pendingRenderKeys } from '../../utils/chunkRenderSignal';
 import {
   inFlightChunks, inFlightPromises, cancelledChunks, processingNetworkDeltas,
   dirtyChunkSet, inFlightRebuildSet, pass1Cache, pendingUnloads, flareLightMap,
-  bufferRecycleQueue, worldState, getChunkKey, getBlockKey
+  bufferRecycleQueue, worldState, getChunkKey, getBlockKey, pendingDeltas
 } from './sharedState';
-import { getCombinedState } from './stranglerInterceptors';
+import { getCombinedState, applyStranglerPatch } from './stranglerInterceptors';
+import type { ChunkOperationsSlice, RootState } from '../../types/store';
+import { StateCreator } from 'zustand';
 
 // mirrors isWorldReady — set below once store is live
 
@@ -56,16 +58,15 @@ const flushBufferRecycleQueue = () => {
   }
 };
 
-export const createChunkOperations = (rawSet, rawGet) => {
+export const createChunkOperations: StateCreator<RootState, [], [], ChunkOperationsSlice> = (rawSet, rawGet) => {
   const set = rawSet;
   const get = rawGet;
   return {
 batcherVersion: 0,
-incrementBatcherVersion: () => rawSet(state => ({
+incrementBatcherVersion: () => rawSet((state: RootState) => ({
   batcherVersion: state.batcherVersion + 1
 })),
 pass1Cache: pass1Cache,
-pendingDeltas: {},
 isResetting: false,
 resetWorld: async () => {
   if (get().isResetting) return;
@@ -81,8 +82,7 @@ resetWorld: async () => {
   pass1Cache.clear();
   await clearDB();
   rawSet({
-    isResetting: false,
-    pendingDeltas: {}
+    isResetting: false
   });
   useChunkStore.setState({
     chunks: {}
@@ -98,10 +98,10 @@ resetWorld: async () => {
   localStorage.removeItem(`saveMetadata_${prefix}`);
   window.location.reload();
 },
-applyWorldSync: chunksData => {
+applyWorldSync: (chunksData: any) => {
   (() => {
     const prev = getCombinedState(rawGet);
-    const __patch = (prev => {
+    const __patch = ((prev: RootState) => {
       const newChunks = {
         ...prev.chunks
       };
@@ -142,7 +142,7 @@ applyWorldSync: chunksData => {
         }
 
         // Apply any pending deltas that arrived before this sync
-        const pending = prev.pendingDeltas[chunkKey];
+        const pending = pendingDeltas.get(chunkKey);
         if (pending) {
           for (let i = 0; i < pending.length; i += 2) {
             newChunks[chunkKey].buffer[pending[i]] = pending[i + 1];
@@ -153,43 +153,7 @@ applyWorldSync: chunksData => {
         chunks: newChunks
       } : {};
     })(prev);
-    if (__patch.chunks !== undefined || __patch.pendingMeshMounts !== undefined || __patch.overflowChunks !== undefined || __patch.activePhysicsChunks !== undefined) {
-      const cPatch = {};
-      if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
-      if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
-      if (__patch.overflowChunks !== undefined) cPatch.overflowChunks = __patch.overflowChunks;
-      if (__patch.activePhysicsChunks !== undefined) cPatch.activePhysicsChunks = __patch.activePhysicsChunks;
-      useChunkStore.setState(cPatch);
-    }
-    if (__patch.debris !== undefined || __patch.fallingStructures !== undefined || __patch.chests !== undefined || __patch.droppedItems !== undefined || __patch.tombstones !== undefined) {
-      const iPatch = {};
-      if (__patch.debris !== undefined) iPatch.debris = __patch.debris;
-      if (__patch.fallingStructures !== undefined) iPatch.fallingStructures = __patch.fallingStructures;
-      if (__patch.chests !== undefined) iPatch.chests = __patch.chests;
-      if (__patch.droppedItems !== undefined) iPatch.droppedItems = __patch.droppedItems;
-      if (__patch.tombstones !== undefined) iPatch.tombstones = __patch.tombstones;
-      useInventoryStore.setState(iPatch);
-    }
-    if (__patch.placedFlares !== undefined) useFlareStore.setState({
-      placedFlares: __patch.placedFlares
-    });
-    if (__patch.worldTime !== undefined) {
-      useEnvironmentStore.setState({
-        worldTime: __patch.worldTime,
-        currentDay: __patch.currentDay,
-        isNightTime: __patch.isNightTime,
-        isRaining: __patch.isRaining,
-        skyColor: __patch.skyColor,
-        fogDensity: __patch.fogDensity
-      });
-    }
-    if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-      const rawPatch = {};
-      if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-      if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-      if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
-      rawSet(rawPatch);
-    }
+    applyStranglerPatch(__patch, rawSet);
   })();
   // Need to rebuild all synced chunks!
   for (const chunkKey in chunksData) {
@@ -201,7 +165,7 @@ applyNetworkDelta: (chunkKey, deltas) => {
   let rebuilds = new Set();
   (() => {
     const prev = getCombinedState(rawGet);
-    const __patch = (prev => {
+    const __patch = ((prev: RootState) => {
       const prevChunkData = prev.chunks[chunkKey];
       if (!prevChunkData) {
         // Silently load, apply, and save to DB in the background to prevent data loss!
@@ -209,57 +173,9 @@ applyNetworkDelta: (chunkKey, deltas) => {
           processingNetworkDeltas.add(chunkKey);
           setTimeout(async () => {
             try {
-              const processingDeltas = get().pendingDeltas[chunkKey];
+              const processingDeltas = pendingDeltas.get(chunkKey);
               if (!processingDeltas) return;
-              (() => {
-                const prev = getCombinedState(rawGet);
-                const __patch = (s => {
-                  const next = {
-                    ...s.pendingDeltas
-                  };
-                  delete next[chunkKey];
-                  return {
-                    pendingDeltas: next
-                  };
-                })(prev);
-                if (__patch.chunks !== undefined || __patch.pendingMeshMounts !== undefined || __patch.overflowChunks !== undefined || __patch.activePhysicsChunks !== undefined) {
-                  const cPatch = {};
-                  if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
-                  if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
-                  if (__patch.overflowChunks !== undefined) cPatch.overflowChunks = __patch.overflowChunks;
-                  if (__patch.activePhysicsChunks !== undefined) cPatch.activePhysicsChunks = __patch.activePhysicsChunks;
-                  useChunkStore.setState(cPatch);
-                }
-                if (__patch.debris !== undefined || __patch.fallingStructures !== undefined || __patch.chests !== undefined || __patch.droppedItems !== undefined || __patch.tombstones !== undefined) {
-                  const iPatch = {};
-                  if (__patch.debris !== undefined) iPatch.debris = __patch.debris;
-                  if (__patch.fallingStructures !== undefined) iPatch.fallingStructures = __patch.fallingStructures;
-                  if (__patch.chests !== undefined) iPatch.chests = __patch.chests;
-                  if (__patch.droppedItems !== undefined) iPatch.droppedItems = __patch.droppedItems;
-                  if (__patch.tombstones !== undefined) iPatch.tombstones = __patch.tombstones;
-                  useInventoryStore.setState(iPatch);
-                }
-                if (__patch.placedFlares !== undefined) useFlareStore.setState({
-                  placedFlares: __patch.placedFlares
-                });
-                if (__patch.worldTime !== undefined) {
-                  useEnvironmentStore.setState({
-                    worldTime: __patch.worldTime,
-                    currentDay: __patch.currentDay,
-                    isNightTime: __patch.isNightTime,
-                    isRaining: __patch.isRaining,
-                    skyColor: __patch.skyColor,
-                    fogDensity: __patch.fogDensity
-                  });
-                }
-                if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-                  const rawPatch = {};
-                  if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-                  if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-                  if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
-                  rawSet(rawPatch);
-                }
-              })();
+              pendingDeltas.delete(chunkKey);
               let chunkData;
               chunkData = await loadChunkFromDB(chunkKey);
               if (!chunkData) {
@@ -279,18 +195,15 @@ applyNetworkDelta: (chunkKey, deltas) => {
               console.error('Silent delta save failed', e);
             } finally {
               processingNetworkDeltas.delete(chunkKey);
-              if (get().pendingDeltas[chunkKey]) {
+              if (pendingDeltas.has(chunkKey)) {
                 get().applyNetworkDelta(chunkKey, []);
               }
             }
           }, 0);
         }
-        return {
-          pendingDeltas: {
-            ...prev.pendingDeltas,
-            [chunkKey]: [...(prev.pendingDeltas[chunkKey] || []), ...deltas]
-          }
-        };
+        const existing = pendingDeltas.get(chunkKey) || [];
+        pendingDeltas.set(chunkKey, [...existing, ...deltas]);
+        return {};
       }
       rebuilds.add(chunkKey);
       const [cx, cz] = chunkKey.split(',').map(Number);
@@ -324,43 +237,7 @@ applyNetworkDelta: (chunkKey, deltas) => {
         }
       };
     })(prev);
-    if (__patch.chunks !== undefined || __patch.pendingMeshMounts !== undefined || __patch.overflowChunks !== undefined || __patch.activePhysicsChunks !== undefined) {
-      const cPatch = {};
-      if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
-      if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
-      if (__patch.overflowChunks !== undefined) cPatch.overflowChunks = __patch.overflowChunks;
-      if (__patch.activePhysicsChunks !== undefined) cPatch.activePhysicsChunks = __patch.activePhysicsChunks;
-      useChunkStore.setState(cPatch);
-    }
-    if (__patch.debris !== undefined || __patch.fallingStructures !== undefined || __patch.chests !== undefined || __patch.droppedItems !== undefined || __patch.tombstones !== undefined) {
-      const iPatch = {};
-      if (__patch.debris !== undefined) iPatch.debris = __patch.debris;
-      if (__patch.fallingStructures !== undefined) iPatch.fallingStructures = __patch.fallingStructures;
-      if (__patch.chests !== undefined) iPatch.chests = __patch.chests;
-      if (__patch.droppedItems !== undefined) iPatch.droppedItems = __patch.droppedItems;
-      if (__patch.tombstones !== undefined) iPatch.tombstones = __patch.tombstones;
-      useInventoryStore.setState(iPatch);
-    }
-    if (__patch.placedFlares !== undefined) useFlareStore.setState({
-      placedFlares: __patch.placedFlares
-    });
-    if (__patch.worldTime !== undefined) {
-      useEnvironmentStore.setState({
-        worldTime: __patch.worldTime,
-        currentDay: __patch.currentDay,
-        isNightTime: __patch.isNightTime,
-        isRaining: __patch.isRaining,
-        skyColor: __patch.skyColor,
-        fogDensity: __patch.fogDensity
-      });
-    }
-    if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-      const rawPatch = {};
-      if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-      if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-      if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
-      rawSet(rawPatch);
-    }
+    applyStranglerPatch(__patch, rawSet);
   })();
 
   // Only rebuild the chunk itself and neighbors that actually touch the modified blocks!
@@ -375,8 +252,8 @@ getGlobalBlockSafe: (x, y, z) => {
   if (!chunk || !chunk.buffer) return 0;
   const ly = Math.round(y - 0.5);
   if (ly < CHUNK_Y_MIN || ly > CHUNK_Y_MAX) return 0;
-  const lx = (x % 16 + 16) % 16;
-  const lz = (z % 16 + 16) % 16;
+  const lx = Math.floor((x % 16 + 16) % 16);
+  const lz = Math.floor((z % 16 + 16) % 16);
   return chunk.buffer[getIndex(lx, ly, lz)];
 },
 findSafeSpawnY: (x, z) => {
@@ -406,7 +283,7 @@ findSafeSpawnY: (x, z) => {
 },
 clearVisualMeshArrays: chunkKey => (() => {
   const prev = getCombinedState(rawGet);
-  const __patch = (prev => {
+  const __patch = ((prev: RootState) => {
     const chunk = prev.chunks[chunkKey];
     if (!chunk || !chunk.meshArrays) return prev;
 
@@ -465,48 +342,12 @@ clearVisualMeshArrays: chunkKey => (() => {
       }
     };
   })(prev);
-  if (__patch.chunks !== undefined || __patch.pendingMeshMounts !== undefined || __patch.overflowChunks !== undefined || __patch.activePhysicsChunks !== undefined) {
-    const cPatch = {};
-    if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
-    if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
-    if (__patch.overflowChunks !== undefined) cPatch.overflowChunks = __patch.overflowChunks;
-    if (__patch.activePhysicsChunks !== undefined) cPatch.activePhysicsChunks = __patch.activePhysicsChunks;
-    useChunkStore.setState(cPatch);
-  }
-  if (__patch.debris !== undefined || __patch.fallingStructures !== undefined || __patch.chests !== undefined || __patch.droppedItems !== undefined || __patch.tombstones !== undefined) {
-    const iPatch = {};
-    if (__patch.debris !== undefined) iPatch.debris = __patch.debris;
-    if (__patch.fallingStructures !== undefined) iPatch.fallingStructures = __patch.fallingStructures;
-    if (__patch.chests !== undefined) iPatch.chests = __patch.chests;
-    if (__patch.droppedItems !== undefined) iPatch.droppedItems = __patch.droppedItems;
-    if (__patch.tombstones !== undefined) iPatch.tombstones = __patch.tombstones;
-    useInventoryStore.setState(iPatch);
-  }
-  if (__patch.placedFlares !== undefined) useFlareStore.setState({
-    placedFlares: __patch.placedFlares
-  });
-  if (__patch.worldTime !== undefined) {
-    useEnvironmentStore.setState({
-      worldTime: __patch.worldTime,
-      currentDay: __patch.currentDay,
-      isNightTime: __patch.isNightTime,
-      isRaining: __patch.isRaining,
-      skyColor: __patch.skyColor,
-      fogDensity: __patch.fogDensity
-    });
-  }
-  if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-    const rawPatch = {};
-    if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-    if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-    if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
-    rawSet(rawPatch);
-  }
+  applyStranglerPatch(__patch, rawSet);
 })(),
-applyNetworkSync: chunksData => {
+  applyNetworkSync: chunksData => {
   (() => {
     const prev = getCombinedState(rawGet);
-    const __patch = (prev => {
+    const __patch = ((prev: RootState) => {
       const newChunks = {
         ...prev.chunks
       };
@@ -544,7 +385,7 @@ applyNetworkSync: chunksData => {
         }
 
         // Apply any pending deltas that arrived before this sync
-        const pending = prev.pendingDeltas[chunkKey];
+        const pending = pendingDeltas.get(chunkKey);
         if (pending) {
           for (let i = 0; i < pending.length; i += 2) {
             newChunks[chunkKey].buffer[pending[i]] = pending[i + 1];
@@ -555,43 +396,7 @@ applyNetworkSync: chunksData => {
         chunks: newChunks
       } : {};
     })(prev);
-    if (__patch.chunks !== undefined || __patch.pendingMeshMounts !== undefined || __patch.overflowChunks !== undefined || __patch.activePhysicsChunks !== undefined) {
-      const cPatch = {};
-      if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
-      if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
-      if (__patch.overflowChunks !== undefined) cPatch.overflowChunks = __patch.overflowChunks;
-      if (__patch.activePhysicsChunks !== undefined) cPatch.activePhysicsChunks = __patch.activePhysicsChunks;
-      useChunkStore.setState(cPatch);
-    }
-    if (__patch.debris !== undefined || __patch.fallingStructures !== undefined || __patch.chests !== undefined || __patch.droppedItems !== undefined || __patch.tombstones !== undefined) {
-      const iPatch = {};
-      if (__patch.debris !== undefined) iPatch.debris = __patch.debris;
-      if (__patch.fallingStructures !== undefined) iPatch.fallingStructures = __patch.fallingStructures;
-      if (__patch.chests !== undefined) iPatch.chests = __patch.chests;
-      if (__patch.droppedItems !== undefined) iPatch.droppedItems = __patch.droppedItems;
-      if (__patch.tombstones !== undefined) iPatch.tombstones = __patch.tombstones;
-      useInventoryStore.setState(iPatch);
-    }
-    if (__patch.placedFlares !== undefined) useFlareStore.setState({
-      placedFlares: __patch.placedFlares
-    });
-    if (__patch.worldTime !== undefined) {
-      useEnvironmentStore.setState({
-        worldTime: __patch.worldTime,
-        currentDay: __patch.currentDay,
-        isNightTime: __patch.isNightTime,
-        isRaining: __patch.isRaining,
-        skyColor: __patch.skyColor,
-        fogDensity: __patch.fogDensity
-      });
-    }
-    if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-      const rawPatch = {};
-      if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-      if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-      if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
-      rawSet(rawPatch);
-    }
+    applyStranglerPatch(__patch, rawSet);
   })();
   // Need to rebuild all synced chunks!
   for (const chunkKey in chunksData) {
@@ -610,7 +415,7 @@ setWorldTime: (time, day, isRainingOverride = undefined) => {
   let newRaining;
   (() => {
     const prev = getCombinedState(rawGet);
-    const __patch = (state => {
+    const __patch = ((state: RootState) => {
       newRaining = isRainingOverride !== undefined ? isRainingOverride : state.isRaining;
       if (isRainingOverride === undefined && Math.floor(time) !== Math.floor(state.worldTime)) {
         if (Math.random() < 0.1) {
@@ -623,43 +428,7 @@ setWorldTime: (time, day, isRainingOverride = undefined) => {
         isRaining: newRaining
       };
     })(prev);
-    if (__patch.chunks !== undefined || __patch.pendingMeshMounts !== undefined || __patch.overflowChunks !== undefined || __patch.activePhysicsChunks !== undefined) {
-      const cPatch = {};
-      if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
-      if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
-      if (__patch.overflowChunks !== undefined) cPatch.overflowChunks = __patch.overflowChunks;
-      if (__patch.activePhysicsChunks !== undefined) cPatch.activePhysicsChunks = __patch.activePhysicsChunks;
-      useChunkStore.setState(cPatch);
-    }
-    if (__patch.debris !== undefined || __patch.fallingStructures !== undefined || __patch.chests !== undefined || __patch.droppedItems !== undefined || __patch.tombstones !== undefined) {
-      const iPatch = {};
-      if (__patch.debris !== undefined) iPatch.debris = __patch.debris;
-      if (__patch.fallingStructures !== undefined) iPatch.fallingStructures = __patch.fallingStructures;
-      if (__patch.chests !== undefined) iPatch.chests = __patch.chests;
-      if (__patch.droppedItems !== undefined) iPatch.droppedItems = __patch.droppedItems;
-      if (__patch.tombstones !== undefined) iPatch.tombstones = __patch.tombstones;
-      useInventoryStore.setState(iPatch);
-    }
-    if (__patch.placedFlares !== undefined) useFlareStore.setState({
-      placedFlares: __patch.placedFlares
-    });
-    if (__patch.worldTime !== undefined) {
-      useEnvironmentStore.setState({
-        worldTime: __patch.worldTime,
-        currentDay: __patch.currentDay,
-        isNightTime: __patch.isNightTime,
-        isRaining: __patch.isRaining,
-        skyColor: __patch.skyColor,
-        fogDensity: __patch.fogDensity
-      });
-    }
-    if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-      const rawPatch = {};
-      if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-      if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-      if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
-      rawSet(rawPatch);
-    }
+    applyStranglerPatch(__patch, rawSet);
   })();
 
   // Strangler Fig Shadow Write: Update the parallel store
@@ -691,7 +460,7 @@ placedFlares: [],
 placeFlare: (pos, normal, id) => {
   (() => {
     const prev = getCombinedState(rawGet);
-    const __patch = (prev => {
+    const __patch = ((prev: RootState) => {
       const newFlares = [...prev.placedFlares, {
         id: id,
         pos,
@@ -705,43 +474,7 @@ placeFlare: (pos, normal, id) => {
         placedFlares: newFlares
       };
     })(prev);
-    if (__patch.chunks !== undefined || __patch.pendingMeshMounts !== undefined || __patch.overflowChunks !== undefined || __patch.activePhysicsChunks !== undefined) {
-      const cPatch = {};
-      if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
-      if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
-      if (__patch.overflowChunks !== undefined) cPatch.overflowChunks = __patch.overflowChunks;
-      if (__patch.activePhysicsChunks !== undefined) cPatch.activePhysicsChunks = __patch.activePhysicsChunks;
-      useChunkStore.setState(cPatch);
-    }
-    if (__patch.debris !== undefined || __patch.fallingStructures !== undefined || __patch.chests !== undefined || __patch.droppedItems !== undefined || __patch.tombstones !== undefined) {
-      const iPatch = {};
-      if (__patch.debris !== undefined) iPatch.debris = __patch.debris;
-      if (__patch.fallingStructures !== undefined) iPatch.fallingStructures = __patch.fallingStructures;
-      if (__patch.chests !== undefined) iPatch.chests = __patch.chests;
-      if (__patch.droppedItems !== undefined) iPatch.droppedItems = __patch.droppedItems;
-      if (__patch.tombstones !== undefined) iPatch.tombstones = __patch.tombstones;
-      useInventoryStore.setState(iPatch);
-    }
-    if (__patch.placedFlares !== undefined) useFlareStore.setState({
-      placedFlares: __patch.placedFlares
-    });
-    if (__patch.worldTime !== undefined) {
-      useEnvironmentStore.setState({
-        worldTime: __patch.worldTime,
-        currentDay: __patch.currentDay,
-        isNightTime: __patch.isNightTime,
-        isRaining: __patch.isRaining,
-        skyColor: __patch.skyColor,
-        fogDensity: __patch.fogDensity
-      });
-    }
-    if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-      const rawPatch = {};
-      if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-      if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-      if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
-      rawSet(rawPatch);
-    }
+    applyStranglerPatch(__patch, rawSet);
   })();
 
   // Inject Flare Block into Voxel Engine
@@ -800,43 +533,7 @@ removeFlare: id => {
         placedFlares: newFlares
       };
     })(prev);
-    if (__patch.chunks !== undefined || __patch.pendingMeshMounts !== undefined || __patch.overflowChunks !== undefined || __patch.activePhysicsChunks !== undefined) {
-      const cPatch = {};
-      if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
-      if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
-      if (__patch.overflowChunks !== undefined) cPatch.overflowChunks = __patch.overflowChunks;
-      if (__patch.activePhysicsChunks !== undefined) cPatch.activePhysicsChunks = __patch.activePhysicsChunks;
-      useChunkStore.setState(cPatch);
-    }
-    if (__patch.debris !== undefined || __patch.fallingStructures !== undefined || __patch.chests !== undefined || __patch.droppedItems !== undefined || __patch.tombstones !== undefined) {
-      const iPatch = {};
-      if (__patch.debris !== undefined) iPatch.debris = __patch.debris;
-      if (__patch.fallingStructures !== undefined) iPatch.fallingStructures = __patch.fallingStructures;
-      if (__patch.chests !== undefined) iPatch.chests = __patch.chests;
-      if (__patch.droppedItems !== undefined) iPatch.droppedItems = __patch.droppedItems;
-      if (__patch.tombstones !== undefined) iPatch.tombstones = __patch.tombstones;
-      useInventoryStore.setState(iPatch);
-    }
-    if (__patch.placedFlares !== undefined) useFlareStore.setState({
-      placedFlares: __patch.placedFlares
-    });
-    if (__patch.worldTime !== undefined) {
-      useEnvironmentStore.setState({
-        worldTime: __patch.worldTime,
-        currentDay: __patch.currentDay,
-        isNightTime: __patch.isNightTime,
-        isRaining: __patch.isRaining,
-        skyColor: __patch.skyColor,
-        fogDensity: __patch.fogDensity
-      });
-    }
-    if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-      const rawPatch = {};
-      if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-      if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-      if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
-      rawSet(rawPatch);
-    }
+    applyStranglerPatch(__patch, rawSet);
   })();
   const networkActions = getNetworkStore();
   if (networkActions) {
@@ -856,8 +553,8 @@ setVoxelRaw: (x, y, z, texId) => {
   // // const state = get();
   const chunkData = useChunkStore.getState().chunks[chunkKey];
   if (!chunkData || !chunkData.buffer) return;
-  const lx = (x % 16 + 16) % 16;
-  const lz = (z % 16 + 16) % 16;
+  const lx = Math.floor((x % 16 + 16) % 16);
+  const lz = Math.floor((z % 16 + 16) % 16);
   const health = BlockById[texId]?.health ?? 100;
   const rebuilds = new Set([chunkKey]);
   if (lx === 0) {
@@ -895,43 +592,7 @@ setVoxelRaw: (x, y, z, texId) => {
         }
       };
     })(prev);
-    if (__patch.chunks !== undefined || __patch.pendingMeshMounts !== undefined || __patch.overflowChunks !== undefined || __patch.activePhysicsChunks !== undefined) {
-      const cPatch = {};
-      if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
-      if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
-      if (__patch.overflowChunks !== undefined) cPatch.overflowChunks = __patch.overflowChunks;
-      if (__patch.activePhysicsChunks !== undefined) cPatch.activePhysicsChunks = __patch.activePhysicsChunks;
-      useChunkStore.setState(cPatch);
-    }
-    if (__patch.debris !== undefined || __patch.fallingStructures !== undefined || __patch.chests !== undefined || __patch.droppedItems !== undefined || __patch.tombstones !== undefined) {
-      const iPatch = {};
-      if (__patch.debris !== undefined) iPatch.debris = __patch.debris;
-      if (__patch.fallingStructures !== undefined) iPatch.fallingStructures = __patch.fallingStructures;
-      if (__patch.chests !== undefined) iPatch.chests = __patch.chests;
-      if (__patch.droppedItems !== undefined) iPatch.droppedItems = __patch.droppedItems;
-      if (__patch.tombstones !== undefined) iPatch.tombstones = __patch.tombstones;
-      useInventoryStore.setState(iPatch);
-    }
-    if (__patch.placedFlares !== undefined) useFlareStore.setState({
-      placedFlares: __patch.placedFlares
-    });
-    if (__patch.worldTime !== undefined) {
-      useEnvironmentStore.setState({
-        worldTime: __patch.worldTime,
-        currentDay: __patch.currentDay,
-        isNightTime: __patch.isNightTime,
-        isRaining: __patch.isRaining,
-        skyColor: __patch.skyColor,
-        fogDensity: __patch.fogDensity
-      });
-    }
-    if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-      const rawPatch = {};
-      if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-      if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-      if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
-      rawSet(rawPatch);
-    }
+    applyStranglerPatch(__patch, rawSet);
   })();
   rebuilds.forEach(nck => {
     if (useChunkStore.getState().chunks[nck]) get().requestMeshRebuild(nck);
@@ -1000,11 +661,11 @@ _executeRebuildInternal: async (chunkKey, get, rawGet, rawSet) => {
       meshArrays,
       lightOverflow
     } = workerResult;
-    if (lightOverflow && lightOverflow.length > 0) {
+      if (lightOverflow && lightOverflow.length > 0) {
       const neighborsToRebuild = new Set();
       (() => {
         const prev = getCombinedState(rawGet);
-        const __patch = (prev => {
+        const __patch = ((prev: RootState) => {
           const nextChunks = {
             ...prev.chunks
           };
@@ -1052,43 +713,7 @@ _executeRebuildInternal: async (chunkKey, get, rawGet, rawSet) => {
           }
           return {};
         })(prev);
-        if (__patch.chunks !== undefined || __patch.pendingMeshMounts !== undefined || __patch.overflowChunks !== undefined || __patch.activePhysicsChunks !== undefined) {
-          const cPatch = {};
-          if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
-          if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
-          if (__patch.overflowChunks !== undefined) cPatch.overflowChunks = __patch.overflowChunks;
-          if (__patch.activePhysicsChunks !== undefined) cPatch.activePhysicsChunks = __patch.activePhysicsChunks;
-          useChunkStore.setState(cPatch);
-        }
-        if (__patch.debris !== undefined || __patch.fallingStructures !== undefined || __patch.chests !== undefined || __patch.droppedItems !== undefined || __patch.tombstones !== undefined) {
-          const iPatch = {};
-          if (__patch.debris !== undefined) iPatch.debris = __patch.debris;
-          if (__patch.fallingStructures !== undefined) iPatch.fallingStructures = __patch.fallingStructures;
-          if (__patch.chests !== undefined) iPatch.chests = __patch.chests;
-          if (__patch.droppedItems !== undefined) iPatch.droppedItems = __patch.droppedItems;
-          if (__patch.tombstones !== undefined) iPatch.tombstones = __patch.tombstones;
-          useInventoryStore.setState(iPatch);
-        }
-        if (__patch.placedFlares !== undefined) useFlareStore.setState({
-          placedFlares: __patch.placedFlares
-        });
-        if (__patch.worldTime !== undefined) {
-          useEnvironmentStore.setState({
-            worldTime: __patch.worldTime,
-            currentDay: __patch.currentDay,
-            isNightTime: __patch.isNightTime,
-            isRaining: __patch.isRaining,
-            skyColor: __patch.skyColor,
-            fogDensity: __patch.fogDensity
-          });
-        }
-        if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-          const rawPatch = {};
-          if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-          if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-          if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
-          rawSet(rawPatch);
-        }
+        applyStranglerPatch(__patch, rawSet);
       })();
       neighborsToRebuild.forEach(nKey => {
         if (useChunkStore.getState().chunks[nKey]) get().requestMeshRebuild(nKey);
@@ -1096,7 +721,7 @@ _executeRebuildInternal: async (chunkKey, get, rawGet, rawSet) => {
     }
     (() => {
       const prev = getCombinedState(rawGet);
-      const __patch = (prev => {
+      const __patch = ((prev: RootState) => {
         const c = prev.chunks[chunkKey];
         // Discard stale worker results if the chunk was modified again during computation
         if (!c || (c.rebuildId || 0) !== targetRebuildId) {
@@ -1126,43 +751,7 @@ _executeRebuildInternal: async (chunkKey, get, rawGet, rawSet) => {
           }
         };
       })(prev);
-      if (__patch.chunks !== undefined || __patch.pendingMeshMounts !== undefined || __patch.overflowChunks !== undefined || __patch.activePhysicsChunks !== undefined) {
-        const cPatch = {};
-        if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
-        if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
-        if (__patch.overflowChunks !== undefined) cPatch.overflowChunks = __patch.overflowChunks;
-        if (__patch.activePhysicsChunks !== undefined) cPatch.activePhysicsChunks = __patch.activePhysicsChunks;
-        useChunkStore.setState(cPatch);
-      }
-      if (__patch.debris !== undefined || __patch.fallingStructures !== undefined || __patch.chests !== undefined || __patch.droppedItems !== undefined || __patch.tombstones !== undefined) {
-        const iPatch = {};
-        if (__patch.debris !== undefined) iPatch.debris = __patch.debris;
-        if (__patch.fallingStructures !== undefined) iPatch.fallingStructures = __patch.fallingStructures;
-        if (__patch.chests !== undefined) iPatch.chests = __patch.chests;
-        if (__patch.droppedItems !== undefined) iPatch.droppedItems = __patch.droppedItems;
-        if (__patch.tombstones !== undefined) iPatch.tombstones = __patch.tombstones;
-        useInventoryStore.setState(iPatch);
-      }
-      if (__patch.placedFlares !== undefined) useFlareStore.setState({
-        placedFlares: __patch.placedFlares
-      });
-      if (__patch.worldTime !== undefined) {
-        useEnvironmentStore.setState({
-          worldTime: __patch.worldTime,
-          currentDay: __patch.currentDay,
-          isNightTime: __patch.isNightTime,
-          isRaining: __patch.isRaining,
-          skyColor: __patch.skyColor,
-          fogDensity: __patch.fogDensity
-        });
-      }
-      if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-        const rawPatch = {};
-        if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-        if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-        if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
-        rawSet(rawPatch);
-      }
+      applyStranglerPatch(__patch, rawSet);
     })();
   } catch (error) {
     console.error(`Error rebuilding mesh for chunk ${chunkKey}:`, error);
@@ -1426,64 +1015,17 @@ loadChunkPass2Async: async (cx, cz) => {
         }
       } else {
         // 3. Target hasn't started generating at all
-        (() => {
-          const prev = getCombinedState(rawGet);
-          const __patch = (prev => {
-            const pending = {
-              ...prev.pendingDeltas
-            };
-            if (!pending[tKey]) pending[tKey] = [];
-            for (const b of blocks) {
-              const lx = (b.x % 16 + 16) % 16;
-              const ly = b.y;
-              const lz = (b.z % 16 + 16) % 16;
-              if (ly >= CHUNK_Y_MIN && ly <= CHUNK_Y_MAX) {
-                const idx = getIndex(lx, ly, lz);
-                pending[tKey].push(idx, b.id & 0xff | 100 << 8);
-              }
-            }
-            return {
-              pendingDeltas: pending
-            };
-          })(prev);
-          if (__patch.chunks !== undefined || __patch.pendingMeshMounts !== undefined || __patch.overflowChunks !== undefined || __patch.activePhysicsChunks !== undefined) {
-            const cPatch = {};
-            if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
-            if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
-            if (__patch.overflowChunks !== undefined) cPatch.overflowChunks = __patch.overflowChunks;
-            if (__patch.activePhysicsChunks !== undefined) cPatch.activePhysicsChunks = __patch.activePhysicsChunks;
-            useChunkStore.setState(cPatch);
+        const pending = pendingDeltas.get(tKey) || [];
+        for (const b of blocks) {
+          const lx = (b.x % 16 + 16) % 16;
+          const ly = b.y;
+          const lz = (b.z % 16 + 16) % 16;
+          if (ly >= CHUNK_Y_MIN && ly <= CHUNK_Y_MAX) {
+            const idx = getIndex(lx, ly, lz);
+            pending.push(idx, b.id & 0xff | 100 << 8);
           }
-          if (__patch.debris !== undefined || __patch.fallingStructures !== undefined || __patch.chests !== undefined || __patch.droppedItems !== undefined || __patch.tombstones !== undefined) {
-            const iPatch = {};
-            if (__patch.debris !== undefined) iPatch.debris = __patch.debris;
-            if (__patch.fallingStructures !== undefined) iPatch.fallingStructures = __patch.fallingStructures;
-            if (__patch.chests !== undefined) iPatch.chests = __patch.chests;
-            if (__patch.droppedItems !== undefined) iPatch.droppedItems = __patch.droppedItems;
-            if (__patch.tombstones !== undefined) iPatch.tombstones = __patch.tombstones;
-            useInventoryStore.setState(iPatch);
-          }
-          if (__patch.placedFlares !== undefined) useFlareStore.setState({
-            placedFlares: __patch.placedFlares
-          });
-          if (__patch.worldTime !== undefined) {
-            useEnvironmentStore.setState({
-              worldTime: __patch.worldTime,
-              currentDay: __patch.currentDay,
-              isNightTime: __patch.isNightTime,
-              isRaining: __patch.isRaining,
-              skyColor: __patch.skyColor,
-              fogDensity: __patch.fogDensity
-            });
-          }
-          if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-            const rawPatch = {};
-            if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-            if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-            if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
-            rawSet(rawPatch);
-          }
-        })();
+        }
+        pendingDeltas.set(tKey, pending);
       }
     }
 
@@ -1572,64 +1114,14 @@ loadChunkPass2Async: async (cx, cz) => {
       });
     }
     chunkData.rebuildId = 0;
-    const pending = get().pendingDeltas[chunkKey];
+    const pending = pendingDeltas.get(chunkKey);
     if (pending) {
       for (let i = 0; i < pending.length; i += 2) {
         chunkData.buffer[pending[i]] = pending[i + 1];
       }
       chunkData.isModified = true;
       chunkData.rebuildId = (chunkData.rebuildId || 0) + 1;
-      (() => {
-        const prev = getCombinedState(rawGet);
-        const __patch = (prev => {
-          const nextPending = {
-            ...prev.pendingDeltas
-          };
-          delete nextPending[chunkKey];
-          return {
-            pendingDeltas: nextPending
-          };
-        })(prev);
-        if (__patch.chunks !== undefined || __patch.pendingMeshMounts !== undefined || __patch.overflowChunks !== undefined || __patch.activePhysicsChunks !== undefined) {
-          const cPatch = {};
-          if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
-          if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
-          if (__patch.overflowChunks !== undefined) cPatch.overflowChunks = __patch.overflowChunks;
-          if (__patch.activePhysicsChunks !== undefined) cPatch.activePhysicsChunks = __patch.activePhysicsChunks;
-          useChunkStore.setState(cPatch);
-        }
-        if (__patch.debris !== undefined || __patch.fallingStructures !== undefined || __patch.chests !== undefined || __patch.droppedItems !== undefined || __patch.tombstones !== undefined) {
-          const iPatch = {};
-          if (__patch.debris !== undefined) iPatch.debris = __patch.debris;
-          if (__patch.fallingStructures !== undefined) iPatch.fallingStructures = __patch.fallingStructures;
-          if (__patch.chests !== undefined) iPatch.chests = __patch.chests;
-          if (__patch.droppedItems !== undefined) iPatch.droppedItems = __patch.droppedItems;
-          if (__patch.tombstones !== undefined) iPatch.tombstones = __patch.tombstones;
-          useInventoryStore.setState(iPatch);
-        }
-        if (__patch.placedFlares !== undefined) useFlareStore.setState({
-          placedFlares: __patch.placedFlares
-        });
-        if (__patch.worldTime !== undefined) {
-          useEnvironmentStore.setState({
-            worldTime: __patch.worldTime,
-            currentDay: __patch.currentDay,
-            isNightTime: __patch.isNightTime,
-            isRaining: __patch.isRaining,
-            skyColor: __patch.skyColor,
-            fogDensity: __patch.fogDensity
-          });
-        }
-        if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-          const rawPatch = {};
-          if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-          if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-          if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
-          rawSet(rawPatch);
-        }
-      })();
-      // CRITICAL FIX: Trigger a mesh rebuild to actually show the applied overflow blocks!
-      get().requestMeshRebuild(chunkKey);
+      pendingDeltas.delete(chunkKey);
     }
     const meshArrays = chunkData.meshArrays;
     delete chunkData.meshArrays;
@@ -1646,43 +1138,7 @@ loadChunkPass2Async: async (cx, cz) => {
           rebuildId: chunkData.rebuildId || 0
         }]
       }))(prev);
-      if (__patch.chunks !== undefined || __patch.pendingMeshMounts !== undefined || __patch.overflowChunks !== undefined || __patch.activePhysicsChunks !== undefined) {
-        const cPatch = {};
-        if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
-        if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
-        if (__patch.overflowChunks !== undefined) cPatch.overflowChunks = __patch.overflowChunks;
-        if (__patch.activePhysicsChunks !== undefined) cPatch.activePhysicsChunks = __patch.activePhysicsChunks;
-        useChunkStore.setState(cPatch);
-      }
-      if (__patch.debris !== undefined || __patch.fallingStructures !== undefined || __patch.chests !== undefined || __patch.droppedItems !== undefined || __patch.tombstones !== undefined) {
-        const iPatch = {};
-        if (__patch.debris !== undefined) iPatch.debris = __patch.debris;
-        if (__patch.fallingStructures !== undefined) iPatch.fallingStructures = __patch.fallingStructures;
-        if (__patch.chests !== undefined) iPatch.chests = __patch.chests;
-        if (__patch.droppedItems !== undefined) iPatch.droppedItems = __patch.droppedItems;
-        if (__patch.tombstones !== undefined) iPatch.tombstones = __patch.tombstones;
-        useInventoryStore.setState(iPatch);
-      }
-      if (__patch.placedFlares !== undefined) useFlareStore.setState({
-        placedFlares: __patch.placedFlares
-      });
-      if (__patch.worldTime !== undefined) {
-        useEnvironmentStore.setState({
-          worldTime: __patch.worldTime,
-          currentDay: __patch.currentDay,
-          isNightTime: __patch.isNightTime,
-          isRaining: __patch.isRaining,
-          skyColor: __patch.skyColor,
-          fogDensity: __patch.fogDensity
-        });
-      }
-      if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-        const rawPatch = {};
-        if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-        if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-        if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
-        rawSet(rawPatch);
-      }
+      applyStranglerPatch(__patch, rawSet);
     })();
     inFlightChunks.delete(chunkKey);
     pass1Cache.delete(chunkKey);
@@ -1755,43 +1211,7 @@ unloadChunk: async chunkKey => {
         overflowChunks: newOverflow
       };
     })(prev);
-    if (__patch.chunks !== undefined || __patch.pendingMeshMounts !== undefined || __patch.overflowChunks !== undefined || __patch.activePhysicsChunks !== undefined) {
-      const cPatch = {};
-      if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
-      if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
-      if (__patch.overflowChunks !== undefined) cPatch.overflowChunks = __patch.overflowChunks;
-      if (__patch.activePhysicsChunks !== undefined) cPatch.activePhysicsChunks = __patch.activePhysicsChunks;
-      useChunkStore.setState(cPatch);
-    }
-    if (__patch.debris !== undefined || __patch.fallingStructures !== undefined || __patch.chests !== undefined || __patch.droppedItems !== undefined || __patch.tombstones !== undefined) {
-      const iPatch = {};
-      if (__patch.debris !== undefined) iPatch.debris = __patch.debris;
-      if (__patch.fallingStructures !== undefined) iPatch.fallingStructures = __patch.fallingStructures;
-      if (__patch.chests !== undefined) iPatch.chests = __patch.chests;
-      if (__patch.droppedItems !== undefined) iPatch.droppedItems = __patch.droppedItems;
-      if (__patch.tombstones !== undefined) iPatch.tombstones = __patch.tombstones;
-      useInventoryStore.setState(iPatch);
-    }
-    if (__patch.placedFlares !== undefined) useFlareStore.setState({
-      placedFlares: __patch.placedFlares
-    });
-    if (__patch.worldTime !== undefined) {
-      useEnvironmentStore.setState({
-        worldTime: __patch.worldTime,
-        currentDay: __patch.currentDay,
-        isNightTime: __patch.isNightTime,
-        isRaining: __patch.isRaining,
-        skyColor: __patch.skyColor,
-        fogDensity: __patch.fogDensity
-      });
-    }
-    if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-      const rawPatch = {};
-      if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-      if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-      if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
-      rawSet(rawPatch);
-    }
+    applyStranglerPatch(__patch, rawSet);
   })();
   if (chunkData.isModified) {
     await saveChunkToDB(chunkKey, chunkData);
@@ -1806,8 +1226,8 @@ addCube: (x, y, z) => {
   // // const state = get();
   const chunkData = useChunkStore.getState().chunks[chunkKey];
   if (!chunkData || !chunkData.buffer) return false;
-  const lx = (x % 16 + 16) % 16;
-  const lz = (z % 16 + 16) % 16;
+  const lx = Math.floor((x % 16 + 16) % 16);
+  const lz = Math.floor((z % 16 + 16) % 16);
   const currentVal = chunkData.buffer[getIndex(lx, ly, lz)];
   const currentTexId = getTextureId(currentVal);
   if (currentTexId !== 0 && BlockById[currentTexId]?.isPassable === false) {
@@ -1834,8 +1254,8 @@ addCube: (x, y, z) => {
         isModified: false
       };
       const newBuffer = new Uint32Array(prevChunkData.buffer);
-      const lx = (x % 16 + 16) % 16;
-      const lz = (z % 16 + 16) % 16;
+      const lx = Math.floor((x % 16 + 16) % 16);
+      const lz = Math.floor((z % 16 + 16) % 16);
 
       // We resolve tex to ID
       const texName = prev.texture;
@@ -1872,43 +1292,7 @@ addCube: (x, y, z) => {
         chests: newChests
       };
     })(prev);
-    if (__patch.chunks !== undefined || __patch.pendingMeshMounts !== undefined || __patch.overflowChunks !== undefined || __patch.activePhysicsChunks !== undefined) {
-      const cPatch = {};
-      if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
-      if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
-      if (__patch.overflowChunks !== undefined) cPatch.overflowChunks = __patch.overflowChunks;
-      if (__patch.activePhysicsChunks !== undefined) cPatch.activePhysicsChunks = __patch.activePhysicsChunks;
-      useChunkStore.setState(cPatch);
-    }
-    if (__patch.debris !== undefined || __patch.fallingStructures !== undefined || __patch.chests !== undefined || __patch.droppedItems !== undefined || __patch.tombstones !== undefined) {
-      const iPatch = {};
-      if (__patch.debris !== undefined) iPatch.debris = __patch.debris;
-      if (__patch.fallingStructures !== undefined) iPatch.fallingStructures = __patch.fallingStructures;
-      if (__patch.chests !== undefined) iPatch.chests = __patch.chests;
-      if (__patch.droppedItems !== undefined) iPatch.droppedItems = __patch.droppedItems;
-      if (__patch.tombstones !== undefined) iPatch.tombstones = __patch.tombstones;
-      useInventoryStore.setState(iPatch);
-    }
-    if (__patch.placedFlares !== undefined) useFlareStore.setState({
-      placedFlares: __patch.placedFlares
-    });
-    if (__patch.worldTime !== undefined) {
-      useEnvironmentStore.setState({
-        worldTime: __patch.worldTime,
-        currentDay: __patch.currentDay,
-        isNightTime: __patch.isNightTime,
-        isRaining: __patch.isRaining,
-        skyColor: __patch.skyColor,
-        fogDensity: __patch.fogDensity
-      });
-    }
-    if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-      const rawPatch = {};
-      if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-      if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-      if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
-      rawSet(rawPatch);
-    }
+    applyStranglerPatch(__patch, rawSet);
   })();
   get().consumeActiveItem();
   rebuilds.forEach(ck => get().requestMeshRebuild(ck));
@@ -1985,43 +1369,7 @@ bakeCube: (key, pos) => {
         debris: prev.debris.filter(d => d.key !== key)
       };
     })(prev);
-    if (__patch.chunks !== undefined || __patch.pendingMeshMounts !== undefined || __patch.overflowChunks !== undefined || __patch.activePhysicsChunks !== undefined) {
-      const cPatch = {};
-      if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
-      if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
-      if (__patch.overflowChunks !== undefined) cPatch.overflowChunks = __patch.overflowChunks;
-      if (__patch.activePhysicsChunks !== undefined) cPatch.activePhysicsChunks = __patch.activePhysicsChunks;
-      useChunkStore.setState(cPatch);
-    }
-    if (__patch.debris !== undefined || __patch.fallingStructures !== undefined || __patch.chests !== undefined || __patch.droppedItems !== undefined || __patch.tombstones !== undefined) {
-      const iPatch = {};
-      if (__patch.debris !== undefined) iPatch.debris = __patch.debris;
-      if (__patch.fallingStructures !== undefined) iPatch.fallingStructures = __patch.fallingStructures;
-      if (__patch.chests !== undefined) iPatch.chests = __patch.chests;
-      if (__patch.droppedItems !== undefined) iPatch.droppedItems = __patch.droppedItems;
-      if (__patch.tombstones !== undefined) iPatch.tombstones = __patch.tombstones;
-      useInventoryStore.setState(iPatch);
-    }
-    if (__patch.placedFlares !== undefined) useFlareStore.setState({
-      placedFlares: __patch.placedFlares
-    });
-    if (__patch.worldTime !== undefined) {
-      useEnvironmentStore.setState({
-        worldTime: __patch.worldTime,
-        currentDay: __patch.currentDay,
-        isNightTime: __patch.isNightTime,
-        isRaining: __patch.isRaining,
-        skyColor: __patch.skyColor,
-        fogDensity: __patch.fogDensity
-      });
-    }
-    if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-      const rawPatch = {};
-      if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-      if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-      if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
-      rawSet(rawPatch);
-    }
+    applyStranglerPatch(__patch, rawSet);
   })();
   rebuilds.forEach(ck => get().requestMeshRebuild(ck));
   wakeFluidsAround(get, set, Math.round(x), Math.round(y), Math.round(z));
@@ -2035,8 +1383,8 @@ removeCube: (x, y, z, causedByGravity = false, initiatedByPlayerId = null) => {
   // // const state = get();
   const chunkData = useChunkStore.getState().chunks[chunkKey];
   if (!chunkData || !chunkData.buffer) return;
-  const lx = (x % 16 + 16) % 16;
-  const lz = (z % 16 + 16) % 16;
+  const lx = Math.floor((x % 16 + 16) % 16);
+  const lz = Math.floor((z % 16 + 16) % 16);
   const val = chunkData.buffer[getIndex(lx, ly, lz)];
   if ((val & 0xff) === 0) return; // Block is already air! Abort side effects to prevent multiple drops/lag.
 
@@ -2076,6 +1424,7 @@ removeCube: (x, y, z, causedByGravity = false, initiatedByPlayerId = null) => {
       ...prev.chunks
     };
     const deltas = [];
+    const neighborDeltas = {};
 
     // Check flora cascade above:
     let floraBroken = null;
@@ -2085,7 +1434,7 @@ removeCube: (x, y, z, causedByGravity = false, initiatedByPlayerId = null) => {
       if ((aboveVal & 0xff) !== 0) {
         const aboveTexId = getTextureId(aboveVal);
         const aboveTexName = BlockKeyById[aboveTexId];
-        if (BlockById[aboveTexId]?.isFlora || aboveTexName === 'flare') {
+        if (BlockById[aboveTexId]?.isFlora || aboveTexName === 'flare' || aboveTexName === 'chest' || BlockById[aboveTexId]?.isContainer) {
           setBlock(newBuffer, aboveIdx, 0, 0, 0, 0);
           deltas.push(aboveIdx, 0);
           floraBroken = {
@@ -2124,8 +1473,8 @@ removeCube: (x, y, z, causedByGravity = false, initiatedByPlayerId = null) => {
         const ncx = Math.floor(nx / 16);
         const ncz = Math.floor(nz / 16);
         const nChunkKey = `${ncx},${ncz}`;
-        const nlx = (nx % 16 + 16) % 16;
-        const nlz = (nz % 16 + 16) % 16;
+        const nlx = Math.floor((nx % 16 + 16) % 16);
+        const nlz = Math.floor((nz % 16 + 16) % 16);
         let targetBuffer;
         let isMainChunk = nChunkKey === chunkKey;
         if (isMainChunk) {
@@ -2138,7 +1487,8 @@ removeCube: (x, y, z, causedByGravity = false, initiatedByPlayerId = null) => {
             newChunks[nChunkKey] = {
               ...prev.chunks[nChunkKey],
               buffer: new Uint32Array(prev.chunks[nChunkKey].buffer),
-              isModified: true
+              isModified: true,
+              rebuildId: (prev.chunks[nChunkKey].rebuildId || 0) + 1
             };
           }
           targetBuffer = newChunks[nChunkKey].buffer;
@@ -2153,10 +1503,9 @@ removeCube: (x, y, z, causedByGravity = false, initiatedByPlayerId = null) => {
           if (isMainChunk) {
             deltas.push(nIdx, targetBuffer[nIdx]);
           } else {
-            const networkActions = getNetworkStore();
-            if (networkActions) {
-              networkActions.getState().broadcastDelta(nChunkKey, [nIdx, targetBuffer[nIdx]]);
-            }
+            rebuilds.add(nChunkKey);
+            if (!neighborDeltas[nChunkKey]) neighborDeltas[nChunkKey] = [];
+            neighborDeltas[nChunkKey].push(nIdx, targetBuffer[nIdx]);
           }
         } else {
           // Already-visible solid block — stop propagating in this direction
@@ -2171,7 +1520,10 @@ removeCube: (x, y, z, causedByGravity = false, initiatedByPlayerId = null) => {
     }
     const networkActions = getNetworkStore();
     if (networkActions) {
-      networkActions.getState().broadcastDelta(chunkKey, deltas);
+      if (deltas.length > 0) networkActions.getState().broadcastDelta(chunkKey, deltas);
+      for (const [nKey, nDeltas] of Object.entries(neighborDeltas)) {
+        networkActions.getState().broadcastDelta(nKey, nDeltas);
+      }
     }
     newChunks[chunkKey] = {
       ...prevChunkData,
@@ -2179,7 +1531,7 @@ removeCube: (x, y, z, causedByGravity = false, initiatedByPlayerId = null) => {
       isModified: true,
       rebuildId: (prevChunkData.rebuildId || 0) + 1
     };
-    return {
+    const ret: any = {
       chunks: newChunks,
       _meta: {
         texName,
@@ -2187,12 +1539,14 @@ removeCube: (x, y, z, causedByGravity = false, initiatedByPlayerId = null) => {
         floraBroken
       }
     };
+    if (chestItems) {
+      const chests = { ...prev.chests };
+      delete chests[`${x},${ly},${z}`];
+      ret.chests = chests;
+    }
+    return ret;
   })(prev);
-  if (__patch.chunks !== undefined) {
-    useChunkStore.setState({
-      chunks: __patch.chunks
-    });
-  }
+    applyStranglerPatch(__patch, rawSet);
   rebuilds.forEach(ck => get().requestMeshRebuild(ck));
   const {
     texName,
@@ -2230,6 +1584,7 @@ removeCubesBulk: (blocks, causedByGravity = false, initiatedByPlayerId = null) =
   const processedBlocks = [];
   const prev = getCombinedState(rawGet);
   const __patch = (prev => {
+    let __patch_chests = null;
     const newChunks = {
       ...prev.chunks
     };
@@ -2241,8 +1596,8 @@ removeCubesBulk: (blocks, causedByGravity = false, initiatedByPlayerId = null) =
       } = b;
       const ly = Math.floor(y);
       if (ly < CHUNK_Y_MIN || ly > CHUNK_Y_MAX) return;
-      const lx = (x % 16 + 16) % 16;
-      const lz = (z % 16 + 16) % 16;
+      const lx = Math.floor((x % 16 + 16) % 16);
+      const lz = Math.floor((z % 16 + 16) % 16);
       const cx = Math.floor(x / 16);
       const cz = Math.floor(z / 16);
       const chunkKey = `${cx},${cz}`;
@@ -2267,6 +1622,33 @@ removeCubesBulk: (blocks, causedByGravity = false, initiatedByPlayerId = null) =
       setBlock(newBuffer, idx, 0, 0, 0, 0);
       if (!chunkDeltas[chunkKey]) chunkDeltas[chunkKey] = [];
       chunkDeltas[chunkKey].push(idx, 0);
+      
+      if (ly + 1 <= CHUNK_Y_MAX) {
+        const aboveIdx = getIndex(lx, ly + 1, lz);
+        const aboveVal = newBuffer[aboveIdx];
+        if ((aboveVal & 0xff) !== 0) {
+          const aboveTexId = getTextureId(aboveVal);
+          const aboveTexName = BlockKeyById[aboveTexId];
+          if (BlockById[aboveTexId]?.isFlora || aboveTexName === 'flare' || aboveTexName === 'chest' || BlockById[aboveTexId]?.isContainer) {
+            setBlock(newBuffer, aboveIdx, 0, 0, 0, 0);
+            chunkDeltas[chunkKey].push(aboveIdx, 0);
+            let cascadeChestItems = null;
+            if (aboveTexName === 'chest') {
+              if (!__patch_chests) __patch_chests = { ...prev.chests };
+              cascadeChestItems = __patch_chests[`${x},${y + 1},${z}`] || null;
+              delete __patch_chests[`${x},${y + 1},${z}`];
+            }
+            processedBlocks.push({
+              x,
+              y: ly + 1,
+              z,
+              texName: aboveTexName,
+              chestItems: cascadeChestItems
+            });
+          }
+        }
+      }
+
       rebuilds.add(chunkKey);
       if (lx === 0) rebuilds.add(`${cx - 1},${cz}`);
       if (lx === 15) rebuilds.add(`${cx + 1},${cz}`);
@@ -2274,7 +1656,9 @@ removeCubesBulk: (blocks, causedByGravity = false, initiatedByPlayerId = null) =
       if (lz === 15) rebuilds.add(`${cx},${cz + 1}`);
       let chestItems = null;
       if (texName === 'chest') {
-        chestItems = useInventoryStore.getState().chests[`${x},${y},${z}`] || null;
+        if (!__patch_chests) __patch_chests = { ...prev.chests };
+        chestItems = __patch_chests[`${x},${y},${z}`] || null;
+        delete __patch_chests[`${x},${y},${z}`];
       }
       processedBlocks.push({
         x,
@@ -2312,8 +1696,8 @@ removeCubesBulk: (blocks, causedByGravity = false, initiatedByPlayerId = null) =
         const ncx = Math.floor(nx / 16);
         const ncz = Math.floor(nz / 16);
         const nChunkKey = `${ncx},${ncz}`;
-        const nlx = (nx % 16 + 16) % 16;
-        const nlz = (nz % 16 + 16) % 16;
+        const nlx = Math.floor((nx % 16 + 16) % 16);
+        const nlz = Math.floor((nz % 16 + 16) % 16);
         const nChunk = newChunks[nChunkKey] || prev.chunks[nChunkKey];
         if (!nChunk?.buffer) continue;
 
@@ -2351,15 +1735,13 @@ removeCubesBulk: (blocks, causedByGravity = false, initiatedByPlayerId = null) =
         }
       }
     }
-    return {
+    const ret: any = {
       chunks: newChunks
     };
+    if (__patch_chests) ret.chests = __patch_chests;
+    return ret;
   })(prev);
-  if (__patch.chunks !== undefined) {
-    useChunkStore.setState({
-      chunks: __patch.chunks
-    });
-  }
+    applyStranglerPatch(__patch, rawSet);
   rebuilds.forEach(ck => get().requestMeshRebuild(ck));
   if (networkActions) {
     for (const ck in chunkDeltas) {
@@ -2376,18 +1758,15 @@ removeCubesBulk: (blocks, causedByGravity = false, initiatedByPlayerId = null) =
 },
 damageBlocksBulk: blocksData => {
   // blocksData: Array of { x, y, z, amount }
-
+  let rebuilds: Set<string>;
   (() => {
     const prev = getCombinedState(rawGet);
     const __patch = (prev => {
       const newChunks = {
         ...prev.chunks
       };
-      const newPendingDeltas = {
-        ...prev.pendingDeltas
-      };
       let updated = false;
-      const rebuilds = new Set();
+      rebuilds = new Set();
       for (const {
         x,
         y,
@@ -2418,8 +1797,19 @@ damageBlocksBulk: blocksData => {
         if (health <= 0) {
           // Block is destroyed
           setBlock(chunkData.buffer, i, 0, 0, false);
-          if (!newPendingDeltas[chunkKey]) newPendingDeltas[chunkKey] = {};
-          newPendingDeltas[chunkKey][getBlockKey(localX, ly, localZ)] = 0;
+          
+          if (ly + 1 <= CHUNK_Y_MAX) {
+            const aboveIdx = getIndex(localX, ly + 1, localZ);
+            const aboveVal = chunkData.buffer[aboveIdx];
+            if ((aboveVal & 0xff) !== 0) {
+              const aboveTexId = getTextureId(aboveVal);
+              const aboveTexName = BlockKeyById[aboveTexId];
+              if (BlockById[aboveTexId]?.isFlora || aboveTexName === 'flare' || aboveTexName === 'chest' || BlockById[aboveTexId]?.isContainer) {
+                setBlock(chunkData.buffer, aboveIdx, 0, 0, false);
+              }
+            }
+          }
+
           rebuilds.add(chunkKey);
           const dirs = [[0, 1, 0], [0, -1, 0], [1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]];
           for (const [dx, dy, dz] of dirs) {
@@ -2430,8 +1820,8 @@ damageBlocksBulk: blocksData => {
             const ncx = Math.floor(nx / 16);
             const ncz = Math.floor(nz / 16);
             const nKey = `${ncx},${ncz}`;
-            const nlx = (nx % 16 + 16) % 16;
-            const nlz = (nz % 16 + 16) % 16;
+            const nlx = Math.floor((nx % 16 + 16) % 16);
+            const nlz = Math.floor((nz % 16 + 16) % 16);
             const nChunk = newChunks[nKey] || prev.chunks[nKey];
             if (nChunk && nChunk.buffer) {
               if (!newChunks[nKey] || newChunks[nKey] === prev.chunks[nKey]) {
@@ -2478,54 +1868,15 @@ damageBlocksBulk: blocksData => {
         }
       });
       return {
-        chunks: newChunks,
-        pendingDeltas: newPendingDeltas
+        chunks: newChunks
       };
     })(prev);
-    if (__patch.chunks !== undefined || __patch.pendingMeshMounts !== undefined || __patch.overflowChunks !== undefined || __patch.activePhysicsChunks !== undefined) {
-      const cPatch = {};
-      if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
-      if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
-      if (__patch.overflowChunks !== undefined) cPatch.overflowChunks = __patch.overflowChunks;
-      if (__patch.activePhysicsChunks !== undefined) cPatch.activePhysicsChunks = __patch.activePhysicsChunks;
-      useChunkStore.setState(cPatch);
-    }
-    if (__patch.debris !== undefined || __patch.fallingStructures !== undefined || __patch.chests !== undefined || __patch.droppedItems !== undefined || __patch.tombstones !== undefined) {
-      const iPatch = {};
-      if (__patch.debris !== undefined) iPatch.debris = __patch.debris;
-      if (__patch.fallingStructures !== undefined) iPatch.fallingStructures = __patch.fallingStructures;
-      if (__patch.chests !== undefined) iPatch.chests = __patch.chests;
-      if (__patch.droppedItems !== undefined) iPatch.droppedItems = __patch.droppedItems;
-      if (__patch.tombstones !== undefined) iPatch.tombstones = __patch.tombstones;
-      useInventoryStore.setState(iPatch);
-    }
-    if (__patch.placedFlares !== undefined) useFlareStore.setState({
-      placedFlares: __patch.placedFlares
-    });
-    if (__patch.worldTime !== undefined) {
-      useEnvironmentStore.setState({
-        worldTime: __patch.worldTime,
-        currentDay: __patch.currentDay,
-        isNightTime: __patch.isNightTime,
-        isRaining: __patch.isRaining,
-        skyColor: __patch.skyColor,
-        fogDensity: __patch.fogDensity
-      });
-    }
-    if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-      const rawPatch = {};
-      if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-      if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-      if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
-      rawSet(rawPatch);
-    }
+    applyStranglerPatch(__patch, rawSet);
   })();
 
-  // Defer mesh rebuilds
-  // // const state = get();
-  // We don't have rebuilds set here, so we'll just request rebuilds on next frame for pending chunks if needed.
-  // Actually, we can just let AutoSaveManager/Network sync handle it, or we can manually request.
-  // The beast attack is just an effect. We will add manual rebuild requests in SwarmManager.
+  if (rebuilds && rebuilds.size > 0) {
+    rebuilds.forEach(ck => get().requestMeshRebuild(ck));
+  }
 },
 damageBlock: (x, y, z, amount, naturalOnly = false) => {
   const chunkKey = getChunkKey(x, z);
@@ -2534,8 +1885,8 @@ damageBlock: (x, y, z, amount, naturalOnly = false) => {
   // // const state = get();
   const chunkData = useChunkStore.getState().chunks[chunkKey];
   if (!chunkData) return;
-  const lx = (x % 16 + 16) % 16;
-  const lz = (z % 16 + 16) % 16;
+  const lx = Math.floor((x % 16 + 16) % 16);
+  const lz = Math.floor((z % 16 + 16) % 16);
   const val = chunkData.buffer[getIndex(lx, ly, lz)];
   if ((val & 0xff) === 0) return;
   if (naturalOnly) {
@@ -2574,43 +1925,7 @@ damageBlock: (x, y, z, amount, naturalOnly = false) => {
           chunks: newChunks
         };
       })(prev);
-      if (__patch.chunks !== undefined || __patch.pendingMeshMounts !== undefined || __patch.overflowChunks !== undefined || __patch.activePhysicsChunks !== undefined) {
-        const cPatch = {};
-        if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
-        if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
-        if (__patch.overflowChunks !== undefined) cPatch.overflowChunks = __patch.overflowChunks;
-        if (__patch.activePhysicsChunks !== undefined) cPatch.activePhysicsChunks = __patch.activePhysicsChunks;
-        useChunkStore.setState(cPatch);
-      }
-      if (__patch.debris !== undefined || __patch.fallingStructures !== undefined || __patch.chests !== undefined || __patch.droppedItems !== undefined || __patch.tombstones !== undefined) {
-        const iPatch = {};
-        if (__patch.debris !== undefined) iPatch.debris = __patch.debris;
-        if (__patch.fallingStructures !== undefined) iPatch.fallingStructures = __patch.fallingStructures;
-        if (__patch.chests !== undefined) iPatch.chests = __patch.chests;
-        if (__patch.droppedItems !== undefined) iPatch.droppedItems = __patch.droppedItems;
-        if (__patch.tombstones !== undefined) iPatch.tombstones = __patch.tombstones;
-        useInventoryStore.setState(iPatch);
-      }
-      if (__patch.placedFlares !== undefined) useFlareStore.setState({
-        placedFlares: __patch.placedFlares
-      });
-      if (__patch.worldTime !== undefined) {
-        useEnvironmentStore.setState({
-          worldTime: __patch.worldTime,
-          currentDay: __patch.currentDay,
-          isNightTime: __patch.isNightTime,
-          isRaining: __patch.isRaining,
-          skyColor: __patch.skyColor,
-          fogDensity: __patch.fogDensity
-        });
-      }
-      if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-        const rawPatch = {};
-        if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-        if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-        if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
-        rawSet(rawPatch);
-      }
+      applyStranglerPatch(__patch, rawSet);
     })();
   }
 },
@@ -2717,43 +2032,7 @@ saveWorld: async () => {
       }
       return changed ? nextState : prev;
     })(prev);
-    if (__patch.chunks !== undefined || __patch.pendingMeshMounts !== undefined || __patch.overflowChunks !== undefined || __patch.activePhysicsChunks !== undefined) {
-      const cPatch = {};
-      if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
-      if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
-      if (__patch.overflowChunks !== undefined) cPatch.overflowChunks = __patch.overflowChunks;
-      if (__patch.activePhysicsChunks !== undefined) cPatch.activePhysicsChunks = __patch.activePhysicsChunks;
-      useChunkStore.setState(cPatch);
-    }
-    if (__patch.debris !== undefined || __patch.fallingStructures !== undefined || __patch.chests !== undefined || __patch.droppedItems !== undefined || __patch.tombstones !== undefined) {
-      const iPatch = {};
-      if (__patch.debris !== undefined) iPatch.debris = __patch.debris;
-      if (__patch.fallingStructures !== undefined) iPatch.fallingStructures = __patch.fallingStructures;
-      if (__patch.chests !== undefined) iPatch.chests = __patch.chests;
-      if (__patch.droppedItems !== undefined) iPatch.droppedItems = __patch.droppedItems;
-      if (__patch.tombstones !== undefined) iPatch.tombstones = __patch.tombstones;
-      useInventoryStore.setState(iPatch);
-    }
-    if (__patch.placedFlares !== undefined) useFlareStore.setState({
-      placedFlares: __patch.placedFlares
-    });
-    if (__patch.worldTime !== undefined) {
-      useEnvironmentStore.setState({
-        worldTime: __patch.worldTime,
-        currentDay: __patch.currentDay,
-        isNightTime: __patch.isNightTime,
-        isRaining: __patch.isRaining,
-        skyColor: __patch.skyColor,
-        fogDensity: __patch.fogDensity
-      });
-    }
-    if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-      const rawPatch = {};
-      if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-      if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-      if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
-      rawSet(rawPatch);
-    }
+    applyStranglerPatch(__patch, rawSet);
   })();
 
   // 1. Gather all modified chunks and their CURRENT rebuildId
@@ -2808,43 +2087,7 @@ saveWorld: async () => {
         chunks: newChunks
       } : prev;
     })(prev);
-    if (__patch.chunks !== undefined || __patch.pendingMeshMounts !== undefined || __patch.overflowChunks !== undefined || __patch.activePhysicsChunks !== undefined) {
-      const cPatch = {};
-      if (__patch.chunks !== undefined) cPatch.chunks = __patch.chunks;
-      if (__patch.pendingMeshMounts !== undefined) cPatch.pendingMeshMounts = __patch.pendingMeshMounts;
-      if (__patch.overflowChunks !== undefined) cPatch.overflowChunks = __patch.overflowChunks;
-      if (__patch.activePhysicsChunks !== undefined) cPatch.activePhysicsChunks = __patch.activePhysicsChunks;
-      useChunkStore.setState(cPatch);
-    }
-    if (__patch.debris !== undefined || __patch.fallingStructures !== undefined || __patch.chests !== undefined || __patch.droppedItems !== undefined || __patch.tombstones !== undefined) {
-      const iPatch = {};
-      if (__patch.debris !== undefined) iPatch.debris = __patch.debris;
-      if (__patch.fallingStructures !== undefined) iPatch.fallingStructures = __patch.fallingStructures;
-      if (__patch.chests !== undefined) iPatch.chests = __patch.chests;
-      if (__patch.droppedItems !== undefined) iPatch.droppedItems = __patch.droppedItems;
-      if (__patch.tombstones !== undefined) iPatch.tombstones = __patch.tombstones;
-      useInventoryStore.setState(iPatch);
-    }
-    if (__patch.placedFlares !== undefined) useFlareStore.setState({
-      placedFlares: __patch.placedFlares
-    });
-    if (__patch.worldTime !== undefined) {
-      useEnvironmentStore.setState({
-        worldTime: __patch.worldTime,
-        currentDay: __patch.currentDay,
-        isNightTime: __patch.isNightTime,
-        isRaining: __patch.isRaining,
-        skyColor: __patch.skyColor,
-        fogDensity: __patch.fogDensity
-      });
-    }
-    if (__patch.pendingDeltas !== undefined || __patch.isResetting !== undefined || __patch.batcherVersion !== undefined) {
-      const rawPatch = {};
-      if (__patch.pendingDeltas !== undefined) rawPatch.pendingDeltas = __patch.pendingDeltas;
-      if (__patch.isResetting !== undefined) rawPatch.isResetting = __patch.isResetting;
-      if (__patch.batcherVersion !== undefined) rawPatch.batcherVersion = __patch.batcherVersion;
-      rawSet(rawPatch);
-    }
+    applyStranglerPatch(__patch, rawSet);
   })();
 },
   };

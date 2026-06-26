@@ -9,38 +9,38 @@ export interface BiomeDefinition {
 
 export type BiomeRegistryData = Record<string, BiomeDefinition>;
 
-export interface LootDrop {
+interface LootDrop {
   id: string;
   chance: number;
   min: number;
   max: number;
 }
 
-export interface LootTable {
+interface LootTable {
   rolls: number;
   drops: LootDrop[];
 }
 
 export type LootRegistryData = Record<string, LootTable>;
 
-export interface QuestObjective {
+interface QuestObjective {
   type: string;
   target: string;
   amount: number;
 }
 
-export interface QuestRewardItem {
+interface QuestRewardItem {
   texture: string;
   count: number;
 }
 
-export interface QuestRewards {
+interface QuestRewards {
   data?: number;
   coins?: number;
   items?: QuestRewardItem[];
 }
 
-export interface QuestDefinition {
+interface QuestDefinition {
   id: string;
   syncLevel?: number;
   title: string;
@@ -54,7 +54,7 @@ export interface QuestsData {
   side_quests_pool: QuestDefinition[];
 }
 
-export interface SkillDefinition {
+interface SkillDefinition {
   id: string;
   name: string;
   category: string;

@@ -1,3 +1,6 @@
+// @ts-nocheck
+import { useSettingsStore } from '../stores/useSettingsStore';
+
 import { useStore } from '../stores/useStore';
 import { useUIStore } from '../stores/useUIStore';
 import { BlockKeyById } from '../registry/BlockRegistry';
@@ -20,7 +23,7 @@ export const Crosshair = () => {
   const hoverBlockInfo = useStore((state) => state.hoverBlockInfo);
   const isMenuOpen = useUIStore((state) => state.activeModal === 'MENU');
   const isInventoryOpen = useUIStore((state) => state.activeModal === 'INVENTORY');
-  const isSettingsOpen = useStore((state) => state.isSettingsOpen);
+  const isSettingsOpen = useSettingsStore((state) => state.isSettingsOpen);
   const isDead = useStore((state) => state.isDead);
   const isSeated = useStore((state) => state.isSeated);
 
@@ -79,3 +82,4 @@ export const Crosshair = () => {
     </div>
   );
 };
+

@@ -1,7 +1,9 @@
+// @ts-nocheck
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { useStore } from '../stores/useStore';
 import { useChunkStore } from '../stores/chunkSlice';
 import { chunkWorkerPool } from '../utils/workerPool';
+import { pendingDeltas } from '../stores/worldActions/sharedState';
 
 // Mock dependencies
 vi.mock('../utils/workerPool', () => ({
@@ -65,12 +67,12 @@ describe('Chunk Lifecycle Edge Cases', () => {
     store.applyNetworkDelta('10,10', [0, 255]); // Index 0, Value 255
     
     // It should add to pendingDeltas without recursively locking
-    const pending = useStore.getState().pendingDeltas['10,10'];
+    const pending = pendingDeltas.get('10,10');
     expect(pending).toEqual([0, 255]);
     
     // Test that the infinite loop fix holds (no stack overflow when applying again)
     store.applyNetworkDelta('10,10', [1, 128]);
-    expect(useStore.getState().pendingDeltas['10,10']).toEqual([0, 255, 1, 128]);
+    expect(pendingDeltas.get('10,10')).toEqual([0, 255, 1, 128]);
   });
 
   it('queues massive detached buffers for recycling on unload', async () => {

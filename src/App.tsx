@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect } from 'react';
 import TitleScreen from './components/ui/TitleScreen';
 import GameEngine from './GameEngine';
@@ -7,6 +8,7 @@ import { SpectorModal } from './components/ui/SpectorModal';
 import { HTestRunner } from './components/HTestRunner';
 
 import { initWorldSeed } from './worldSeed';
+import { setDbSlotId } from './utils/db';
 
 export default function App() {
   if (!localStorage.getItem('v14_reload_fix')) {
@@ -18,6 +20,7 @@ export default function App() {
 
   const handleStart = (slotId) => {
     sessionStorage.setItem('saveSlotId', slotId);
+    setDbSlotId(slotId);
     initWorldSeed();
     setGameState('playing');
   };

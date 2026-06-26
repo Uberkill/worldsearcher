@@ -79,330 +79,10 @@
     "ast_hash": "0b71c2e7d39daa010985d529f1320b37",
     "semantic_hash": "0b71c2e7d39daa010985d529f1320b37"
   },
-  "eslint.config.js": {
-    "mtime": 1780611498.2233043,
-    "ast_hash": "b63dda878dc2c4440544282f9f170f46",
-    "semantic_hash": "b63dda878dc2c4440544282f9f170f46"
-  },
   "package.json": {
     "mtime": 1780772728.1723285,
     "ast_hash": "89ff3d09625c045133d6cee658dcddb3",
     "semantic_hash": "89ff3d09625c045133d6cee658dcddb3"
-  },
-  "src/App.jsx": {
-    "mtime": 1780689316.8902664,
-    "ast_hash": "7eedd52ac91e95ea04ccec4a722c4f38",
-    "semantic_hash": "7eedd52ac91e95ea04ccec4a722c4f38"
-  },
-  "src/GameEngine.jsx": {
-    "mtime": 1780773529.9528766,
-    "ast_hash": "66867f585bee2c3b079d56cf8c745f76",
-    "semantic_hash": "66867f585bee2c3b079d56cf8c745f76"
-  },
-  "src/audio/AudioPoolManager.jsx": {
-    "mtime": 1780689316.4567797,
-    "ast_hash": "7df807728109e9f92ef3bb629ef05a57",
-    "semantic_hash": "7df807728109e9f92ef3bb629ef05a57"
-  },
-  "src/audio/GameAudio.js": {
-    "mtime": 1780811065.8826668,
-    "ast_hash": "288c79a2ee5c9ca2ffb5ead25f2a603b",
-    "semantic_hash": ""
-  },
-  "src/audio/globalAudioPool.js": {
-    "mtime": 1780689316.4607933,
-    "ast_hash": "028505450b5522ca23a6967507a04ecd",
-    "semantic_hash": "028505450b5522ca23a6967507a04ecd"
-  },
-  "src/components/AchievementPopup.jsx": {
-    "mtime": 1780689316.5250134,
-    "ast_hash": "1b1191abf6be79e46a5f4a770eb6c7a7",
-    "semantic_hash": "1b1191abf6be79e46a5f4a770eb6c7a7"
-  },
-  "src/components/AmbientAudio.jsx": {
-    "mtime": 1780689316.5275226,
-    "ast_hash": "ed1e3c0bdb3aaafdaae9501717491602",
-    "semantic_hash": "ed1e3c0bdb3aaafdaae9501717491602"
-  },
-  "src/components/AutoSaveManager.jsx": {
-    "mtime": 1780689316.5295298,
-    "ast_hash": "b9a4b1b0791fcd9be97e78ce589ae177",
-    "semantic_hash": "b9a4b1b0791fcd9be97e78ce589ae177"
-  },
-  "src/components/BlockInteraction.jsx": {
-    "mtime": 1780811647.0745468,
-    "ast_hash": "1c332bba637102a9341f771a0733bd1f",
-    "semantic_hash": ""
-  },
-  "src/components/Bullets.jsx": {
-    "mtime": 1780689316.5365539,
-    "ast_hash": "824d8eb50826ac8f4399349f5f092e22",
-    "semantic_hash": "824d8eb50826ac8f4399349f5f092e22"
-  },
-  "src/components/ChunkManager.jsx": {
-    "mtime": 1780773865.793431,
-    "ast_hash": "14cc8d93be46da6c2555a7f8410a9bd8",
-    "semantic_hash": "14cc8d93be46da6c2555a7f8410a9bd8"
-  },
-  "src/components/ChunkPhysics.jsx": {
-    "mtime": 1780689316.5516055,
-    "ast_hash": "24a1c0a96e70c63e999467ef63faad01",
-    "semantic_hash": "24a1c0a96e70c63e999467ef63faad01"
-  },
-  "src/components/Crosshair.jsx": {
-    "mtime": 1780689316.5556183,
-    "ast_hash": "0180fa1c1a25e4d0c05d42aa40442af8",
-    "semantic_hash": "0180fa1c1a25e4d0c05d42aa40442af8"
-  },
-  "src/components/Cubes.jsx": {
-    "mtime": 1780690940.6505067,
-    "ast_hash": "85d0ed1ac964930d47bc14bfebec39a8",
-    "semantic_hash": "85d0ed1ac964930d47bc14bfebec39a8"
-  },
-  "src/components/DeathScreen.jsx": {
-    "mtime": 1780689316.5611382,
-    "ast_hash": "c8d3baad992e75b1d57c98ea4cc2ccd8",
-    "semantic_hash": "c8d3baad992e75b1d57c98ea4cc2ccd8"
-  },
-  "src/components/DebugOverlay.jsx": {
-    "mtime": 1780691016.035505,
-    "ast_hash": "8b64d7da5c615d85cf489261a65b3bd3",
-    "semantic_hash": "8b64d7da5c615d85cf489261a65b3bd3"
-  },
-  "src/components/DebugTracker.jsx": {
-    "mtime": 1780689316.5736802,
-    "ast_hash": "8c166a08b0e0114656eae0425f323b7b",
-    "semantic_hash": "8c166a08b0e0114656eae0425f323b7b"
-  },
-  "src/components/DroppedItems.jsx": {
-    "mtime": 1780690449.9948318,
-    "ast_hash": "419646559dd691bfa9aa01cfa35c31ab",
-    "semantic_hash": "419646559dd691bfa9aa01cfa35c31ab"
-  },
-  "src/components/DynamicCube.jsx": {
-    "mtime": 1780689316.5807045,
-    "ast_hash": "2b8764e2e88db5c308243db02166ccec",
-    "semantic_hash": "2b8764e2e88db5c308243db02166ccec"
-  },
-  "src/components/DynamicSky.jsx": {
-    "mtime": 1780690795.1498518,
-    "ast_hash": "957ff4616ec098c783abefd53f68e1a0",
-    "semantic_hash": "957ff4616ec098c783abefd53f68e1a0"
-  },
-  "src/components/Enemies.jsx": {
-    "mtime": 1780690484.754327,
-    "ast_hash": "dfcdc2a7f00043b67cadfcecab193b2c",
-    "semantic_hash": "dfcdc2a7f00043b67cadfcecab193b2c"
-  },
-  "src/components/ErrorBoundary.jsx": {
-    "mtime": 1780689316.600271,
-    "ast_hash": "429e12a6763905adfc165f75c060fdc8",
-    "semantic_hash": "429e12a6763905adfc165f75c060fdc8"
-  },
-  "src/components/FPV.jsx": {
-    "mtime": 1780689316.615323,
-    "ast_hash": "d583d4b30770a4a6779d4c36b6ae8220",
-    "semantic_hash": "d583d4b30770a4a6779d4c36b6ae8220"
-  },
-  "src/components/FallingStructure.jsx": {
-    "mtime": 1780689316.605289,
-    "ast_hash": "c65df6ebe1efb72b6a340be32ceaf222",
-    "semantic_hash": "c65df6ebe1efb72b6a340be32ceaf222"
-  },
-  "src/components/Flares.jsx": {
-    "mtime": 1780690495.6098444,
-    "ast_hash": "b0b8268e6d0cda7f6760e43d4cf47f62",
-    "semantic_hash": "b0b8268e6d0cda7f6760e43d4cf47f62"
-  },
-  "src/components/Flashlight.jsx": {
-    "mtime": 1780689316.6128144,
-    "ast_hash": "af542c492b3a028cd39b32cbe8005f8a",
-    "semantic_hash": "af542c492b3a028cd39b32cbe8005f8a"
-  },
-  "src/components/GhostBlock.jsx": {
-    "mtime": 1780689316.6173298,
-    "ast_hash": "b5d64313a2db3397a6ada0a40811916e",
-    "semantic_hash": "b5d64313a2db3397a6ada0a40811916e"
-  },
-  "src/components/HTestRunner.jsx": {
-    "mtime": 1780689316.629371,
-    "ast_hash": "7cf255ed15e033bfa52cafffb7bec0f3",
-    "semantic_hash": "7cf255ed15e033bfa52cafffb7bec0f3"
-  },
-  "src/components/HostCombat.jsx": {
-    "mtime": 1780775327.2973812,
-    "ast_hash": "e31296c7acee350f509912003adbe6f5",
-    "semantic_hash": "e31296c7acee350f509912003adbe6f5"
-  },
-  "src/components/Hotbar.jsx": {
-    "mtime": 1780689316.6268623,
-    "ast_hash": "ab8fa7f7e820f04ef607c70988993fb8",
-    "semantic_hash": "ab8fa7f7e820f04ef607c70988993fb8"
-  },
-  "src/components/Lasers.jsx": {
-    "mtime": 1780689316.6323817,
-    "ast_hash": "3ecf2ed6e94c9a4073bc75b150966573",
-    "semantic_hash": "3ecf2ed6e94c9a4073bc75b150966573"
-  },
-  "src/components/LoadingScreen.jsx": {
-    "mtime": 1780689316.6489387,
-    "ast_hash": "fc722badcc5a12a1523895a1435a8de0",
-    "semantic_hash": "fc722badcc5a12a1523895a1435a8de0"
-  },
-  "src/components/Minimap.jsx": {
-    "mtime": 1780689316.6539555,
-    "ast_hash": "781c7b1cf183a8ca2d50a698bf01b075",
-    "semantic_hash": "781c7b1cf183a8ca2d50a698bf01b075"
-  },
-  "src/components/ModelLoader.jsx": {
-    "mtime": 1780689316.6559625,
-    "ast_hash": "a4d1e03b0870e99b80adc11042a695cc",
-    "semantic_hash": "a4d1e03b0870e99b80adc11042a695cc"
-  },
-  "src/components/MultiplayerManager.jsx": {
-    "mtime": 1780689316.6614814,
-    "ast_hash": "fb52ebeb8eb9dc6f62ff2aeb3085e5f2",
-    "semantic_hash": "fb52ebeb8eb9dc6f62ff2aeb3085e5f2"
-  },
-  "src/components/Player.jsx": {
-    "mtime": 1780690986.3427281,
-    "ast_hash": "015d963f3eddcd2b9a8d9bd7291ba73b",
-    "semantic_hash": "015d963f3eddcd2b9a8d9bd7291ba73b"
-  },
-  "src/components/PostFX.jsx": {
-    "mtime": 1780689316.6745267,
-    "ast_hash": "f3bfcabf4e756a5ec524465744b35896",
-    "semantic_hash": "f3bfcabf4e756a5ec524465744b35896"
-  },
-  "src/components/Screenshot.jsx": {
-    "mtime": 1780689316.676031,
-    "ast_hash": "8556109cc124003a2fa25f6483d43adb",
-    "semantic_hash": "8556109cc124003a2fa25f6483d43adb"
-  },
-  "src/components/SwarmManager.jsx": {
-    "mtime": 1780691307.3614204,
-    "ast_hash": "86d0cd069239ac9d078a7d3c87723820",
-    "semantic_hash": "86d0cd069239ac9d078a7d3c87723820"
-  },
-  "src/components/Tether.jsx": {
-    "mtime": 1780689316.690582,
-    "ast_hash": "64fd46451f429e80d8849262012eec40",
-    "semantic_hash": "64fd46451f429e80d8849262012eec40"
-  },
-  "src/components/Tombstones.jsx": {
-    "mtime": 1780811604.2390275,
-    "ast_hash": "eb49b4bbb415f66c49d21e82e84ff3bc",
-    "semantic_hash": ""
-  },
-  "src/components/ViewModel.jsx": {
-    "mtime": 1780689316.699111,
-    "ast_hash": "5c103a0f854a48ae6463d13f507c1335",
-    "semantic_hash": "5c103a0f854a48ae6463d13f507c1335"
-  },
-  "src/components/Waypoints.jsx": {
-    "mtime": 1780689316.7016199,
-    "ast_hash": "14c39f5a09bd7fc8b6fa87a2ea899974",
-    "semantic_hash": "14c39f5a09bd7fc8b6fa87a2ea899974"
-  },
-  "src/components/WeatherSystem.jsx": {
-    "mtime": 1780690805.0788336,
-    "ast_hash": "cb0a385e3a9b7b2a3dd63f8afed4cd02",
-    "semantic_hash": "cb0a385e3a9b7b2a3dd63f8afed4cd02"
-  },
-  "src/components/ui/BaseOverlay.jsx": {
-    "mtime": 1780689316.4643054,
-    "ast_hash": "01f67dab86d2caca65c2010d1bd024e4",
-    "semantic_hash": "01f67dab86d2caca65c2010d1bd024e4"
-  },
-  "src/components/ui/ChatFeed.jsx": {
-    "mtime": 1780689400.748875,
-    "ast_hash": "8254a4c7e784685c3f25d2b8bf8cb570",
-    "semantic_hash": "8254a4c7e784685c3f25d2b8bf8cb570"
-  },
-  "src/components/ui/ChestOverlay.jsx": {
-    "mtime": 1780773692.4882278,
-    "ast_hash": "232b5368218712332995b5ecd3e125c7",
-    "semantic_hash": "232b5368218712332995b5ecd3e125c7"
-  },
-  "src/components/ui/CraftingOverlay.jsx": {
-    "mtime": 1780689316.4698248,
-    "ast_hash": "56646e0dc05822a7af52e478f58d94f8",
-    "semantic_hash": "56646e0dc05822a7af52e478f58d94f8"
-  },
-  "src/components/ui/CreativeInventory.jsx": {
-    "mtime": 1780689316.4718318,
-    "ast_hash": "20ba99ee170d117debc97ca1000feeb8",
-    "semantic_hash": "20ba99ee170d117debc97ca1000feeb8"
-  },
-  "src/components/ui/CursorItem.jsx": {
-    "mtime": 1780689316.473337,
-    "ast_hash": "79f7716770b8961999042f952aca59f9",
-    "semantic_hash": "79f7716770b8961999042f952aca59f9"
-  },
-  "src/components/ui/CustomCursor.jsx": {
-    "mtime": 1780689316.474842,
-    "ast_hash": "b11dfed587b7184fe00394091119f5c3",
-    "semantic_hash": "b11dfed587b7184fe00394091119f5c3"
-  },
-  "src/components/ui/DataBufferHUD.jsx": {
-    "mtime": 1780689316.476348,
-    "ast_hash": "c7394931172ac763fa361bb32dea5a27",
-    "semantic_hash": "c7394931172ac763fa361bb32dea5a27"
-  },
-  "src/components/ui/InGameUI.jsx": {
-    "mtime": 1780689316.4853783,
-    "ast_hash": "94488ba88fa2f2f8c92b77b6e00d8bbe",
-    "semantic_hash": "94488ba88fa2f2f8c92b77b6e00d8bbe"
-  },
-  "src/components/ui/InventoryOverlay.jsx": {
-    "mtime": 1780689316.4868827,
-    "ast_hash": "cd768a90edcdf95520561106fb214551",
-    "semantic_hash": "cd768a90edcdf95520561106fb214551"
-  },
-  "src/components/ui/InventorySlot.jsx": {
-    "mtime": 1780773696.7150562,
-    "ast_hash": "d9b5e78e77f9703e2f56f656abf3607b",
-    "semantic_hash": "d9b5e78e77f9703e2f56f656abf3607b"
-  },
-  "src/components/ui/MusicPlayerWidget.jsx": {
-    "mtime": 1780689316.4919002,
-    "ast_hash": "bd90f69472b3c4f7871fc5fdd94c69bd",
-    "semantic_hash": "bd90f69472b3c4f7871fc5fdd94c69bd"
-  },
-  "src/components/ui/QuestJournal.jsx": {
-    "mtime": 1780689316.4949102,
-    "ast_hash": "51040389e359f4670e7aa012b72d0f3e",
-    "semantic_hash": "51040389e359f4670e7aa012b72d0f3e"
-  },
-  "src/components/ui/QuestTracker.jsx": {
-    "mtime": 1780689316.496917,
-    "ast_hash": "cdb411a63ff9ad0220d4bd9f3338455c",
-    "semantic_hash": "cdb411a63ff9ad0220d4bd9f3338455c"
-  },
-  "src/components/ui/Scoreboard.jsx": {
-    "mtime": 1780689316.500429,
-    "ast_hash": "75b985c92cb9c71bf0fe72befd7885cf",
-    "semantic_hash": "75b985c92cb9c71bf0fe72befd7885cf"
-  },
-  "src/components/ui/ShopOverlay.jsx": {
-    "mtime": 1780689316.5029378,
-    "ast_hash": "ee976b423d396787e498ce6a04e2f054",
-    "semantic_hash": "ee976b423d396787e498ce6a04e2f054"
-  },
-  "src/components/ui/SkillTreeOverlay.jsx": {
-    "mtime": 1780689316.5054462,
-    "ast_hash": "b1714532eb5adf8050369227783c2bcc",
-    "semantic_hash": "b1714532eb5adf8050369227783c2bcc"
-  },
-  "src/components/ui/SpectorModal.jsx": {
-    "mtime": 1780689316.5099626,
-    "ast_hash": "b1e2f3dce835df267c2ecbc40bf7a36d",
-    "semantic_hash": "b1e2f3dce835df267c2ecbc40bf7a36d"
-  },
-  "src/components/ui/TitleScreen.jsx": {
-    "mtime": 1780689316.5230074,
-    "ast_hash": "05b0652d392ba49069ad5dd6ddd29289",
-    "semantic_hash": "05b0652d392ba49069ad5dd6ddd29289"
   },
   "src/data/biomes.json": {
     "mtime": 1780566104.7275133,
@@ -423,26 +103,6 @@
     "mtime": 1780611500.435347,
     "ast_hash": "7801360eaab417730dced3c9cba5b54d",
     "semantic_hash": "7801360eaab417730dced3c9cba5b54d"
-  },
-  "src/globals.js": {
-    "mtime": 1780689316.895283,
-    "ast_hash": "9831aa70f9d96b266ad21619ddc4c41a",
-    "semantic_hash": "9831aa70f9d96b266ad21619ddc4c41a"
-  },
-  "src/hooks/useKeyboard.js": {
-    "mtime": 1780689316.7076397,
-    "ast_hash": "49e616c5ae33a0904e460e3410c9ef08",
-    "semantic_hash": "49e616c5ae33a0904e460e3410c9ef08"
-  },
-  "src/main.jsx": {
-    "mtime": 1780689316.8967893,
-    "ast_hash": "145f7cb1e3047c637d1cdbb9a6c78ad7",
-    "semantic_hash": "145f7cb1e3047c637d1cdbb9a6c78ad7"
-  },
-  "src/materials/ChunkMaterial.js": {
-    "mtime": 1780689316.7111516,
-    "ast_hash": "f0af42e959d15374c52c37fa3008ee1c",
-    "semantic_hash": "f0af42e959d15374c52c37fa3008ee1c"
   },
   "src/prefabs/crystal_spire.json": {
     "mtime": 1780611500.4935465,
@@ -494,26 +154,6 @@
     "ast_hash": "c2118c34b40bc5cc5cb64170cea0c142",
     "semantic_hash": "c2118c34b40bc5cc5cb64170cea0c142"
   },
-  "src/registry/BlockRegistry.js": {
-    "mtime": 1780689316.7141623,
-    "ast_hash": "1d129647ca586fcca406a5a5ded173d4",
-    "semantic_hash": "1d129647ca586fcca406a5a5ded173d4"
-  },
-  "src/registry/CraftingRegistry.js": {
-    "mtime": 1780689316.7161696,
-    "ast_hash": "e76c7afcd1e70ff7ec0705e7b24dffb3",
-    "semantic_hash": "e76c7afcd1e70ff7ec0705e7b24dffb3"
-  },
-  "src/registry/ItemRegistry.js": {
-    "mtime": 1780689316.7176738,
-    "ast_hash": "08426bf2f0410352587eaf4c9ac79a9b",
-    "semantic_hash": "08426bf2f0410352587eaf4c9ac79a9b"
-  },
-  "src/registry/Registry.js": {
-    "mtime": 1780689316.7191792,
-    "ast_hash": "3e8b6884b4a4ce678097ea4eff0baa91",
-    "semantic_hash": "3e8b6884b4a4ce678097ea4eff0baa91"
-  },
   "src/registry/quests.json": {
     "mtime": 1780664409.222752,
     "ast_hash": "ab75094a4cc91bafa1f8f1c64f2d9ca3",
@@ -523,206 +163,6 @@
     "mtime": 1780664400.2316315,
     "ast_hash": "e04b7674ee0acbe73846cbae83716328",
     "semantic_hash": "e04b7674ee0acbe73846cbae83716328"
-  },
-  "src/stores/chatSlice.js": {
-    "mtime": 1780689316.7211854,
-    "ast_hash": "159dd1c1be4343f3ba387f1307d577cc",
-    "semantic_hash": "159dd1c1be4343f3ba387f1307d577cc"
-  },
-  "src/stores/chunkSlice.js": {
-    "mtime": 1780689316.7236948,
-    "ast_hash": "fa2aa441437752dfd712642d765ebab3",
-    "semantic_hash": "fa2aa441437752dfd712642d765ebab3"
-  },
-  "src/stores/connectionSlice.js": {
-    "mtime": 1780689316.7246993,
-    "ast_hash": "bea9ce671c1bafb4ebb359276fa21612",
-    "semantic_hash": "bea9ce671c1bafb4ebb359276fa21612"
-  },
-  "src/stores/createAchievementSlice.js": {
-    "mtime": 1780689316.7262032,
-    "ast_hash": "6a2329704fcb2810f1893b6e0efb270d",
-    "semantic_hash": "6a2329704fcb2810f1893b6e0efb270d"
-  },
-  "src/stores/createEntitySlice.js": {
-    "mtime": 1780774159.7524786,
-    "ast_hash": "e34ee915b720208402907ca8d922ad5e",
-    "semantic_hash": "e34ee915b720208402907ca8d922ad5e"
-  },
-  "src/stores/createPlayerSlice.js": {
-    "mtime": 1780811575.394165,
-    "ast_hash": "c1271131e31ca67a5a0c41ea1b010651",
-    "semantic_hash": ""
-  },
-  "src/stores/createQuestSlice.js": {
-    "mtime": 1780811619.8929641,
-    "ast_hash": "6d12fb3afae8d5917e09b27e271893bb",
-    "semantic_hash": ""
-  },
-  "src/stores/createSettingsSlice.js": {
-    "mtime": 1780689316.7452688,
-    "ast_hash": "ffb12175986bd536bcf4a58cd1793e42",
-    "semantic_hash": "ffb12175986bd536bcf4a58cd1793e42"
-  },
-  "src/stores/environmentSlice.js": {
-    "mtime": 1780689316.7462726,
-    "ast_hash": "f29c638e96139844c054caa3749158fa",
-    "semantic_hash": "f29c638e96139844c054caa3749158fa"
-  },
-  "src/stores/flareSlice.js": {
-    "mtime": 1780689316.7477777,
-    "ast_hash": "b58018fd2f084793331e3da556d07f2c",
-    "semantic_hash": "b58018fd2f084793331e3da556d07f2c"
-  },
-  "src/stores/inventorySlice.js": {
-    "mtime": 1780690999.3081388,
-    "ast_hash": "f46b703623bffaac7f7021c352a9c039",
-    "semantic_hash": "f46b703623bffaac7f7021c352a9c039"
-  },
-  "src/stores/networkActions.js": {
-    "mtime": 1780811590.6355891,
-    "ast_hash": "63fca752a7af8024510c9ab4ec100c08",
-    "semantic_hash": ""
-  },
-  "src/stores/storeLinker.js": {
-    "mtime": 1780689316.767846,
-    "ast_hash": "3dd3d8d6222982ad669118eccb2e54ee",
-    "semantic_hash": "3dd3d8d6222982ad669118eccb2e54ee"
-  },
-  "src/stores/syncSlice.js": {
-    "mtime": 1780689316.769351,
-    "ast_hash": "a5b92281b9b8a53fa0c7537798fb67e9",
-    "semantic_hash": "a5b92281b9b8a53fa0c7537798fb67e9"
-  },
-  "src/stores/useAuthStore.js": {
-    "mtime": 1780689316.7723625,
-    "ast_hash": "ec43e9e6a290a1d07385852cd5ac6165",
-    "semantic_hash": "ec43e9e6a290a1d07385852cd5ac6165"
-  },
-  "src/stores/useStore.js": {
-    "mtime": 1780811011.1149457,
-    "ast_hash": "5fb2f9bf966b7bc5dd78b17981e21c22",
-    "semantic_hash": ""
-  },
-  "src/stores/worldActions.js": {
-    "mtime": 1780775887.716258,
-    "ast_hash": "7b495bd096f298eb574f2aad281cb205",
-    "semantic_hash": "7b495bd096f298eb574f2aad281cb205"
-  },
-  "src/systems/ItemDropSystem.js": {
-    "mtime": 1780773516.3955228,
-    "ast_hash": "ce774591c013b2c7bf42d8b99f8a9cdd",
-    "semantic_hash": "ce774591c013b2c7bf42d8b99f8a9cdd"
-  },
-  "src/systems/PhysicsReactionSystem.js": {
-    "mtime": 1780773541.1362844,
-    "ast_hash": "c3529249cb6543da364303b4204c7d81",
-    "semantic_hash": "c3529249cb6543da364303b4204c7d81"
-  },
-  "src/systems/QuestSystem.js": {
-    "mtime": 1780773518.6115918,
-    "ast_hash": "e6f7857fbf9ae5aed78d7dcf20465764",
-    "semantic_hash": "e6f7857fbf9ae5aed78d7dcf20465764"
-  },
-  "src/utils/ChunkMaterialCache.js": {
-    "mtime": 1780689316.8069813,
-    "ast_hash": "f756733c213edc1e02b5f9c8d153452e",
-    "semantic_hash": "f756733c213edc1e02b5f9c8d153452e"
-  },
-  "src/utils/EventBus.js": {
-    "mtime": 1780773481.00378,
-    "ast_hash": "c80abcbfe3b38ea090999b2ff06d47cf",
-    "semantic_hash": "c80abcbfe3b38ea090999b2ff06d47cf"
-  },
-  "src/utils/MaterialCache.js": {
-    "mtime": 1780689316.8501282,
-    "ast_hash": "68ae2dfe86359d7f472c2c7bba726c73",
-    "semantic_hash": "68ae2dfe86359d7f472c2c7bba726c73"
-  },
-  "src/utils/TextureAtlas.js": {
-    "mtime": 1780689316.872707,
-    "ast_hash": "0d3b95901160a0b3b938a1da71a179d7",
-    "semantic_hash": "0d3b95901160a0b3b938a1da71a179d7"
-  },
-  "src/utils/WebGLTracker.js": {
-    "mtime": 1780689316.8752146,
-    "ast_hash": "8f39c36052c377e49f640da209c291a8",
-    "semantic_hash": "8f39c36052c377e49f640da209c291a8"
-  },
-  "src/utils/biomes.js": {
-    "mtime": 1780689316.7989533,
-    "ast_hash": "f934838cb1a9880f8faeabac8235410d",
-    "semantic_hash": "f934838cb1a9880f8faeabac8235410d"
-  },
-  "src/utils/chunkData.js": {
-    "mtime": 1780775860.6104944,
-    "ast_hash": "506c8a52ea51dffd4fa1075bc61c0747",
-    "semantic_hash": "506c8a52ea51dffd4fa1075bc61c0747"
-  },
-  "src/utils/chunkGenerator.js": {
-    "mtime": 1780689316.8059769,
-    "ast_hash": "32b023da08e96bfd94ccd47ac933e9ea",
-    "semantic_hash": "32b023da08e96bfd94ccd47ac933e9ea"
-  },
-  "src/utils/db.js": {
-    "mtime": 1780772475.458818,
-    "ast_hash": "48147d6d27634e236d55eb39aa82c173",
-    "semantic_hash": "48147d6d27634e236d55eb39aa82c173"
-  },
-  "src/utils/fluidSystem.js": {
-    "mtime": 1780691530.2079356,
-    "ast_hash": "673314175f28a1edf2d8f00aa9dbff87",
-    "semantic_hash": "673314175f28a1edf2d8f00aa9dbff87"
-  },
-  "src/utils/greedyMesh.js": {
-    "mtime": 1780689316.830059,
-    "ast_hash": "847c4d28e21aedf5371494394059a8f4",
-    "semantic_hash": "847c4d28e21aedf5371494394059a8f4"
-  },
-  "src/utils/lighting.js": {
-    "mtime": 1780689316.8476193,
-    "ast_hash": "dc3f9356ea81f0ddebe3979a7a0b4bb0",
-    "semantic_hash": "dc3f9356ea81f0ddebe3979a7a0b4bb0"
-  },
-  "src/utils/structuralPhysics.js": {
-    "mtime": 1780691540.5083807,
-    "ast_hash": "47c170f455fccbbbc70c8363d5ebf8fc",
-    "semantic_hash": "47c170f455fccbbbc70c8363d5ebf8fc"
-  },
-  "src/utils/structures.js": {
-    "mtime": 1780689316.8681908,
-    "ast_hash": "5a597fa95634330a044aa5bfccddece8",
-    "semantic_hash": "5a597fa95634330a044aa5bfccddece8"
-  },
-  "src/utils/swarmConfig.js": {
-    "mtime": 1780689316.8701968,
-    "ast_hash": "29dafe5ec7bd5c4f7a692c0f5334a511",
-    "semantic_hash": "29dafe5ec7bd5c4f7a692c0f5334a511"
-  },
-  "src/utils/workerPool.js": {
-    "mtime": 1780810995.2662828,
-    "ast_hash": "24e4147f08a35bb8eae901648e3368fd",
-    "semantic_hash": ""
-  },
-  "src/workers/chunkWorker.js": {
-    "mtime": 1780689316.8852491,
-    "ast_hash": "99bb9846eeda3622a3c3e0e156722266",
-    "semantic_hash": "99bb9846eeda3622a3c3e0e156722266"
-  },
-  "src/workers/pathfinderWorker.js": {
-    "mtime": 1780689316.8887622,
-    "ast_hash": "22bf471e3d9ba1dfb4e4f6e707da40b7",
-    "semantic_hash": "22bf471e3d9ba1dfb4e4f6e707da40b7"
-  },
-  "src/worldSeed.js": {
-    "mtime": 1780689316.8983078,
-    "ast_hash": "3b4145a8d1f6d0f19803c0f8b7abf37c",
-    "semantic_hash": "3b4145a8d1f6d0f19803c0f8b7abf37c"
-  },
-  "vite.config.js": {
-    "mtime": 1780611500.7725027,
-    "ast_hash": "6873db3cf9d729c20e5ceed525779712",
-    "semantic_hash": "6873db3cf9d729c20e5ceed525779712"
   },
   ".agents/rules/graphify.md": {
     "mtime": 1780808355.3832998,
@@ -1019,335 +459,15 @@
     "ast_hash": "0b71c2e7d39daa010985d529f1320b37",
     "semantic_hash": "0b71c2e7d39daa010985d529f1320b37"
   },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\eslint.config.js": {
-    "mtime": 1781157640.1901264,
-    "ast_hash": "eaeb052fb7922af62edaf1e2f8eaff53",
-    "semantic_hash": "eaeb052fb7922af62edaf1e2f8eaff53"
-  },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\package.json": {
-    "mtime": 1781771186.9351134,
-    "ast_hash": "fc2a2297a633c4abdf0a23bafc864496",
-    "semantic_hash": "fc2a2297a633c4abdf0a23bafc864496"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\App.jsx": {
-    "mtime": 1781233548.191751,
-    "ast_hash": "d7fa9397f38f26551594f2100a5f5ed6",
-    "semantic_hash": "d7fa9397f38f26551594f2100a5f5ed6"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\GameEngine.jsx": {
-    "mtime": 1781668750.08609,
-    "ast_hash": "e7a15becf08d02f0a704e1f354cbaa6c",
-    "semantic_hash": "e7a15becf08d02f0a704e1f354cbaa6c"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\audio\\AudioPoolManager.jsx": {
-    "mtime": 1781524997.7633424,
-    "ast_hash": "a52a41b02f45c8e92a90634ee9ef8c0b",
-    "semantic_hash": "a52a41b02f45c8e92a90634ee9ef8c0b"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\audio\\GameAudio.js": {
-    "mtime": 1781523984.2953482,
-    "ast_hash": "a007a55a38033d6bc9c29d91514110d0",
-    "semantic_hash": "a007a55a38033d6bc9c29d91514110d0"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\audio\\globalAudioPool.js": {
-    "mtime": 1781068714.1461482,
-    "ast_hash": "028505450b5522ca23a6967507a04ecd",
-    "semantic_hash": "028505450b5522ca23a6967507a04ecd"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\AchievementPopup.jsx": {
-    "mtime": 1781068714.1471512,
-    "ast_hash": "1b1191abf6be79e46a5f4a770eb6c7a7",
-    "semantic_hash": "1b1191abf6be79e46a5f4a770eb6c7a7"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\AmbientAudio.jsx": {
-    "mtime": 1781068714.1476536,
-    "ast_hash": "3981cf3c7328eb7e3e376b0ced3a41dc",
-    "semantic_hash": "3981cf3c7328eb7e3e376b0ced3a41dc"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\AutoSaveManager.jsx": {
-    "mtime": 1781667104.9279187,
-    "ast_hash": "2f9384ef92e0ce530919a8dbd1431cf2",
-    "semantic_hash": "2f9384ef92e0ce530919a8dbd1431cf2"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\BlockInteraction.jsx": {
-    "mtime": 1781705729.2753687,
-    "ast_hash": "e794b489ecf2b89f9601be6406586028",
-    "semantic_hash": "e794b489ecf2b89f9601be6406586028"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Bullets.jsx": {
-    "mtime": 1781068714.14966,
-    "ast_hash": "824d8eb50826ac8f4399349f5f092e22",
-    "semantic_hash": "824d8eb50826ac8f4399349f5f092e22"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ChunkManager.jsx": {
-    "mtime": 1781765234.5334265,
-    "ast_hash": "213fb8b7c60e8c5ebd16d25a1210035e",
-    "semantic_hash": "213fb8b7c60e8c5ebd16d25a1210035e"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ChunkPhysics.jsx": {
-    "mtime": 1781785630.310627,
-    "ast_hash": "9e08072f7a4c5a6a998ccd5bb9b54ed5",
-    "semantic_hash": "9e08072f7a4c5a6a998ccd5bb9b54ed5"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Crosshair.jsx": {
-    "mtime": 1781678537.727132,
-    "ast_hash": "d294c515fae2dd90718475e59619d443",
-    "semantic_hash": "d294c515fae2dd90718475e59619d443"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Cubes.jsx": {
-    "mtime": 1781785925.6927447,
-    "ast_hash": "a4fec59cfe0d9e9eb97675fb5f153255",
-    "semantic_hash": "a4fec59cfe0d9e9eb97675fb5f153255"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\DeathScreen.jsx": {
-    "mtime": 1781324907.9227722,
-    "ast_hash": "89f35aec611ef6c372f33466f50ad5db",
-    "semantic_hash": "89f35aec611ef6c372f33466f50ad5db"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\DebugOverlay.jsx": {
-    "mtime": 1781680065.040141,
-    "ast_hash": "c29f05602b60cace8b7241e921301a6a",
-    "semantic_hash": "c29f05602b60cace8b7241e921301a6a"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\DebugTracker.jsx": {
-    "mtime": 1781068714.157688,
-    "ast_hash": "aa88f893b86246e5dc7157973e95837d",
-    "semantic_hash": "aa88f893b86246e5dc7157973e95837d"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\DroppedItems.jsx": {
-    "mtime": 1781177186.3831797,
-    "ast_hash": "ee17de57222cc616f0d54fcbfa803c44",
-    "semantic_hash": "ee17de57222cc616f0d54fcbfa803c44"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\DynamicCube.jsx": {
-    "mtime": 1781068714.158691,
-    "ast_hash": "2b8764e2e88db5c308243db02166ccec",
-    "semantic_hash": "2b8764e2e88db5c308243db02166ccec"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\DynamicSky.jsx": {
-    "mtime": 1781679824.6685834,
-    "ast_hash": "97b947ca577ba019c119d6721308f616",
-    "semantic_hash": "97b947ca577ba019c119d6721308f616"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Enemies.jsx": {
-    "mtime": 1781724470.0948203,
-    "ast_hash": "dc2853852a9d3113bde7d3d46fe3e297",
-    "semantic_hash": "dc2853852a9d3113bde7d3d46fe3e297"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ErrorBoundary.jsx": {
-    "mtime": 1781068714.1606982,
-    "ast_hash": "429e12a6763905adfc165f75c060fdc8",
-    "semantic_hash": "429e12a6763905adfc165f75c060fdc8"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\FPV.jsx": {
-    "mtime": 1781165520.8519094,
-    "ast_hash": "d08fa45ddb42927a04bc91ece0536d19",
-    "semantic_hash": "d08fa45ddb42927a04bc91ece0536d19"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\FallingStructure.jsx": {
-    "mtime": 1781687072.654027,
-    "ast_hash": "8c7d54e1d091c94ea5aa54a0da9602f8",
-    "semantic_hash": "8c7d54e1d091c94ea5aa54a0da9602f8"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Flares.jsx": {
-    "mtime": 1781505042.056922,
-    "ast_hash": "32e908e1d7ff5faa5953756413e1640b",
-    "semantic_hash": "32e908e1d7ff5faa5953756413e1640b"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Flashlight.jsx": {
-    "mtime": 1781068714.1637082,
-    "ast_hash": "af542c492b3a028cd39b32cbe8005f8a",
-    "semantic_hash": "af542c492b3a028cd39b32cbe8005f8a"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\GhostBlock.jsx": {
-    "mtime": 1781492443.9124355,
-    "ast_hash": "c3d727157960bf5e7f791910b154560c",
-    "semantic_hash": "c3d727157960bf5e7f791910b154560c"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\HTestRunner.jsx": {
-    "mtime": 1781157640.2036705,
-    "ast_hash": "48c896110d02a72a5d08d439ee380242",
-    "semantic_hash": "48c896110d02a72a5d08d439ee380242"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\HostCombat.jsx": {
-    "mtime": 1781696393.386781,
-    "ast_hash": "1200c4a811d0bc3866aa7ccd09726673",
-    "semantic_hash": "1200c4a811d0bc3866aa7ccd09726673"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Hotbar.jsx": {
-    "mtime": 1781683152.9936526,
-    "ast_hash": "920789a5d9df7707a257ee94cb219e43",
-    "semantic_hash": "920789a5d9df7707a257ee94cb219e43"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Lasers.jsx": {
-    "mtime": 1781068714.167722,
-    "ast_hash": "3ecf2ed6e94c9a4073bc75b150966573",
-    "semantic_hash": "3ecf2ed6e94c9a4073bc75b150966573"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\LoadingScreen.jsx": {
-    "mtime": 1781765002.389908,
-    "ast_hash": "fc722badcc5a12a1523895a1435a8de0",
-    "semantic_hash": "fc722badcc5a12a1523895a1435a8de0"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Minimap.jsx": {
-    "mtime": 1781157640.2051754,
-    "ast_hash": "9fef9e7d225e6da33a0a659a0c372598",
-    "semantic_hash": "9fef9e7d225e6da33a0a659a0c372598"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ModelLoader.jsx": {
-    "mtime": 1781068714.1707323,
-    "ast_hash": "a4d1e03b0870e99b80adc11042a695cc",
-    "semantic_hash": "a4d1e03b0870e99b80adc11042a695cc"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\MultiplayerManager.jsx": {
-    "mtime": 1781600295.7638402,
-    "ast_hash": "98e401d55c2550558220f55879d056bc",
-    "semantic_hash": "98e401d55c2550558220f55879d056bc"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Player.jsx": {
-    "mtime": 1781765273.3087187,
-    "ast_hash": "02c9ddce517775b41845567d4985079a",
-    "semantic_hash": "02c9ddce517775b41845567d4985079a"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\PostFX.jsx": {
-    "mtime": 1781068714.172739,
-    "ast_hash": "62a1181ee8b3ffb73a2194a22db43c67",
-    "semantic_hash": "62a1181ee8b3ffb73a2194a22db43c67"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Screenshot.jsx": {
-    "mtime": 1781686086.3163226,
-    "ast_hash": "11b4011ec1a78d53cf14d1096a68f82a",
-    "semantic_hash": "11b4011ec1a78d53cf14d1096a68f82a"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\SwarmManager.jsx": {
-    "mtime": 1781755448.7808585,
-    "ast_hash": "ea467f8805097f93ba3027c3dc48000a",
-    "semantic_hash": "ea467f8805097f93ba3027c3dc48000a"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Tether.jsx": {
-    "mtime": 1781068714.1747458,
-    "ast_hash": "64fd46451f429e80d8849262012eec40",
-    "semantic_hash": "64fd46451f429e80d8849262012eec40"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Tombstones.jsx": {
-    "mtime": 1781068714.1752474,
-    "ast_hash": "0f417eccebf112fc46c2e00fe33d39e2",
-    "semantic_hash": "0f417eccebf112fc46c2e00fe33d39e2"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ViewModel.jsx": {
-    "mtime": 1781334515.8506377,
-    "ast_hash": "f0a3542343f36533bfb8fb271cf1a2c7",
-    "semantic_hash": "f0a3542343f36533bfb8fb271cf1a2c7"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Waypoints.jsx": {
-    "mtime": 1781492398.0377922,
-    "ast_hash": "05e4d014db14edad5e288aecf6037dbe",
-    "semantic_hash": "05e4d014db14edad5e288aecf6037dbe"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\WeatherSystem.jsx": {
-    "mtime": 1781621567.1932225,
-    "ast_hash": "220d9b0deed7474b55e2296c95685f00",
-    "semantic_hash": "220d9b0deed7474b55e2296c95685f00"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\BaseOverlay.jsx": {
-    "mtime": 1781068714.1777563,
-    "ast_hash": "01f67dab86d2caca65c2010d1bd024e4",
-    "semantic_hash": "01f67dab86d2caca65c2010d1bd024e4"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\ChatFeed.jsx": {
-    "mtime": 1781068714.1782584,
-    "ast_hash": "8254a4c7e784685c3f25d2b8bf8cb570",
-    "semantic_hash": "8254a4c7e784685c3f25d2b8bf8cb570"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\ChestOverlay.jsx": {
-    "mtime": 1781530984.086186,
-    "ast_hash": "70efffc1fcf557b865697c5986522327",
-    "semantic_hash": "70efffc1fcf557b865697c5986522327"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\CraftingOverlay.jsx": {
-    "mtime": 1781531002.3744404,
-    "ast_hash": "da7aea82a6f9848558efd78200263050",
-    "semantic_hash": "da7aea82a6f9848558efd78200263050"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\CreativeInventory.jsx": {
-    "mtime": 1781334502.1072893,
-    "ast_hash": "9aba999621cad4f497d447e4726d33ef",
-    "semantic_hash": "9aba999621cad4f497d447e4726d33ef"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\CursorItem.jsx": {
-    "mtime": 1781068714.180265,
-    "ast_hash": "79f7716770b8961999042f952aca59f9",
-    "semantic_hash": "79f7716770b8961999042f952aca59f9"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\CustomCursor.jsx": {
-    "mtime": 1781068714.1807666,
-    "ast_hash": "b11dfed587b7184fe00394091119f5c3",
-    "semantic_hash": "b11dfed587b7184fe00394091119f5c3"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\DataBufferHUD.jsx": {
-    "mtime": 1781068714.18177,
-    "ast_hash": "c7394931172ac763fa361bb32dea5a27",
-    "semantic_hash": "c7394931172ac763fa361bb32dea5a27"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\InGameUI.jsx": {
-    "mtime": 1781717152.0501895,
-    "ast_hash": "ecd3405d36e1575c03689648b58451bf",
-    "semantic_hash": "ecd3405d36e1575c03689648b58451bf"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\InventoryOverlay.jsx": {
-    "mtime": 1781068714.1827748,
-    "ast_hash": "cd768a90edcdf95520561106fb214551",
-    "semantic_hash": "cd768a90edcdf95520561106fb214551"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\InventorySlot.jsx": {
-    "mtime": 1781758105.8340645,
-    "ast_hash": "a809f6791466825439c89c2f239d31ef",
-    "semantic_hash": "a809f6791466825439c89c2f239d31ef"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\MusicPlayerWidget.jsx": {
-    "mtime": 1781068714.1837776,
-    "ast_hash": "bd90f69472b3c4f7871fc5fdd94c69bd",
-    "semantic_hash": "bd90f69472b3c4f7871fc5fdd94c69bd"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\QuestJournal.jsx": {
-    "mtime": 1781678556.7771297,
-    "ast_hash": "56825cef17f4f09d755fb7ca423d891a",
-    "semantic_hash": "56825cef17f4f09d755fb7ca423d891a"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\QuestTracker.jsx": {
-    "mtime": 1781068714.1847806,
-    "ast_hash": "cdb411a63ff9ad0220d4bd9f3338455c",
-    "semantic_hash": "cdb411a63ff9ad0220d4bd9f3338455c"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\Scoreboard.jsx": {
-    "mtime": 1781716505.7391407,
-    "ast_hash": "402d508a9bccb79a20f82ccb1941d33b",
-    "semantic_hash": "402d508a9bccb79a20f82ccb1941d33b"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\ShopOverlay.jsx": {
-    "mtime": 1781068714.185784,
-    "ast_hash": "ee976b423d396787e498ce6a04e2f054",
-    "semantic_hash": "ee976b423d396787e498ce6a04e2f054"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\SkillTreeOverlay.jsx": {
-    "mtime": 1781157640.2106943,
-    "ast_hash": "aa7293d94b775099aef4626c8fd58f15",
-    "semantic_hash": "aa7293d94b775099aef4626c8fd58f15"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\SpectorModal.jsx": {
-    "mtime": 1781157640.211196,
-    "ast_hash": "294ff182c9fa65cc525509a941ece36c",
-    "semantic_hash": "294ff182c9fa65cc525509a941ece36c"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\TitleScreen.jsx": {
-    "mtime": 1781157640.2122002,
-    "ast_hash": "9fc00bcf8b5ea4a49bc43e6cf579edc0",
-    "semantic_hash": "9fc00bcf8b5ea4a49bc43e6cf579edc0"
+    "mtime": 1781890652.266471,
+    "ast_hash": "e7bff3b2da2bead2b0958185bd7ed558",
+    "semantic_hash": "e7bff3b2da2bead2b0958185bd7ed558"
   },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\data\\biomes.json": {
-    "mtime": 1781068714.1882925,
-    "ast_hash": "300cf12745d71bc50489868b66244462",
-    "semantic_hash": "300cf12745d71bc50489868b66244462"
+    "mtime": 1781894637.950954,
+    "ast_hash": "d320828d743736d0120f3bf17ca1432d",
+    "semantic_hash": "d320828d743736d0120f3bf17ca1432d"
   },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\data\\blocks.json": {
     "mtime": 1781534366.841158,
@@ -1355,34 +475,14 @@
     "semantic_hash": "ff3808c245caa44f44f7a55e767431dd"
   },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\data\\items.json": {
-    "mtime": 1781339093.327479,
-    "ast_hash": "0551025678150327d2022b39fd7175fc",
-    "semantic_hash": "0551025678150327d2022b39fd7175fc"
+    "mtime": 1781894501.8620412,
+    "ast_hash": "4cc64a1ae4007d6413caba2455addce0",
+    "semantic_hash": "4cc64a1ae4007d6413caba2455addce0"
   },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\data\\loot.json": {
     "mtime": 1781068714.1897974,
     "ast_hash": "36005dc73b9fc0ce7e253afb994c8dde",
     "semantic_hash": "36005dc73b9fc0ce7e253afb994c8dde"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\globals.js": {
-    "mtime": 1781524641.2079835,
-    "ast_hash": "ac1e305b304617a4e6f64d02a60d33e9",
-    "semantic_hash": "ac1e305b304617a4e6f64d02a60d33e9"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\hooks\\useKeyboard.js": {
-    "mtime": 1781682739.8371334,
-    "ast_hash": "b59611ed4fdc38dfa5bfb1009c3d2646",
-    "semantic_hash": "b59611ed4fdc38dfa5bfb1009c3d2646"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\main.jsx": {
-    "mtime": 1781104778.6756053,
-    "ast_hash": "8fbde05d0dc4eb802e0a1e6076ae1ec8",
-    "semantic_hash": "8fbde05d0dc4eb802e0a1e6076ae1ec8"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\materials\\ChunkMaterial.js": {
-    "mtime": 1781586395.7337005,
-    "ast_hash": "d70ee5b751790da72d497af6214ae667",
-    "semantic_hash": "d70ee5b751790da72d497af6214ae667"
   },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\prefabs\\crystal_spire.json": {
     "mtime": 1781068714.192808,
@@ -1434,26 +534,6 @@
     "ast_hash": "b7977ba413b33c372af8f9205b51f98c",
     "semantic_hash": "b7977ba413b33c372af8f9205b51f98c"
   },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\registry\\BlockRegistry.js": {
-    "mtime": 1781717098.443938,
-    "ast_hash": "5afaff569a107c906b25902de6a9f4de",
-    "semantic_hash": "5afaff569a107c906b25902de6a9f4de"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\registry\\CraftingRegistry.js": {
-    "mtime": 1781339098.4560945,
-    "ast_hash": "466b48507ee6ece308c57d668f4b694e",
-    "semantic_hash": "466b48507ee6ece308c57d668f4b694e"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\registry\\ItemRegistry.js": {
-    "mtime": 1781247335.0209746,
-    "ast_hash": "9a81d89d802cf7fc00dc68c58da7af48",
-    "semantic_hash": "9a81d89d802cf7fc00dc68c58da7af48"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\registry\\Registry.js": {
-    "mtime": 1781247355.0806503,
-    "ast_hash": "872760d151ab5b3df795a7721b0c729a",
-    "semantic_hash": "872760d151ab5b3df795a7721b0c729a"
-  },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\registry\\quests.json": {
     "mtime": 1781068714.1963198,
     "ast_hash": "4d104622d916877a7cec69cf11b6019a",
@@ -1463,206 +543,6 @@
     "mtime": 1781068714.1968226,
     "ast_hash": "73d4bca7b20bdb73435e698ea901e424",
     "semantic_hash": "73d4bca7b20bdb73435e698ea901e424"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\chatSlice.js": {
-    "mtime": 1781157640.213203,
-    "ast_hash": "eb8ed45af66ad07628db55b8942967f1",
-    "semantic_hash": "eb8ed45af66ad07628db55b8942967f1"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\chunkSlice.js": {
-    "mtime": 1781157640.2137055,
-    "ast_hash": "48231c6e283ba785b8aab556cc378b01",
-    "semantic_hash": "48231c6e283ba785b8aab556cc378b01"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\connectionSlice.js": {
-    "mtime": 1781157640.2142062,
-    "ast_hash": "3a04da621a3e0f8d8f21d7e643d4cfbc",
-    "semantic_hash": "3a04da621a3e0f8d8f21d7e643d4cfbc"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\createAchievementSlice.js": {
-    "mtime": 1781068714.1983268,
-    "ast_hash": "6a2329704fcb2810f1893b6e0efb270d",
-    "semantic_hash": "6a2329704fcb2810f1893b6e0efb270d"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\createEntitySlice.js": {
-    "mtime": 1781778767.6725678,
-    "ast_hash": "0153468d11b702842196147476fed2f4",
-    "semantic_hash": "0153468d11b702842196147476fed2f4"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\createPlayerSlice.js": {
-    "mtime": 1781765251.7042468,
-    "ast_hash": "904fc335ef46f73d2bed5dba09c958b5",
-    "semantic_hash": "904fc335ef46f73d2bed5dba09c958b5"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\createQuestSlice.js": {
-    "mtime": 1781157640.2152102,
-    "ast_hash": "8527f4928d40dd1627bf13e1bde962ca",
-    "semantic_hash": "8527f4928d40dd1627bf13e1bde962ca"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\createSettingsSlice.js": {
-    "mtime": 1781516048.001615,
-    "ast_hash": "44fa487f4b0c44d588a524ea3af4ec9c",
-    "semantic_hash": "44fa487f4b0c44d588a524ea3af4ec9c"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\environmentSlice.js": {
-    "mtime": 1781068714.2008352,
-    "ast_hash": "16ceb37e8c401e0d7a83cd84dc644707",
-    "semantic_hash": "16ceb37e8c401e0d7a83cd84dc644707"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\flareSlice.js": {
-    "mtime": 1781424190.857461,
-    "ast_hash": "e76cd7a93e586dbf957ec62f3d8220ac",
-    "semantic_hash": "e76cd7a93e586dbf957ec62f3d8220ac"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\inventorySlice.js": {
-    "mtime": 1781534453.7866,
-    "ast_hash": "dd56d7b8ef5a5dee4876e0480c272b7f",
-    "semantic_hash": "dd56d7b8ef5a5dee4876e0480c272b7f"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\networkActions.js": {
-    "mtime": 1781718242.1829522,
-    "ast_hash": "bd97dba383ac32e02fa682dba39c2db6",
-    "semantic_hash": "bd97dba383ac32e02fa682dba39c2db6"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\storeLinker.js": {
-    "mtime": 1780689316.767846,
-    "ast_hash": "3dd3d8d6222982ad669118eccb2e54ee",
-    "semantic_hash": "3dd3d8d6222982ad669118eccb2e54ee"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\syncSlice.js": {
-    "mtime": 1781191581.2090752,
-    "ast_hash": "84a91b5fb4270eb45b12dc421cc95f01",
-    "semantic_hash": "84a91b5fb4270eb45b12dc421cc95f01"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\useAuthStore.js": {
-    "mtime": 1781068714.2028422,
-    "ast_hash": "ec43e9e6a290a1d07385852cd5ac6165",
-    "semantic_hash": "ec43e9e6a290a1d07385852cd5ac6165"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\useStore.js": {
-    "mtime": 1781622082.7586234,
-    "ast_hash": "145d78b96c3c46743d751f0de41dced7",
-    "semantic_hash": "145d78b96c3c46743d751f0de41dced7"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\worldActions.js": {
-    "mtime": 1781800335.8448966,
-    "ast_hash": "1bf4077e47ca7f142beace0fca60b279",
-    "semantic_hash": "1bf4077e47ca7f142beace0fca60b279"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\ItemDropSystem.js": {
-    "mtime": 1781536488.176374,
-    "ast_hash": "74c22619dd0fa2d5448003bfe5d73274",
-    "semantic_hash": "74c22619dd0fa2d5448003bfe5d73274"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\PhysicsReactionSystem.js": {
-    "mtime": 1781068714.2053506,
-    "ast_hash": "e639c8ddc0a1919a32d2275f7d6a0016",
-    "semantic_hash": "e639c8ddc0a1919a32d2275f7d6a0016"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\QuestSystem.js": {
-    "mtime": 1781068714.2053506,
-    "ast_hash": "816114ebdb50a324b58c5624ce882c81",
-    "semantic_hash": "816114ebdb50a324b58c5624ce882c81"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\ChunkMaterialCache.js": {
-    "mtime": 1781104778.677612,
-    "ast_hash": "798a0f8aab8998a956dd34129e5506ef",
-    "semantic_hash": "798a0f8aab8998a956dd34129e5506ef"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\EventBus.js": {
-    "mtime": 1781068714.2063549,
-    "ast_hash": "6187b019be9bfd68f4ef92bc31692cb3",
-    "semantic_hash": "6187b019be9bfd68f4ef92bc31692cb3"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\MaterialCache.js": {
-    "mtime": 1781068714.2068567,
-    "ast_hash": "68ae2dfe86359d7f472c2c7bba726c73",
-    "semantic_hash": "68ae2dfe86359d7f472c2c7bba726c73"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\TextureAtlas.js": {
-    "mtime": 1781247424.362326,
-    "ast_hash": "5f92d5f9c159067d4a7132ae293ba379",
-    "semantic_hash": "5f92d5f9c159067d4a7132ae293ba379"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\WebGLTracker.js": {
-    "mtime": 1781068714.2083616,
-    "ast_hash": "8f39c36052c377e49f640da209c291a8",
-    "semantic_hash": "8f39c36052c377e49f640da209c291a8"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\biomes.js": {
-    "mtime": 1781247412.1043088,
-    "ast_hash": "8f7c2ed7fdb28dd50ad4cae505fd993c",
-    "semantic_hash": "8f7c2ed7fdb28dd50ad4cae505fd993c"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\chunkData.js": {
-    "mtime": 1781691428.9859612,
-    "ast_hash": "68acbd056526bb7c89b5000b13ed51da",
-    "semantic_hash": "68acbd056526bb7c89b5000b13ed51da"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\chunkGenerator.js": {
-    "mtime": 1781249843.4644113,
-    "ast_hash": "651a060813999f5674bf2843ea8bc848",
-    "semantic_hash": "651a060813999f5674bf2843ea8bc848"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\db.js": {
-    "mtime": 1781778740.65878,
-    "ast_hash": "84d08abb3983694b96e5689936dc1627",
-    "semantic_hash": "84d08abb3983694b96e5689936dc1627"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\fluidSystem.js": {
-    "mtime": 1781247412.1429412,
-    "ast_hash": "b09cb9e5f921aaed40d07956acb1b183",
-    "semantic_hash": "b09cb9e5f921aaed40d07956acb1b183"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\greedyMesh.js": {
-    "mtime": 1781696268.0207202,
-    "ast_hash": "5adf9755a63169a8eccae9c94d2a04b0",
-    "semantic_hash": "5adf9755a63169a8eccae9c94d2a04b0"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\lighting.js": {
-    "mtime": 1781699365.3064628,
-    "ast_hash": "7d3858d9f12e7aaafeec88736ac73175",
-    "semantic_hash": "7d3858d9f12e7aaafeec88736ac73175"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\structuralPhysics.js": {
-    "mtime": 1781759548.5923338,
-    "ast_hash": "9132e461da162a536d6505dd40471e3e",
-    "semantic_hash": "9132e461da162a536d6505dd40471e3e"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\structures.js": {
-    "mtime": 1781334612.9401786,
-    "ast_hash": "3fc85c870635cafee7d857eb55a189c4",
-    "semantic_hash": "3fc85c870635cafee7d857eb55a189c4"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\swarmConfig.js": {
-    "mtime": 1781542703.6957393,
-    "ast_hash": "b1f0f5d72731b29ca387b0c0fb2ee1ce",
-    "semantic_hash": "b1f0f5d72731b29ca387b0c0fb2ee1ce"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\workerPool.js": {
-    "mtime": 1781751111.9433794,
-    "ast_hash": "6e2f73043b0d599e60c2baed494940a5",
-    "semantic_hash": "6e2f73043b0d599e60c2baed494940a5"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\workers\\chunkWorker.js": {
-    "mtime": 1781717104.7631054,
-    "ast_hash": "52eff51e593dc26375e86171a42dddd8",
-    "semantic_hash": "52eff51e593dc26375e86171a42dddd8"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\workers\\pathfinderWorker.js": {
-    "mtime": 1781754246.7196805,
-    "ast_hash": "fa431831086183dbba3ad8194b63de2a",
-    "semantic_hash": "fa431831086183dbba3ad8194b63de2a"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\worldSeed.js": {
-    "mtime": 1781068714.2148833,
-    "ast_hash": "3b4145a8d1f6d0f19803c0f8b7abf37c",
-    "semantic_hash": "3b4145a8d1f6d0f19803c0f8b7abf37c"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\vite.config.js": {
-    "mtime": 1781325641.4817007,
-    "ast_hash": "eec2e5c4336e3b8ea30368a776125896",
-    "semantic_hash": "eec2e5c4336e3b8ea30368a776125896"
   },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\README.md": {
     "mtime": 1781769637.418782,
@@ -1674,16 +554,6 @@
     "ast_hash": "2c6b6cf26a16033599534cd2f0f0d5f4",
     "semantic_hash": "2c6b6cf26a16033599534cd2f0f0d5f4"
   },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ChunkRenderer.jsx": {
-    "mtime": 1781800358.2859888,
-    "ast_hash": "782f63fc2a242167e17b4bf4ed63f635",
-    "semantic_hash": "782f63fc2a242167e17b4bf4ed63f635"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\workers\\dbWorker.js": {
-    "mtime": 1781236550.72311,
-    "ast_hash": "dacf55883d59640d959558c804336a4e",
-    "semantic_hash": "dacf55883d59640d959558c804336a4e"
-  },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\graphify-out\\memory\\query_20260607_050746_why_does_workermanager_connect_worker_pool___task.md": {
     "mtime": 1781068714.084939,
     "ast_hash": "a1c98459d878899ed770ec8d2fd00774",
@@ -1694,150 +564,30 @@
     "ast_hash": "5e2d4c2060e3314a3d4bed7b0abc1ff6",
     "semantic_hash": "5e2d4c2060e3314a3d4bed7b0abc1ff6"
   },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\_archive_scripts\\parse_eslint.ps1": {
-    "mtime": 1781157640.195643,
-    "ast_hash": "d5b5e891361f3fbd6d6003527870837f",
-    "semantic_hash": "d5b5e891361f3fbd6d6003527870837f"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\e2e\\chunk_memory.spec.js": {
-    "mtime": 1781233530.3586268,
-    "ast_hash": "25882ce048a48be5e8ff3e0e5deb2ebe",
-    "semantic_hash": "25882ce048a48be5e8ff3e0e5deb2ebe"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\e2e\\persistence.spec.js": {
-    "mtime": 1781202596.2417018,
-    "ast_hash": "91be31972ba3805122ad0f530d79f935",
-    "semantic_hash": "91be31972ba3805122ad0f530d79f935"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\playwright.config.js": {
-    "mtime": 1781177297.4570255,
-    "ast_hash": "caae177482a00d3c879da0c66c4ed68b",
-    "semantic_hash": "caae177482a00d3c879da0c66c4ed68b"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\GlitchFire.jsx": {
-    "mtime": 1781186321.1068301,
-    "ast_hash": "1501239efb5d5be0d4e1ca170c981545",
-    "semantic_hash": "1501239efb5d5be0d4e1ca170c981545"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ShipPhysics.jsx": {
-    "mtime": 1781771084.52149,
-    "ast_hash": "2ed8766008c4b17758b21bbae211c576",
-    "semantic_hash": "2ed8766008c4b17758b21bbae211c576"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\TransitManager.jsx": {
-    "mtime": 1781604326.7903802,
-    "ast_hash": "83998728f11212bf9908f8a0087ba092",
-    "semantic_hash": "83998728f11212bf9908f8a0087ba092"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\Astrolabe.jsx": {
-    "mtime": 1781621225.3009138,
-    "ast_hash": "2c6c3aa2e264e0586b8253382d18559b",
-    "semantic_hash": "2c6c3aa2e264e0586b8253382d18559b"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\HeartCoreOverlay.jsx": {
-    "mtime": 1781716533.5626645,
-    "ast_hash": "cf0237f595574833ab7aad5f60bf82f4",
-    "semantic_hash": "cf0237f595574833ab7aad5f60bf82f4"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\LunarAnchorOverlay.jsx": {
-    "mtime": 1781524095.8374145,
-    "ast_hash": "a8d4361f8f4cd5427ba77df4b9dcd836",
-    "semantic_hash": "a8d4361f8f4cd5427ba77df4b9dcd836"
-  },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\prefabs\\ship.json": {
     "mtime": 1781545039.0824423,
     "ast_hash": "fdd41aaff4ecd1beb5428e082ca41fd7",
     "semantic_hash": "fdd41aaff4ecd1beb5428e082ca41fd7"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\createShipSlice.js": {
-    "mtime": 1781754266.3533337,
-    "ast_hash": "d937199f78fa2f1596a50ef7c51c9138",
-    "semantic_hash": "d937199f78fa2f1596a50ef7c51c9138"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\tests\\chunkLifecycle.test.js": {
-    "mtime": 1781330542.7545345,
-    "ast_hash": "268c59eceaa72255da79038cdc5b936d",
-    "semantic_hash": "268c59eceaa72255da79038cdc5b936d"
   },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\test-results\\.last-run.json": {
     "mtime": 1781234309.8505049,
     "ast_hash": "f196824657d8858bc7fa44eecbba38b1",
     "semantic_hash": "f196824657d8858bc7fa44eecbba38b1"
   },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\ChunkWorker.test.js": {
-    "mtime": 1781177350.6318498,
-    "ast_hash": "cda4b060f3f97c92f92a16674c471c80",
-    "semantic_hash": "cda4b060f3f97c92f92a16674c471c80"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\TransitManager.test.js": {
-    "mtime": 1781177433.4759018,
-    "ast_hash": "4fd91ca199d2c060afba0265ab8522a0",
-    "semantic_hash": "4fd91ca199d2c060afba0265ab8522a0"
-  },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\docs\\canary_tracker.json": {
-    "mtime": 1781783250.944973,
-    "ast_hash": "f2038f9346e37c22be8e22a46c0754b8",
-    "semantic_hash": "f2038f9346e37c22be8e22a46c0754b8"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ShipyardHologram.jsx": {
-    "mtime": 1781678551.5004148,
-    "ast_hash": "61a4f1589b0c48ad35726ccceae4c6af",
-    "semantic_hash": "61a4f1589b0c48ad35726ccceae4c6af"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\ShipHUD.jsx": {
-    "mtime": 1781444822.6814659,
-    "ast_hash": "fbb142dfa83f7c6eabe189b6815547ba",
-    "semantic_hash": "fbb142dfa83f7c6eabe189b6815547ba"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\ShipyardUI.jsx": {
-    "mtime": 1781524095.8379126,
-    "ast_hash": "4786e88ae4ec74038848e73cf67dc850",
-    "semantic_hash": "4786e88ae4ec74038848e73cf67dc850"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\WarpDriveUI.jsx": {
-    "mtime": 1781524095.838412,
-    "ast_hash": "261abde6d4cb24af3ac91d55a1a6f503",
-    "semantic_hash": "261abde6d4cb24af3ac91d55a1a6f503"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\registry\\InteractionRegistry.js": {
-    "mtime": 1781716263.3562367,
-    "ast_hash": "3fb5adbcf44615c891c5a39415ef6620",
-    "semantic_hash": "3fb5adbcf44615c891c5a39415ef6620"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\workers\\shipWorker.js": {
-    "mtime": 1781755441.3351212,
-    "ast_hash": "1ec521a621c1545f5be0f2daa97eb68f",
-    "semantic_hash": "1ec521a621c1545f5be0f2daa97eb68f"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\workers\\shipWorkerPool.js": {
-    "mtime": 1781454601.5208063,
-    "ast_hash": "f69ddcec2c1ba73dc53a223310e2daf3",
-    "semantic_hash": "f69ddcec2c1ba73dc53a223310e2daf3"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\ai-canary.test.js": {
-    "mtime": 1781325682.9734151,
-    "ast_hash": "0d3f344ee685e1b07b95e5f761dfccc3",
-    "semantic_hash": "0d3f344ee685e1b07b95e5f761dfccc3"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\engine\\logic.test.js": {
-    "mtime": 1781325683.2022023,
-    "ast_hash": "acedb7379ca3667b8e836779213bb53d",
-    "semantic_hash": "acedb7379ca3667b8e836779213bb53d"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\setup.js": {
-    "mtime": 1781327341.1591668,
-    "ast_hash": "88bd710f6654cf5720fc6476dfc6d858",
-    "semantic_hash": "88bd710f6654cf5720fc6476dfc6d858"
+    "mtime": 1781859200.9982808,
+    "ast_hash": "c58cd808abc04b2e241708193fca3be0",
+    "semantic_hash": "c58cd808abc04b2e241708193fca3be0"
   },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\docs\\architecture\\architecture.md": {
-    "mtime": 1781756307.6823204,
-    "ast_hash": "b5c9042a550f424e3f81f6a8a2715b44",
-    "semantic_hash": "b5c9042a550f424e3f81f6a8a2715b44"
+    "mtime": 1781978615.421326,
+    "ast_hash": "845d646693d43d1652bce9c7e97363e6",
+    "semantic_hash": "845d646693d43d1652bce9c7e97363e6"
   },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\docs\\architecture\\design.md": {
-    "mtime": 1781104778.6525257,
-    "ast_hash": "9a6aa39022bde39d35f4d8225c0ec24e",
-    "semantic_hash": "9a6aa39022bde39d35f4d8225c0ec24e"
+    "mtime": 1781859201.032784,
+    "ast_hash": "64da5a35c941c0d634f1e929547f02c2",
+    "semantic_hash": "64da5a35c941c0d634f1e929547f02c2"
   },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\docs\\architecture\\design_system.md": {
     "mtime": 1781756279.900614,
@@ -1850,9 +600,9 @@
     "semantic_hash": "83d92c0964e26d7361107b5f272cf470"
   },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\docs\\core\\AI_AGENT_WARNINGS.md": {
-    "mtime": 1781783235.7496552,
-    "ast_hash": "367aab865d212bce12ba7f9c97af123a",
-    "semantic_hash": "367aab865d212bce12ba7f9c97af123a"
+    "mtime": 1781978649.9140182,
+    "ast_hash": "cdf6841a8d3c20d0ee3620062094db39",
+    "semantic_hash": "cdf6841a8d3c20d0ee3620062094db39"
   },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\docs\\core\\GRAPHIFY_INSIGHTS.md": {
     "mtime": 1781686090.3419468,
@@ -1865,9 +615,9 @@
     "semantic_hash": "0f031a7ea98430e76fb39cc1f4ba5e9b"
   },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\docs\\core\\current_state.md": {
-    "mtime": 1781783244.3222818,
-    "ast_hash": "26e4041b77dfe24c504d28d27d799dbf",
-    "semantic_hash": "26e4041b77dfe24c504d28d27d799dbf"
+    "mtime": 1781978627.199113,
+    "ast_hash": "991c51c7417d8822ad3e02452608f0b6",
+    "semantic_hash": "991c51c7417d8822ad3e02452608f0b6"
   },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\docs\\systems\\COMBAT.md": {
     "mtime": 1781104778.6505191,
@@ -1888,41 +638,6 @@
     "mtime": 1781756817.2935474,
     "ast_hash": "2f8bba217075799d778f686bb682f00b",
     "semantic_hash": "2f8bba217075799d778f686bb682f00b"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\eslint_out.json": {
-    "mtime": 1781669125.7020352,
-    "ast_hash": "60a6c650f76cce3c6b6d53d4ddc20ce6",
-    "semantic_hash": "60a6c650f76cce3c6b6d53d4ddc20ce6"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\extract.py": {
-    "mtime": 1781666586.7706602,
-    "ast_hash": "0687c10d99461946c9afdfc574f23811",
-    "semantic_hash": "0687c10d99461946c9afdfc574f23811"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\fallow.json": {
-    "mtime": 1781681470.4283702,
-    "ast_hash": "c0e8ab1405df06aea50fa697a489fb27",
-    "semantic_hash": "c0e8ab1405df06aea50fa697a489fb27"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\fallow_report.json": {
-    "mtime": 1781666481.5153043,
-    "ast_hash": "d7f51192cd9aae0e3903569d821c7e81",
-    "semantic_hash": "d7f51192cd9aae0e3903569d821c7e81"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\get_dead.py": {
-    "mtime": 1781666897.6560063,
-    "ast_hash": "04f995618d8596f90a90f5c5d7b9d08d",
-    "semantic_hash": "04f995618d8596f90a90f5c5d7b9d08d"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\map_player.py": {
-    "mtime": 1781667976.7297518,
-    "ast_hash": "b4357384c6a40f1964715d355ed35482",
-    "semantic_hash": "b4357384c6a40f1964715d355ed35482"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\refactor_network.py": {
-    "mtime": 1781667718.6458795,
-    "ast_hash": "beb71cddde46bd1599d0f7ce69d5b976",
-    "semantic_hash": "beb71cddde46bd1599d0f7ce69d5b976"
   },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\scripts\\extract_ship_tick.py": {
     "mtime": 1781680659.3283048,
@@ -2019,190 +734,15 @@
     "ast_hash": "7221790d696d70941d57722952ddc7da",
     "semantic_hash": "7221790d696d70941d57722952ddc7da"
   },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\split_network.py": {
-    "mtime": 1781667859.9211557,
-    "ast_hash": "d4bfad20c990cbeaad3915d732ffe483",
-    "semantic_hash": "d4bfad20c990cbeaad3915d732ffe483"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\engine\\GameGraphics.jsx": {
-    "mtime": 1781788410.3537965,
-    "ast_hash": "18c886495b67fffcc0eac0bc077a1d43",
-    "semantic_hash": "18c886495b67fffcc0eac0bc077a1d43"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\engine\\GamePhysicsEntities.jsx": {
-    "mtime": 1781668711.3232937,
-    "ast_hash": "702a8482a9d7d1e9a2ab4126c364d4ec",
-    "semantic_hash": "702a8482a9d7d1e9a2ab4126c364d4ec"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\engine\\GameUI.jsx": {
-    "mtime": 1781668711.322794,
-    "ast_hash": "9fae213160477d5b1427a22ec811cc77",
-    "semantic_hash": "9fae213160477d5b1427a22ec811cc77"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\ContainerGUI.jsx": {
-    "mtime": 1781531144.611158,
-    "ast_hash": "f9ab0b0e6c5b3eaef3043a0563305e1c",
-    "semantic_hash": "f9ab0b0e6c5b3eaef3043a0563305e1c"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\FurnaceOverlay.jsx": {
-    "mtime": 1781534830.1976185,
-    "ast_hash": "e3dc9756a33f7dd85f6fada98d3da7b6",
-    "semantic_hash": "e3dc9756a33f7dd85f6fada98d3da7b6"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\hooks\\useDebugOverlayUpdate.js": {
-    "mtime": 1781668649.6377614,
-    "ast_hash": "998e1dbff0ed55245d0516f1900955ba",
-    "semantic_hash": "998e1dbff0ed55245d0516f1900955ba"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\hooks\\usePlayerPhysics.js": {
-    "mtime": 1781778841.6208167,
-    "ast_hash": "6a18db2254dd7707ec32e0bea1cddca8",
-    "semantic_hash": "6a18db2254dd7707ec32e0bea1cddca8"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\hooks\\useWorldLighting.js": {
-    "mtime": 1781788418.6924028,
-    "ast_hash": "12d789d2b5f0fd78ce4b1b8921d53b66",
-    "semantic_hash": "12d789d2b5f0fd78ce4b1b8921d53b66"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\registry\\SmeltingRegistry.js": {
-    "mtime": 1781534807.2832468,
-    "ast_hash": "7284a2a9e819e695ab59a26bd04980a0",
-    "semantic_hash": "7284a2a9e819e695ab59a26bd04980a0"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\network\\broadcastActions.js": {
-    "mtime": 1781718130.1690032,
-    "ast_hash": "b50725ef34e36f7a30086745b1e387b8",
-    "semantic_hash": "b50725ef34e36f7a30086745b1e387b8"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\network\\chatActions.js": {
-    "mtime": 1781718082.4549506,
-    "ast_hash": "b8787eda23a17036ccf2d9ae3244564d",
-    "semantic_hash": "b8787eda23a17036ccf2d9ae3244564d"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\network\\chunkActions.js": {
-    "mtime": 1781718098.7385452,
-    "ast_hash": "12648c31051e310f393bef77f3b78b9a",
-    "semantic_hash": "12648c31051e310f393bef77f3b78b9a"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\network\\connectionActions.js": {
-    "mtime": 1781718195.2747538,
-    "ast_hash": "3b3eed3fa29ffcfd4c76391ae7116bf6",
-    "semantic_hash": "3b3eed3fa29ffcfd4c76391ae7116bf6"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\network\\packetParser.js": {
-    "mtime": 1781718266.6195288,
-    "ast_hash": "aebe2cb1155b0f8aba2954a66cf8f089",
-    "semantic_hash": "aebe2cb1155b0f8aba2954a66cf8f089"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\useSettingsStore.js": {
-    "mtime": 1781687501.7803187,
-    "ast_hash": "df5ccfaaa6bb51ab02aa5c5eec749642",
-    "semantic_hash": "df5ccfaaa6bb51ab02aa5c5eec749642"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\useUIStore.js": {
-    "mtime": 1781717125.427899,
-    "ast_hash": "2c6b7104a63834ef7fb55965a7826d32",
-    "semantic_hash": "2c6b7104a63834ef7fb55965a7826d32"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\MachineTickSystem.js": {
-    "mtime": 1781696755.4806252,
-    "ast_hash": "6c3f72b5c5bb0af4ffa3e4b53c64b248",
-    "semantic_hash": "6c3f72b5c5bb0af4ffa3e4b53c64b248"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\network\\ChatSystems.js": {
-    "mtime": 1781719782.9203181,
-    "ast_hash": "d871c38469e7396bcdf250d0b4ad10bc",
-    "semantic_hash": "d871c38469e7396bcdf250d0b4ad10bc"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\network\\ConnectionSystems.js": {
-    "mtime": 1781717678.099424,
-    "ast_hash": "bde760ae074a15a047ab4ea9a9cc0ca6",
-    "semantic_hash": "bde760ae074a15a047ab4ea9a9cc0ca6"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\network\\InventorySystems.js": {
-    "mtime": 1781719782.922819,
-    "ast_hash": "bd3d3b27ef68447d5cd1b4bda1185203",
-    "semantic_hash": "bd3d3b27ef68447d5cd1b4bda1185203"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\network\\LootSystems.js": {
-    "mtime": 1781719782.9233186,
-    "ast_hash": "c9eae7262708500f95d56c7e2f334234",
-    "semantic_hash": "c9eae7262708500f95d56c7e2f334234"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\network\\PlayerSyncSystems.js": {
-    "mtime": 1781719782.92382,
-    "ast_hash": "e08e37f1052b162df14da0e10a9470ed",
-    "semantic_hash": "e08e37f1052b162df14da0e10a9470ed"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\network\\ShipSystems.js": {
-    "mtime": 1781719782.9243188,
-    "ast_hash": "e2a74ce02c5f8cebe43af5ce4a46b62d",
-    "semantic_hash": "e2a74ce02c5f8cebe43af5ce4a46b62d"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\network\\WorldSyncSystems.js": {
-    "mtime": 1781719743.3568194,
-    "ast_hash": "84f0aafdb918d0f38aea86923611bd14",
-    "semantic_hash": "84f0aafdb918d0f38aea86923611bd14"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\NetworkEventBus.js": {
-    "mtime": 1781667726.8647149,
-    "ast_hash": "b250a453c82cbaee0e0a4a6d6c130162",
-    "semantic_hash": "b250a453c82cbaee0e0a4a6d6c130162"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\playerModels.js": {
-    "mtime": 1781600289.0513763,
-    "ast_hash": "1d32e80b8cd645e7a4be4257e88559d0",
-    "semantic_hash": "1d32e80b8cd645e7a4be4257e88559d0"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\syncState.js": {
-    "mtime": 1781667089.253255,
-    "ast_hash": "49c03c692d14dab057b96bde672646ce",
-    "semantic_hash": "49c03c692d14dab057b96bde672646ce"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\engine\\ShipPhysics.test.js": {
-    "mtime": 1781755863.5490966,
-    "ast_hash": "67f07fe2b50068ea2f2d124440cb6184",
-    "semantic_hash": "67f07fe2b50068ea2f2d124440cb6184"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\engine\\block-breaking.test.js": {
-    "mtime": 1781758507.837006,
-    "ast_hash": "f882551027f95efcced5b8ee1c6f093a",
-    "semantic_hash": "f882551027f95efcced5b8ee1c6f093a"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\engine\\boundaries.test.js": {
-    "mtime": 1781527756.8346605,
-    "ast_hash": "57dbdb0fb5f0911bc414fb7aa09c7f95",
-    "semantic_hash": "57dbdb0fb5f0911bc414fb7aa09c7f95"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\engine\\memory-allocations.test.js": {
-    "mtime": 1781697693.8614085,
-    "ast_hash": "acbe649148257a99359a5591f84d350f",
-    "semantic_hash": "acbe649148257a99359a5591f84d350f"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\engine\\memory.test.js": {
-    "mtime": 1781528340.2710538,
-    "ast_hash": "bdf4158e2d6d009f55f775f2d8038203",
-    "semantic_hash": "bdf4158e2d6d009f55f775f2d8038203"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\engine\\network.test.js": {
-    "mtime": 1781527198.5933335,
-    "ast_hash": "4697b17f37a240d6219c0eeaca295115",
-    "semantic_hash": "4697b17f37a240d6219c0eeaca295115"
-  },
-  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\engine\\simulation.test.js": {
-    "mtime": 1781527744.658567,
-    "ast_hash": "ae6a56f17add5795b68e863eb9d163ba",
-    "semantic_hash": "ae6a56f17add5795b68e863eb9d163ba"
-  },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\.serena\\memories\\conventions.md": {
     "mtime": 1781694962.068133,
     "ast_hash": "b15fe545e020609a19dc19718ca2c4f2",
     "semantic_hash": "b15fe545e020609a19dc19718ca2c4f2"
   },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\.serena\\memories\\core.md": {
-    "mtime": 1781694963.8799796,
-    "ast_hash": "4c1941b3978b0bb921e1e89fe5d6220b",
-    "semantic_hash": "4c1941b3978b0bb921e1e89fe5d6220b"
+    "mtime": 1781882175.9211607,
+    "ast_hash": "a8d1b74a3e70b4172da6791f6e616b15",
+    "semantic_hash": "a8d1b74a3e70b4172da6791f6e616b15"
   },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\.serena\\memories\\memory_maintenance.md": {
     "mtime": 1781694504.6864877,
@@ -2235,9 +775,9 @@
     "semantic_hash": "dc784962fc1c2d2b692cd9aabba043e5"
   },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\docs\\INDEX.md": {
-    "mtime": 1781756792.2305634,
-    "ast_hash": "cb258083f449a10654695cb60a45dd97",
-    "semantic_hash": "cb258083f449a10654695cb60a45dd97"
+    "mtime": 1781882077.205633,
+    "ast_hash": "ec40f334f1694d691abd011bc0ef218d",
+    "semantic_hash": "ec40f334f1694d691abd011bc0ef218d"
   },
   "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\docs\\architecture\\terrain-rendering-and-physics-fixes.md": {
     "mtime": 1781601058.5483694,
@@ -2248,5 +788,1065 @@
     "mtime": 1781529788.609244,
     "ast_hash": "f085fd32f9247eef5b31ff5b54bd108a",
     "semantic_hash": "f085fd32f9247eef5b31ff5b54bd108a"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\e2e\\chunk_memory.spec.ts": {
+    "mtime": 1781233530.3586268,
+    "ast_hash": "25882ce048a48be5e8ff3e0e5deb2ebe",
+    "semantic_hash": "25882ce048a48be5e8ff3e0e5deb2ebe"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\e2e\\persistence.spec.ts": {
+    "mtime": 1781202596.2417018,
+    "ast_hash": "91be31972ba3805122ad0f530d79f935",
+    "semantic_hash": "91be31972ba3805122ad0f530d79f935"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\eslint.config.ts": {
+    "mtime": 1781881569.8041005,
+    "ast_hash": "63da6a6d817d3f47171d3a24198ce6eb",
+    "semantic_hash": "63da6a6d817d3f47171d3a24198ce6eb"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\playwright.config.ts": {
+    "mtime": 1781177297.4570255,
+    "ast_hash": "caae177482a00d3c879da0c66c4ed68b",
+    "semantic_hash": "caae177482a00d3c879da0c66c4ed68b"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\scratch\\analyzeWA.js": {
+    "mtime": 1781882871.3224802,
+    "ast_hash": "ff5cda638444cfde6e2ef78fd0b66e60",
+    "semantic_hash": "ff5cda638444cfde6e2ef78fd0b66e60"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\scratch\\doSplit.js": {
+    "mtime": 1781883012.758071,
+    "ast_hash": "138990e4a776418df3f11a8cda7cf007",
+    "semantic_hash": "138990e4a776418df3f11a8cda7cf007"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\scratch\\get_keys.js": {
+    "mtime": 1781882792.757409,
+    "ast_hash": "47d87ff349851a54b6885a652a6cf77e",
+    "semantic_hash": "47d87ff349851a54b6885a652a6cf77e"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\scratch\\worldActions_recovered.js": {
+    "mtime": 1781885034.8528075,
+    "ast_hash": "82627d30d2cef9652eb839d591ded3fc",
+    "semantic_hash": "82627d30d2cef9652eb839d591ded3fc"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\App.tsx": {
+    "mtime": 1781979475.2878716,
+    "ast_hash": "a674863e3551aeca65648f0040ac1036",
+    "semantic_hash": "a674863e3551aeca65648f0040ac1036"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\GameEngine.tsx": {
+    "mtime": 1781975631.777687,
+    "ast_hash": "b44cb9ae43c7797eb566b7d657270f22",
+    "semantic_hash": "b44cb9ae43c7797eb566b7d657270f22"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\audio\\AudioPoolManager.tsx": {
+    "mtime": 1781975631.6776862,
+    "ast_hash": "6488a1dfda92bd88ffb750f5dda9ca07",
+    "semantic_hash": "6488a1dfda92bd88ffb750f5dda9ca07"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\audio\\GameAudio.ts": {
+    "mtime": 1781975631.6786883,
+    "ast_hash": "c296fcf0fc879e28f52ebd46005acbc0",
+    "semantic_hash": "c296fcf0fc879e28f52ebd46005acbc0"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\audio\\globalAudioPool.ts": {
+    "mtime": 1781975631.679686,
+    "ast_hash": "535b2ce1848b860f460f314dffeff409",
+    "semantic_hash": "535b2ce1848b860f460f314dffeff409"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\AchievementPopup.tsx": {
+    "mtime": 1781068714.1471512,
+    "ast_hash": "1b1191abf6be79e46a5f4a770eb6c7a7",
+    "semantic_hash": "1b1191abf6be79e46a5f4a770eb6c7a7"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\AmbientAudio.tsx": {
+    "mtime": 1781975631.6811883,
+    "ast_hash": "f2140b3fa6175fc6ac25193ca2c182cb",
+    "semantic_hash": "f2140b3fa6175fc6ac25193ca2c182cb"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\AutoSaveManager.tsx": {
+    "mtime": 1781975631.6826885,
+    "ast_hash": "9b59168dc1f731bf4155ebb8be9f499b",
+    "semantic_hash": "9b59168dc1f731bf4155ebb8be9f499b"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\BlockInteraction.tsx": {
+    "mtime": 1781975631.6836882,
+    "ast_hash": "90bfd960e84cb020b476595caca2f7c4",
+    "semantic_hash": "90bfd960e84cb020b476595caca2f7c4"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Bullets.tsx": {
+    "mtime": 1781975631.6846852,
+    "ast_hash": "5acda491d4c86079811076c564890046",
+    "semantic_hash": "5acda491d4c86079811076c564890046"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ChunkManager.tsx": {
+    "mtime": 1781975631.6861856,
+    "ast_hash": "8dfa20380c1f2bd5f0cf15d4df4c43dc",
+    "semantic_hash": "8dfa20380c1f2bd5f0cf15d4df4c43dc"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ChunkPhysics.tsx": {
+    "mtime": 1781975631.687185,
+    "ast_hash": "0b1137c8e60b9f4cd8d5a359706fdc27",
+    "semantic_hash": "0b1137c8e60b9f4cd8d5a359706fdc27"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ChunkRenderer.tsx": {
+    "mtime": 1781975631.6881852,
+    "ast_hash": "fea52dc067b503230ba2c18d36818a70",
+    "semantic_hash": "fea52dc067b503230ba2c18d36818a70"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Crosshair.tsx": {
+    "mtime": 1781975631.689686,
+    "ast_hash": "b3e0978487f3e23a1fa515282f2ed48f",
+    "semantic_hash": "b3e0978487f3e23a1fa515282f2ed48f"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Cubes.tsx": {
+    "mtime": 1781975631.6906862,
+    "ast_hash": "ee5bc5f824dd29994531de0ab2e102e1",
+    "semantic_hash": "ee5bc5f824dd29994531de0ab2e102e1"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\DeathScreen.tsx": {
+    "mtime": 1781975631.692186,
+    "ast_hash": "100861d247227466a9b8c18db94544ee",
+    "semantic_hash": "100861d247227466a9b8c18db94544ee"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\DebugOverlay.tsx": {
+    "mtime": 1781975631.6936865,
+    "ast_hash": "8650af68ad3851fee01f99ef58656d40",
+    "semantic_hash": "8650af68ad3851fee01f99ef58656d40"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\DebugTracker.tsx": {
+    "mtime": 1781975631.6946864,
+    "ast_hash": "b588ff41461ca7d0e508e23600f5204b",
+    "semantic_hash": "b588ff41461ca7d0e508e23600f5204b"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\DroppedItems.tsx": {
+    "mtime": 1781975631.6961854,
+    "ast_hash": "76e6f29154b6080188a1d50b6757bc5a",
+    "semantic_hash": "76e6f29154b6080188a1d50b6757bc5a"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\DynamicCube.tsx": {
+    "mtime": 1781975631.6971855,
+    "ast_hash": "51a31916653367d0c026b0d70017a804",
+    "semantic_hash": "51a31916653367d0c026b0d70017a804"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\DynamicSky.tsx": {
+    "mtime": 1781975631.698686,
+    "ast_hash": "b918cf5500a69cf158cd7857129c4c28",
+    "semantic_hash": "b918cf5500a69cf158cd7857129c4c28"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Enemies.tsx": {
+    "mtime": 1781975631.700187,
+    "ast_hash": "70676e91d156c05cebf8fa4c0a46b4a7",
+    "semantic_hash": "70676e91d156c05cebf8fa4c0a46b4a7"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ErrorBoundary.tsx": {
+    "mtime": 1781975631.7016861,
+    "ast_hash": "4dff38c7fca81d06bc28e14438cafff5",
+    "semantic_hash": "4dff38c7fca81d06bc28e14438cafff5"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\FPV.tsx": {
+    "mtime": 1781975631.7076864,
+    "ast_hash": "d0ecd743c65ef46501f49de2e4913b65",
+    "semantic_hash": "d0ecd743c65ef46501f49de2e4913b65"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\FallingStructure.tsx": {
+    "mtime": 1781975631.7031858,
+    "ast_hash": "8c7b6f30c771bbcf09bfcc4d5cb3feb9",
+    "semantic_hash": "8c7b6f30c771bbcf09bfcc4d5cb3feb9"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Flares.tsx": {
+    "mtime": 1781975631.7046854,
+    "ast_hash": "e7bc39f8e6e533ba72d2579c80251866",
+    "semantic_hash": "e7bc39f8e6e533ba72d2579c80251866"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Flashlight.tsx": {
+    "mtime": 1781975631.7061863,
+    "ast_hash": "168a5508fd37ea1cbd46623240564a9b",
+    "semantic_hash": "168a5508fd37ea1cbd46623240564a9b"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\GhostBlock.tsx": {
+    "mtime": 1781975631.708686,
+    "ast_hash": "6ac826c23eae7c5793db0ffc62357675",
+    "semantic_hash": "6ac826c23eae7c5793db0ffc62357675"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\GlitchFire.tsx": {
+    "mtime": 1781975631.710185,
+    "ast_hash": "31abf0ccf806011d84cdc097f7558846",
+    "semantic_hash": "31abf0ccf806011d84cdc097f7558846"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\HTestRunner.tsx": {
+    "mtime": 1781157640.2036705,
+    "ast_hash": "48c896110d02a72a5d08d439ee380242",
+    "semantic_hash": "48c896110d02a72a5d08d439ee380242"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\HostCombat.tsx": {
+    "mtime": 1781975631.7116854,
+    "ast_hash": "88b94911f3ba2cb5095575e458860378",
+    "semantic_hash": "88b94911f3ba2cb5095575e458860378"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Hotbar.tsx": {
+    "mtime": 1781975631.712685,
+    "ast_hash": "e6478f984a50ea395abb790b47623038",
+    "semantic_hash": "e6478f984a50ea395abb790b47623038"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Lasers.tsx": {
+    "mtime": 1781975631.714186,
+    "ast_hash": "b0b023b1e1ec4e21cc7bfaf4a2a3ca26",
+    "semantic_hash": "b0b023b1e1ec4e21cc7bfaf4a2a3ca26"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\LoadingScreen.tsx": {
+    "mtime": 1781765002.389908,
+    "ast_hash": "fc722badcc5a12a1523895a1435a8de0",
+    "semantic_hash": "fc722badcc5a12a1523895a1435a8de0"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Minimap.tsx": {
+    "mtime": 1781975631.7151847,
+    "ast_hash": "47153f4a616fdeee3fd933b550e3f942",
+    "semantic_hash": "47153f4a616fdeee3fd933b550e3f942"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ModelLoader.tsx": {
+    "mtime": 1781975631.7166853,
+    "ast_hash": "0690b0837d8a33cac21f325f4094d6b9",
+    "semantic_hash": "0690b0837d8a33cac21f325f4094d6b9"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\MultiplayerManager.tsx": {
+    "mtime": 1781975631.7176857,
+    "ast_hash": "cc8f72bb93a5b521195424f0e773c977",
+    "semantic_hash": "cc8f72bb93a5b521195424f0e773c977"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Player.tsx": {
+    "mtime": 1781975631.719687,
+    "ast_hash": "eee4ba2864b9ffea2bb270f007466b11",
+    "semantic_hash": "eee4ba2864b9ffea2bb270f007466b11"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\PostFX.tsx": {
+    "mtime": 1781068714.172739,
+    "ast_hash": "62a1181ee8b3ffb73a2194a22db43c67",
+    "semantic_hash": "62a1181ee8b3ffb73a2194a22db43c67"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Screenshot.tsx": {
+    "mtime": 1781975631.7211857,
+    "ast_hash": "eddc4708ea42026e566f744be6245556",
+    "semantic_hash": "eddc4708ea42026e566f744be6245556"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ShipPhysics.tsx": {
+    "mtime": 1781975631.7231889,
+    "ast_hash": "773454ffdc23a2e6ffd5496ca37a13d8",
+    "semantic_hash": "773454ffdc23a2e6ffd5496ca37a13d8"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ShipyardHologram.tsx": {
+    "mtime": 1781678551.5004148,
+    "ast_hash": "61a4f1589b0c48ad35726ccceae4c6af",
+    "semantic_hash": "61a4f1589b0c48ad35726ccceae4c6af"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\SwarmManager.tsx": {
+    "mtime": 1781975631.7251863,
+    "ast_hash": "c4237c012eba92876974f6d41386c7d4",
+    "semantic_hash": "c4237c012eba92876974f6d41386c7d4"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Tether.tsx": {
+    "mtime": 1781975631.7266865,
+    "ast_hash": "3ec005febd533dcf6fa7302007fb6a60",
+    "semantic_hash": "3ec005febd533dcf6fa7302007fb6a60"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Tombstones.tsx": {
+    "mtime": 1781975631.7276864,
+    "ast_hash": "5d6d90d42096ab2c6bbf7da032dc0974",
+    "semantic_hash": "5d6d90d42096ab2c6bbf7da032dc0974"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\TransitManager.tsx": {
+    "mtime": 1781975631.7286842,
+    "ast_hash": "991786921f977fb84fd83f825ebda174",
+    "semantic_hash": "991786921f977fb84fd83f825ebda174"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ViewModel.tsx": {
+    "mtime": 1781975631.7741864,
+    "ast_hash": "922b0adfec4d862431dc02e4abc2eb27",
+    "semantic_hash": "922b0adfec4d862431dc02e4abc2eb27"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\Waypoints.tsx": {
+    "mtime": 1781975631.7756872,
+    "ast_hash": "85a5056cb45656eabeaf2d003067d875",
+    "semantic_hash": "85a5056cb45656eabeaf2d003067d875"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\WeatherSystem.tsx": {
+    "mtime": 1781975631.7766857,
+    "ast_hash": "1fd7c80bc4ead649361405b13c9d3294",
+    "semantic_hash": "1fd7c80bc4ead649361405b13c9d3294"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\engine\\GameGraphics.tsx": {
+    "mtime": 1781788410.3537965,
+    "ast_hash": "18c886495b67fffcc0eac0bc077a1d43",
+    "semantic_hash": "18c886495b67fffcc0eac0bc077a1d43"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\engine\\GamePhysicsEntities.tsx": {
+    "mtime": 1781668711.3232937,
+    "ast_hash": "702a8482a9d7d1e9a2ab4126c364d4ec",
+    "semantic_hash": "702a8482a9d7d1e9a2ab4126c364d4ec"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\engine\\GameUI.tsx": {
+    "mtime": 1781668711.322794,
+    "ast_hash": "9fae213160477d5b1427a22ec811cc77",
+    "semantic_hash": "9fae213160477d5b1427a22ec811cc77"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\Astrolabe.tsx": {
+    "mtime": 1781975631.7296865,
+    "ast_hash": "3fc291cb31c0f6fd6daf18658378bb2a",
+    "semantic_hash": "3fc291cb31c0f6fd6daf18658378bb2a"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\BaseOverlay.tsx": {
+    "mtime": 1781975631.731188,
+    "ast_hash": "5bf8de92ff09e38df29410e64c77944e",
+    "semantic_hash": "5bf8de92ff09e38df29410e64c77944e"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\ChatFeed.tsx": {
+    "mtime": 1781975631.7326858,
+    "ast_hash": "a57a9d12c4114aaf5f14f4f8edfc8cc3",
+    "semantic_hash": "a57a9d12c4114aaf5f14f4f8edfc8cc3"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\ChestOverlay.tsx": {
+    "mtime": 1781975631.7341874,
+    "ast_hash": "3b2f83850deb8875a24aaa1eb6fa726d",
+    "semantic_hash": "3b2f83850deb8875a24aaa1eb6fa726d"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\ContainerGUI.tsx": {
+    "mtime": 1781975631.7351851,
+    "ast_hash": "eb2dd9e2c7d73260bca0034dc8f4b77b",
+    "semantic_hash": "eb2dd9e2c7d73260bca0034dc8f4b77b"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\CraftingOverlay.tsx": {
+    "mtime": 1781975631.736685,
+    "ast_hash": "44073257e0e224e26fe5ff7669e58cb1",
+    "semantic_hash": "44073257e0e224e26fe5ff7669e58cb1"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\CreativeInventory.tsx": {
+    "mtime": 1781975631.7376845,
+    "ast_hash": "fdd10cf9c772b5eb14a354ffd9ba3778",
+    "semantic_hash": "fdd10cf9c772b5eb14a354ffd9ba3778"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\CursorItem.tsx": {
+    "mtime": 1781975631.7391853,
+    "ast_hash": "89cde2a2915680a4aa12d58d93e66e09",
+    "semantic_hash": "89cde2a2915680a4aa12d58d93e66e09"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\CustomCursor.tsx": {
+    "mtime": 1781975631.7406864,
+    "ast_hash": "096d603bd84be5a8173635cc8d4c83d1",
+    "semantic_hash": "096d603bd84be5a8173635cc8d4c83d1"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\DataBufferHUD.tsx": {
+    "mtime": 1781975631.7426858,
+    "ast_hash": "b28292ae267d1549b9882fe187b20eba",
+    "semantic_hash": "b28292ae267d1549b9882fe187b20eba"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\FurnaceOverlay.tsx": {
+    "mtime": 1781975631.744186,
+    "ast_hash": "75a2050ea622d69b6e81c0114184c64f",
+    "semantic_hash": "75a2050ea622d69b6e81c0114184c64f"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\HeartCoreOverlay.tsx": {
+    "mtime": 1781975631.745686,
+    "ast_hash": "fec5510ea6f0ed380f77be5ae6ba09b7",
+    "semantic_hash": "fec5510ea6f0ed380f77be5ae6ba09b7"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\InGameUI.tsx": {
+    "mtime": 1781975631.7567506,
+    "ast_hash": "32c6e917d74cd1986fa55adb0788f45e",
+    "semantic_hash": "32c6e917d74cd1986fa55adb0788f45e"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\InventoryOverlay.tsx": {
+    "mtime": 1781975631.7576861,
+    "ast_hash": "c1ea43350eefd33ef1d42163a92417f3",
+    "semantic_hash": "c1ea43350eefd33ef1d42163a92417f3"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\InventorySlot.tsx": {
+    "mtime": 1781975631.7591863,
+    "ast_hash": "18e328c0612fe695aca647aca673fffe",
+    "semantic_hash": "18e328c0612fe695aca647aca673fffe"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\LunarAnchorOverlay.tsx": {
+    "mtime": 1781975631.760188,
+    "ast_hash": "1c19bae93b8944c2ce69a729f7ef17ec",
+    "semantic_hash": "1c19bae93b8944c2ce69a729f7ef17ec"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\MusicPlayerWidget.tsx": {
+    "mtime": 1781975631.761186,
+    "ast_hash": "6d52d6209b17abb2bc921894fac917cd",
+    "semantic_hash": "6d52d6209b17abb2bc921894fac917cd"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\QuestJournal.tsx": {
+    "mtime": 1781975631.7621875,
+    "ast_hash": "15654d90749b81e820e474980285b304",
+    "semantic_hash": "15654d90749b81e820e474980285b304"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\QuestTracker.tsx": {
+    "mtime": 1781975631.763188,
+    "ast_hash": "6bad55c3095c52288946eff8fcc3bc78",
+    "semantic_hash": "6bad55c3095c52288946eff8fcc3bc78"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\Scoreboard.tsx": {
+    "mtime": 1781975631.764186,
+    "ast_hash": "e232f76623d9df06dd6c08901d28e201",
+    "semantic_hash": "e232f76623d9df06dd6c08901d28e201"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\ShipHUD.tsx": {
+    "mtime": 1781975631.7651875,
+    "ast_hash": "309f2a7e2f4a0d8e41c30438f3992706",
+    "semantic_hash": "309f2a7e2f4a0d8e41c30438f3992706"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\ShipyardUI.tsx": {
+    "mtime": 1781975631.766185,
+    "ast_hash": "32f068097496865c80ac3878eb6b8bd7",
+    "semantic_hash": "32f068097496865c80ac3878eb6b8bd7"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\ShopOverlay.tsx": {
+    "mtime": 1781975631.7676854,
+    "ast_hash": "34752508b3caddee423660e847c8f96d",
+    "semantic_hash": "34752508b3caddee423660e847c8f96d"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\SkillTreeOverlay.tsx": {
+    "mtime": 1781975631.768685,
+    "ast_hash": "b7db456b409d04e90b8a8362c713e478",
+    "semantic_hash": "b7db456b409d04e90b8a8362c713e478"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\SpectorModal.tsx": {
+    "mtime": 1781975631.7701848,
+    "ast_hash": "72c2e7cea58709b828fb37a7400f913d",
+    "semantic_hash": "72c2e7cea58709b828fb37a7400f913d"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\TitleScreen.tsx": {
+    "mtime": 1781975631.7716866,
+    "ast_hash": "1d6e896b264d5fb0f97dec75b4292db8",
+    "semantic_hash": "1d6e896b264d5fb0f97dec75b4292db8"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\components\\ui\\WarpDriveUI.tsx": {
+    "mtime": 1781975631.7726853,
+    "ast_hash": "8320d1747852393703a2fc4999d5225c",
+    "semantic_hash": "8320d1747852393703a2fc4999d5225c"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\globals.ts": {
+    "mtime": 1781883793.5073311,
+    "ast_hash": "fa066041965a934d43c7edb259c256ef",
+    "semantic_hash": "fa066041965a934d43c7edb259c256ef"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\hooks\\useDebugOverlayUpdate.ts": {
+    "mtime": 1781975631.7791884,
+    "ast_hash": "25fe76abbb30324dfc1c879310ba8fb0",
+    "semantic_hash": "25fe76abbb30324dfc1c879310ba8fb0"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\hooks\\useKeyboard.ts": {
+    "mtime": 1781975631.7806866,
+    "ast_hash": "d69cc29d48a741e3636aace45459e746",
+    "semantic_hash": "d69cc29d48a741e3636aace45459e746"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\hooks\\usePlayerPhysics.ts": {
+    "mtime": 1781975631.7821867,
+    "ast_hash": "b80a8ae838d924a5c9b4416db3344d26",
+    "semantic_hash": "b80a8ae838d924a5c9b4416db3344d26"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\hooks\\useWorldLighting.ts": {
+    "mtime": 1781975631.7831867,
+    "ast_hash": "038e0956cd7748c247171eccd89a2e0e",
+    "semantic_hash": "038e0956cd7748c247171eccd89a2e0e"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\main.tsx": {
+    "mtime": 1781975631.7841861,
+    "ast_hash": "3645f9e3bdf61e28f1e72cac322a60c4",
+    "semantic_hash": "3645f9e3bdf61e28f1e72cac322a60c4"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\materials\\ChunkMaterial.ts": {
+    "mtime": 1781975631.7856872,
+    "ast_hash": "c0583137e74d6b9e725dbdb2e384cbd9",
+    "semantic_hash": "c0583137e74d6b9e725dbdb2e384cbd9"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\registry\\BlockRegistry.ts": {
+    "mtime": 1781975631.7866862,
+    "ast_hash": "87d8eec0d5aba4b16afd75b88d28c6f2",
+    "semantic_hash": "87d8eec0d5aba4b16afd75b88d28c6f2"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\registry\\CraftingRegistry.ts": {
+    "mtime": 1781975631.7876859,
+    "ast_hash": "fe1869514ec0c35a155b6db655d579d7",
+    "semantic_hash": "fe1869514ec0c35a155b6db655d579d7"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\registry\\InteractionRegistry.ts": {
+    "mtime": 1781975631.7891853,
+    "ast_hash": "51065ad011dfca74dfe9dc726014b56f",
+    "semantic_hash": "51065ad011dfca74dfe9dc726014b56f"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\registry\\ItemRegistry.ts": {
+    "mtime": 1781975631.7986865,
+    "ast_hash": "7659cca934a534cb70c30dbfb7b62da9",
+    "semantic_hash": "7659cca934a534cb70c30dbfb7b62da9"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\registry\\LootRegistry.ts": {
+    "mtime": 1781884174.2637246,
+    "ast_hash": "ff4d4ec148041d6a27d250f5252a6ea9",
+    "semantic_hash": "ff4d4ec148041d6a27d250f5252a6ea9"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\registry\\QuestsRegistry.ts": {
+    "mtime": 1781884174.2292273,
+    "ast_hash": "ddb7846c2a8f6e3423dbf521ad47b6c5",
+    "semantic_hash": "ddb7846c2a8f6e3423dbf521ad47b6c5"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\registry\\Registry.ts": {
+    "mtime": 1781975631.7996864,
+    "ast_hash": "d9a4c0875d60f40c61efc2794d0633ea",
+    "semantic_hash": "d9a4c0875d60f40c61efc2794d0633ea"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\registry\\SkillsRegistry.ts": {
+    "mtime": 1781884174.2432246,
+    "ast_hash": "96b5d432b2c95a4ec750ea666f543ed6",
+    "semantic_hash": "96b5d432b2c95a4ec750ea666f543ed6"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\registry\\SmeltingRegistry.ts": {
+    "mtime": 1781884140.7444186,
+    "ast_hash": "e3320a4f1ef27de581e024d9d73d1676",
+    "semantic_hash": "e3320a4f1ef27de581e024d9d73d1676"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\chatSlice.ts": {
+    "mtime": 1781888717.184569,
+    "ast_hash": "b17a9eca8f19261db96d179bb291dac8",
+    "semantic_hash": "b17a9eca8f19261db96d179bb291dac8"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\chunkSlice.ts": {
+    "mtime": 1781975631.8001873,
+    "ast_hash": "df446e5689ee1f41481b7cfd6f291aba",
+    "semantic_hash": "df446e5689ee1f41481b7cfd6f291aba"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\connectionSlice.ts": {
+    "mtime": 1781889027.862125,
+    "ast_hash": "5bd251db02aa90c7c4dc33cf6b13b178",
+    "semantic_hash": "5bd251db02aa90c7c4dc33cf6b13b178"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\createAchievementSlice.ts": {
+    "mtime": 1781889255.6701677,
+    "ast_hash": "e118624c56eb50c6e17c1de4171d4456",
+    "semantic_hash": "e118624c56eb50c6e17c1de4171d4456"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\createEntitySlice.ts": {
+    "mtime": 1781975631.801186,
+    "ast_hash": "77d9724e3dec510d062d54d8b21b7a53",
+    "semantic_hash": "77d9724e3dec510d062d54d8b21b7a53"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\createPlayerSlice.ts": {
+    "mtime": 1781975631.8131855,
+    "ast_hash": "9eb04ed7567ee4316870e1120fe2d6e3",
+    "semantic_hash": "9eb04ed7567ee4316870e1120fe2d6e3"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\createQuestSlice.ts": {
+    "mtime": 1781975631.8146858,
+    "ast_hash": "46c3384be90b992847b0d4cc65c526cb",
+    "semantic_hash": "46c3384be90b992847b0d4cc65c526cb"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\createSettingsSlice.ts": {
+    "mtime": 1781975631.8156853,
+    "ast_hash": "9192fe28fd9f83e685b718cf371f2944",
+    "semantic_hash": "9192fe28fd9f83e685b718cf371f2944"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\createShipSlice.ts": {
+    "mtime": 1781975631.8171864,
+    "ast_hash": "2f47421ea1b3bc3a60e444c8924b78a8",
+    "semantic_hash": "2f47421ea1b3bc3a60e444c8924b78a8"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\environmentSlice.ts": {
+    "mtime": 1781889372.783805,
+    "ast_hash": "3257a976fe220687c4f4736f6e3489a1",
+    "semantic_hash": "3257a976fe220687c4f4736f6e3489a1"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\flareSlice.ts": {
+    "mtime": 1781889091.086022,
+    "ast_hash": "f6d64c9a50a1acda606514a081e39733",
+    "semantic_hash": "f6d64c9a50a1acda606514a081e39733"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\inventorySlice.ts": {
+    "mtime": 1781889327.9519517,
+    "ast_hash": "1e8189cec096d72e554a712d579b8b1a",
+    "semantic_hash": "1e8189cec096d72e554a712d579b8b1a"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\networkActions.ts": {
+    "mtime": 1781978222.6516416,
+    "ast_hash": "b4c6dc01ff15b07aee068bb8b26959ca",
+    "semantic_hash": "b4c6dc01ff15b07aee068bb8b26959ca"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\network\\broadcastActions.ts": {
+    "mtime": 1781975631.8181863,
+    "ast_hash": "9c598b24f4da95f0b0b53c6355ac4398",
+    "semantic_hash": "9c598b24f4da95f0b0b53c6355ac4398"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\network\\chatActions.ts": {
+    "mtime": 1781975631.8196864,
+    "ast_hash": "0ae266313556ab4c648644c82eed4e9e",
+    "semantic_hash": "0ae266313556ab4c648644c82eed4e9e"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\network\\chunkActions.ts": {
+    "mtime": 1781889911.4218373,
+    "ast_hash": "9d639d9ca0f1bdcb9784b5b76eed3abb",
+    "semantic_hash": "9d639d9ca0f1bdcb9784b5b76eed3abb"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\network\\connectionActions.ts": {
+    "mtime": 1781979480.5873446,
+    "ast_hash": "5461e2d6daa2324641406b666a0e9e7f",
+    "semantic_hash": "5461e2d6daa2324641406b666a0e9e7f"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\network\\packetParser.ts": {
+    "mtime": 1781975631.822187,
+    "ast_hash": "bedecbf924a567f3ae390afb1b86854d",
+    "semantic_hash": "bedecbf924a567f3ae390afb1b86854d"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\storeLinker.ts": {
+    "mtime": 1781888849.15677,
+    "ast_hash": "21ad7110ed3d9628c1f84589e26d4477",
+    "semantic_hash": "21ad7110ed3d9628c1f84589e26d4477"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\syncSlice.ts": {
+    "mtime": 1781888992.2981143,
+    "ast_hash": "41bb3e10684e978d0a670b18fdb9ef9c",
+    "semantic_hash": "41bb3e10684e978d0a670b18fdb9ef9c"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\useAudioStore.ts": {
+    "mtime": 1781889328.1754131,
+    "ast_hash": "baafc8971622fb08422122c3679ce1dc",
+    "semantic_hash": "baafc8971622fb08422122c3679ce1dc"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\useAuthStore.ts": {
+    "mtime": 1781889431.229985,
+    "ast_hash": "e6e83ef0312e56c13c014464cb890c9a",
+    "semantic_hash": "e6e83ef0312e56c13c014464cb890c9a"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\useSettingsStore.ts": {
+    "mtime": 1781889373.0213954,
+    "ast_hash": "b66c116248a54fa528789c34cd58a05e",
+    "semantic_hash": "b66c116248a54fa528789c34cd58a05e"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\useStore.ts": {
+    "mtime": 1781975631.8231857,
+    "ast_hash": "5b23fdd85b51e8af85b67ae530b21222",
+    "semantic_hash": "5b23fdd85b51e8af85b67ae530b21222"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\useUIStore.ts": {
+    "mtime": 1781889179.017339,
+    "ast_hash": "ecbb8c3927c4f2208adbea834703317e",
+    "semantic_hash": "ecbb8c3927c4f2208adbea834703317e"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\worldActions\\chunkOperations.ts": {
+    "mtime": 1781974311.3176723,
+    "ast_hash": "7ad8cdad96dca787f8d7e7c31d3be491",
+    "semantic_hash": "7ad8cdad96dca787f8d7e7c31d3be491"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\worldActions\\fluidSimulation.ts": {
+    "mtime": 1781975631.8246858,
+    "ast_hash": "36752c9c3f78a0475b39946f24b3447b",
+    "semantic_hash": "36752c9c3f78a0475b39946f24b3447b"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\worldActions\\garbageCollection.ts": {
+    "mtime": 1781975631.8261862,
+    "ast_hash": "0f6e1f29faa6357e4cf0807c0934d504",
+    "semantic_hash": "0f6e1f29faa6357e4cf0807c0934d504"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\worldActions\\index.ts": {
+    "mtime": 1781889625.314114,
+    "ast_hash": "2e5393b88a0f2e7bb3f23e5d4440d9c9",
+    "semantic_hash": "2e5393b88a0f2e7bb3f23e5d4440d9c9"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\worldActions\\meshMounting.ts": {
+    "mtime": 1781975631.8276868,
+    "ast_hash": "765c1a9a8dcaf2ff5fd39556a612aef6",
+    "semantic_hash": "765c1a9a8dcaf2ff5fd39556a612aef6"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\worldActions\\sharedState.ts": {
+    "mtime": 1781889615.5739934,
+    "ast_hash": "41bafa8e39ef4dcf62ad43e78d650193",
+    "semantic_hash": "41bafa8e39ef4dcf62ad43e78d650193"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\stores\\worldActions\\stranglerInterceptors.ts": {
+    "mtime": 1781975631.828686,
+    "ast_hash": "2944d129b3a3acf9b5d44a3414bdb955",
+    "semantic_hash": "2944d129b3a3acf9b5d44a3414bdb955"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\ItemDropSystem.ts": {
+    "mtime": 1781975631.8301866,
+    "ast_hash": "b66b379caa1534976d40392264a3924f",
+    "semantic_hash": "b66b379caa1534976d40392264a3924f"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\MachineTickSystem.ts": {
+    "mtime": 1781975631.8311858,
+    "ast_hash": "2ffd41cfedb2c66c3c706e5412e99bf9",
+    "semantic_hash": "2ffd41cfedb2c66c3c706e5412e99bf9"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\PhysicsReactionSystem.ts": {
+    "mtime": 1781975631.8411865,
+    "ast_hash": "2a92012bb57083ec65d679fdd92ca5c0",
+    "semantic_hash": "2a92012bb57083ec65d679fdd92ca5c0"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\QuestSystem.ts": {
+    "mtime": 1781975579.6578488,
+    "ast_hash": "762f63f44c4867717c98c8486029816c",
+    "semantic_hash": "762f63f44c4867717c98c8486029816c"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\network\\ChatSystems.ts": {
+    "mtime": 1781975631.8321874,
+    "ast_hash": "1249157c0ddb9220e85a213e7096f70a",
+    "semantic_hash": "1249157c0ddb9220e85a213e7096f70a"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\network\\ConnectionSystems.ts": {
+    "mtime": 1781975631.8331873,
+    "ast_hash": "bfb925a115ec6bafc0ed246ec398e538",
+    "semantic_hash": "bfb925a115ec6bafc0ed246ec398e538"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\network\\InventorySystems.ts": {
+    "mtime": 1781975631.8346858,
+    "ast_hash": "a9439ed7c9fd339a46b4c898be6b764f",
+    "semantic_hash": "a9439ed7c9fd339a46b4c898be6b764f"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\network\\LootSystems.ts": {
+    "mtime": 1781975631.836186,
+    "ast_hash": "eab743a8393449c833885e80d62cee3e",
+    "semantic_hash": "eab743a8393449c833885e80d62cee3e"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\network\\PlayerSyncSystems.ts": {
+    "mtime": 1781975631.8371851,
+    "ast_hash": "6caa25343a667dcef06f919faa0d440f",
+    "semantic_hash": "6caa25343a667dcef06f919faa0d440f"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\network\\ShipSystems.ts": {
+    "mtime": 1781975631.838685,
+    "ast_hash": "25aaf19b90941bef371284a893e118c4",
+    "semantic_hash": "25aaf19b90941bef371284a893e118c4"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\systems\\network\\WorldSyncSystems.ts": {
+    "mtime": 1781975631.8401856,
+    "ast_hash": "7135ea1e90a2dc3a1104c78f551872d7",
+    "semantic_hash": "7135ea1e90a2dc3a1104c78f551872d7"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\tests\\chunkLifecycle.test.ts": {
+    "mtime": 1781975579.6578488,
+    "ast_hash": "526147dc4b60db28580fa3f0f5f3d4f8",
+    "semantic_hash": "526147dc4b60db28580fa3f0f5f3d4f8"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\types\\blocks.ts": {
+    "mtime": 1781883591.373635,
+    "ast_hash": "ceb4684bd899b8fa1655502c64314cff",
+    "semantic_hash": "ceb4684bd899b8fa1655502c64314cff"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\types\\data.ts": {
+    "mtime": 1781884105.8589532,
+    "ast_hash": "4ab627582ca968ef3a3d8e2352454584",
+    "semantic_hash": "4ab627582ca968ef3a3d8e2352454584"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\types\\entities.ts": {
+    "mtime": 1781883726.979241,
+    "ast_hash": "3d0365040150d81661d687eb4c0655fb",
+    "semantic_hash": "3d0365040150d81661d687eb4c0655fb"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\types\\index.ts": {
+    "mtime": 1781884105.890952,
+    "ast_hash": "727bc7023da7511c6eaf514ee25845c5",
+    "semantic_hash": "727bc7023da7511c6eaf514ee25845c5"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\types\\items.ts": {
+    "mtime": 1781883694.013032,
+    "ast_hash": "3f834d3cd30cf064ce558dadc8568926",
+    "semantic_hash": "3f834d3cd30cf064ce558dadc8568926"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\types\\network.ts": {
+    "mtime": 1781883714.3895986,
+    "ast_hash": "d13752eba0003e80d658ac5f3af9c08a",
+    "semantic_hash": "d13752eba0003e80d658ac5f3af9c08a"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\types\\player.ts": {
+    "mtime": 1781883714.1985786,
+    "ast_hash": "0b7980f0579bfe37545e6783c2469306",
+    "semantic_hash": "0b7980f0579bfe37545e6783c2469306"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\types\\ship.ts": {
+    "mtime": 1781883726.991741,
+    "ast_hash": "35c36b0d1fbf11102c63a694cc6c65e1",
+    "semantic_hash": "35c36b0d1fbf11102c63a694cc6c65e1"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\types\\store.ts": {
+    "mtime": 1781883724.949667,
+    "ast_hash": "7c96cdbd3065870a8765f1826346c0fb",
+    "semantic_hash": "7c96cdbd3065870a8765f1826346c0fb"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\types\\workers.ts": {
+    "mtime": 1781972910.5667214,
+    "ast_hash": "16d16e136133afb222b535deebf48887",
+    "semantic_hash": "16d16e136133afb222b535deebf48887"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\types\\world.ts": {
+    "mtime": 1781972203.5132937,
+    "ast_hash": "a9f2324318e99f582005f727d2aceca6",
+    "semantic_hash": "a9f2324318e99f582005f727d2aceca6"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\ChunkMaterialCache.ts": {
+    "mtime": 1781978222.6521392,
+    "ast_hash": "47da60f38371f1c76de5253ba6a360d4",
+    "semantic_hash": "47da60f38371f1c76de5253ba6a360d4"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\EventBus.ts": {
+    "mtime": 1781934271.5013108,
+    "ast_hash": "2fe27e6d13f14e541e38b4ac1f36c4cc",
+    "semantic_hash": "2fe27e6d13f14e541e38b4ac1f36c4cc"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\MaterialCache.ts": {
+    "mtime": 1781978222.6536393,
+    "ast_hash": "e7d150ee74cc0c2f092853a192b7b10b",
+    "semantic_hash": "e7d150ee74cc0c2f092853a192b7b10b"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\NetworkEventBus.ts": {
+    "mtime": 1781883863.5137613,
+    "ast_hash": "a03bb3fd30a2b6d0cf9e1ab0e86b64f2",
+    "semantic_hash": "a03bb3fd30a2b6d0cf9e1ab0e86b64f2"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\TextureAtlas.ts": {
+    "mtime": 1781978222.6561437,
+    "ast_hash": "fd4e9b528e31442c158efc2ca5c49ace",
+    "semantic_hash": "fd4e9b528e31442c158efc2ca5c49ace"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\WebGLTracker.ts": {
+    "mtime": 1781978222.6566436,
+    "ast_hash": "2d11c5708020cf9394465e7c7e899d16",
+    "semantic_hash": "2d11c5708020cf9394465e7c7e899d16"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\biomes.ts": {
+    "mtime": 1781975579.658353,
+    "ast_hash": "c22fb5d2ebc6e659b36002feae219693",
+    "semantic_hash": "c22fb5d2ebc6e659b36002feae219693"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\chunkData.ts": {
+    "mtime": 1781975579.658353,
+    "ast_hash": "12ba64696ef3625b546f7f34500c0249",
+    "semantic_hash": "12ba64696ef3625b546f7f34500c0249"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\chunkGenerator.ts": {
+    "mtime": 1781975579.65885,
+    "ast_hash": "3e084c0ebc96565e439affc141e87620",
+    "semantic_hash": "3e084c0ebc96565e439affc141e87620"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\chunkRenderSignal.ts": {
+    "mtime": 1781978222.6526396,
+    "ast_hash": "9bdcfe520232cd0de94305dc78565996",
+    "semantic_hash": "9bdcfe520232cd0de94305dc78565996"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\db.ts": {
+    "mtime": 1781978222.6531417,
+    "ast_hash": "daa9eaf45a4bfaa895744dd182bbb608",
+    "semantic_hash": "daa9eaf45a4bfaa895744dd182bbb608"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\fluidSystem.ts": {
+    "mtime": 1781978222.6536393,
+    "ast_hash": "87cadb591c42b6a36bc9622a45d43eb1",
+    "semantic_hash": "87cadb591c42b6a36bc9622a45d43eb1"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\greedyMesh.ts": {
+    "mtime": 1781975115.7521615,
+    "ast_hash": "c73961518a1f104b3d3a553c8b8877ec",
+    "semantic_hash": "c73961518a1f104b3d3a553c8b8877ec"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\lighting.ts": {
+    "mtime": 1781975115.7526603,
+    "ast_hash": "36f43bbb099730c6b84339bfbea51a01",
+    "semantic_hash": "36f43bbb099730c6b84339bfbea51a01"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\playerModels.ts": {
+    "mtime": 1781978222.6541407,
+    "ast_hash": "01203080a684d0374a9f371ce3d2370e",
+    "semantic_hash": "01203080a684d0374a9f371ce3d2370e"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\structuralPhysics.ts": {
+    "mtime": 1781978222.6546402,
+    "ast_hash": "025f566deb0b7d56ec11b6d093f0176f",
+    "semantic_hash": "025f566deb0b7d56ec11b6d093f0176f"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\structures.ts": {
+    "mtime": 1781978222.6551402,
+    "ast_hash": "ecf85797b026e6cd27cd4f3e2ace76a4",
+    "semantic_hash": "ecf85797b026e6cd27cd4f3e2ace76a4"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\swarmConfig.ts": {
+    "mtime": 1781978222.6556401,
+    "ast_hash": "e3691dfe45ca3b5a85fbfec97c3bfac2",
+    "semantic_hash": "e3691dfe45ca3b5a85fbfec97c3bfac2"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\syncState.ts": {
+    "mtime": 1781978222.6556401,
+    "ast_hash": "92dcd189c8ec35eceb542ddef79b8ad9",
+    "semantic_hash": "92dcd189c8ec35eceb542ddef79b8ad9"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\utils\\workerPool.ts": {
+    "mtime": 1781973332.1775157,
+    "ast_hash": "73af654791d366afe1c5c47e514a1d8d",
+    "semantic_hash": "73af654791d366afe1c5c47e514a1d8d"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\vite-env.d.ts": {
+    "mtime": 1781893860.3950367,
+    "ast_hash": "26e7ef97244bb4208b4d7240885563d4",
+    "semantic_hash": "26e7ef97244bb4208b4d7240885563d4"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\workers\\chunkWorker.ts": {
+    "mtime": 1781973303.049161,
+    "ast_hash": "1c1e7bfa25b48bfa7d5db97cac886910",
+    "semantic_hash": "1c1e7bfa25b48bfa7d5db97cac886910"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\workers\\dbWorker.ts": {
+    "mtime": 1781973303.049161,
+    "ast_hash": "07061f73d190af678063d156eb74612d",
+    "semantic_hash": "07061f73d190af678063d156eb74612d"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\workers\\pathfinderWorker.ts": {
+    "mtime": 1781973303.0496633,
+    "ast_hash": "f93b2bbc284f1a2c622df0c5bc035913",
+    "semantic_hash": "f93b2bbc284f1a2c622df0c5bc035913"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\workers\\shipWorker.ts": {
+    "mtime": 1781973264.0040345,
+    "ast_hash": "1d1f922bf3c045ee4bc1f44e778b4075",
+    "semantic_hash": "1d1f922bf3c045ee4bc1f44e778b4075"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\workers\\shipWorkerPool.ts": {
+    "mtime": 1781972663.3402703,
+    "ast_hash": "224322abd52a4a134614550031ff675c",
+    "semantic_hash": "224322abd52a4a134614550031ff675c"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\src\\worldSeed.ts": {
+    "mtime": 1781894103.4283347,
+    "ast_hash": "5f4c88872b4cbc456bb82e841cb4d3fd",
+    "semantic_hash": "5f4c88872b4cbc456bb82e841cb4d3fd"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\ChunkWorker.test.ts": {
+    "mtime": 1781177350.6318498,
+    "ast_hash": "cda4b060f3f97c92f92a16674c471c80",
+    "semantic_hash": "cda4b060f3f97c92f92a16674c471c80"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\TransitManager.test.ts": {
+    "mtime": 1781177433.4759018,
+    "ast_hash": "4fd91ca199d2c060afba0265ab8522a0",
+    "semantic_hash": "4fd91ca199d2c060afba0265ab8522a0"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\ai-canary.test.ts": {
+    "mtime": 1781325682.9734151,
+    "ast_hash": "0d3f344ee685e1b07b95e5f761dfccc3",
+    "semantic_hash": "0d3f344ee685e1b07b95e5f761dfccc3"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\engine\\ShipPhysics.test.ts": {
+    "mtime": 1781755863.5490966,
+    "ast_hash": "67f07fe2b50068ea2f2d124440cb6184",
+    "semantic_hash": "67f07fe2b50068ea2f2d124440cb6184"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\engine\\block-breaking.test.ts": {
+    "mtime": 1781758507.837006,
+    "ast_hash": "f882551027f95efcced5b8ee1c6f093a",
+    "semantic_hash": "f882551027f95efcced5b8ee1c6f093a"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\engine\\boundaries.test.ts": {
+    "mtime": 1781527756.8346605,
+    "ast_hash": "57dbdb0fb5f0911bc414fb7aa09c7f95",
+    "semantic_hash": "57dbdb0fb5f0911bc414fb7aa09c7f95"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\engine\\logic.test.ts": {
+    "mtime": 1781325683.2022023,
+    "ast_hash": "acedb7379ca3667b8e836779213bb53d",
+    "semantic_hash": "acedb7379ca3667b8e836779213bb53d"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\engine\\memory-allocations.test.ts": {
+    "mtime": 1781890509.3979278,
+    "ast_hash": "02a23bc6e5bf172f59cded5c50739fa6",
+    "semantic_hash": "02a23bc6e5bf172f59cded5c50739fa6"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\engine\\memory.test.ts": {
+    "mtime": 1781528340.2710538,
+    "ast_hash": "bdf4158e2d6d009f55f775f2d8038203",
+    "semantic_hash": "bdf4158e2d6d009f55f775f2d8038203"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\engine\\network.test.ts": {
+    "mtime": 1781527198.5933335,
+    "ast_hash": "4697b17f37a240d6219c0eeaca295115",
+    "semantic_hash": "4697b17f37a240d6219c0eeaca295115"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\engine\\removeCube.test.ts": {
+    "mtime": 1781892693.6999564,
+    "ast_hash": "1e008ab8dd8e0d5e5454fbc0add0ec87",
+    "semantic_hash": "1e008ab8dd8e0d5e5454fbc0add0ec87"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\engine\\simulation.test.ts": {
+    "mtime": 1781527744.658567,
+    "ast_hash": "ae6a56f17add5795b68e863eb9d163ba",
+    "semantic_hash": "ae6a56f17add5795b68e863eb9d163ba"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tests\\setup.ts": {
+    "mtime": 1781327341.1591668,
+    "ast_hash": "88bd710f6654cf5720fc6476dfc6d858",
+    "semantic_hash": "88bd710f6654cf5720fc6476dfc6d858"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tsconfig.app.json": {
+    "mtime": 1781892771.6308465,
+    "ast_hash": "8ca9a4ab7448582f892a7cb3158c75a9",
+    "semantic_hash": "8ca9a4ab7448582f892a7cb3158c75a9"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tsconfig.json": {
+    "mtime": 1781881540.5133874,
+    "ast_hash": "a3d39fa780ebff65444de257f291ce6c",
+    "semantic_hash": "a3d39fa780ebff65444de257f291ce6c"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\tsconfig.node.json": {
+    "mtime": 1781881545.1196766,
+    "ast_hash": "f17f6f61feebb60243d005ac4b0f0f1a",
+    "semantic_hash": "f17f6f61feebb60243d005ac4b0f0f1a"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\vite.config.ts": {
+    "mtime": 1781325641.4817007,
+    "ast_hash": "eec2e5c4336e3b8ea30368a776125896",
+    "semantic_hash": "eec2e5c4336e3b8ea30368a776125896"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\.serena\\memories\\migration\\completed_files.md": {
+    "mtime": 1781884797.204021,
+    "ast_hash": "8759145eff20de32184885a03373f9a2",
+    "semantic_hash": "8759145eff20de32184885a03373f9a2"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\.serena\\memories\\migration\\conventions.md": {
+    "mtime": 1781881991.0813396,
+    "ast_hash": "95d2d6b9e02d53ad234b6800574a1cfe",
+    "semantic_hash": "95d2d6b9e02d53ad234b6800574a1cfe"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\.serena\\memories\\migration\\decisions.md": {
+    "mtime": 1781881993.4430842,
+    "ast_hash": "70d9a02e2ab5a769158f9b0d04039bd4",
+    "semantic_hash": "70d9a02e2ab5a769158f9b0d04039bd4"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\.serena\\memories\\migration\\status.md": {
+    "mtime": 1781976081.1904159,
+    "ast_hash": "1cb5f46dc7d3dafc1e7976f1b9959684",
+    "semantic_hash": "1cb5f46dc7d3dafc1e7976f1b9959684"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\docs\\migration\\AGENT_BRIEFING.md": {
+    "mtime": 1781881486.9307985,
+    "ast_hash": "141da03bb85e3c2c46fb4a47526536c3",
+    "semantic_hash": "141da03bb85e3c2c46fb4a47526536c3"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\docs\\migration\\DECISIONS.md": {
+    "mtime": 1781881527.9456847,
+    "ast_hash": "ca8ff091e9cb83a7db4c002b95bdeff5",
+    "semantic_hash": "ca8ff091e9cb83a7db4c002b95bdeff5"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\docs\\migration\\MIGRATION_TRACKER.md": {
+    "mtime": 1781975697.7104154,
+    "ast_hash": "097a80f8e7482f8169a1ba537804354b",
+    "semantic_hash": "097a80f8e7482f8169a1ba537804354b"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\docs\\migration\\STAGE_LOG.md": {
+    "mtime": 1781891266.0898666,
+    "ast_hash": "3f92c7517fb2f638af51f7aad500b7da",
+    "semantic_hash": "3f92c7517fb2f638af51f7aad500b7da"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\docs\\migration\\TYPE_CONVENTIONS.md": {
+    "mtime": 1781881530.952852,
+    "ast_hash": "0d4d56a980dd4daec0792b76c38bace8",
+    "semantic_hash": "0d4d56a980dd4daec0792b76c38bace8"
+  },
+  "C:\\Users\\oob\\.gemini\\antigravity\\scratch\\Worldsearchyou\\graphify-out\\memory\\query_20260618_171520_why_does_usestore_connect_community_9_to_community.md": {
+    "mtime": 1781802920.759918,
+    "ast_hash": "27015b936589a380ab70c6cdd83d741f",
+    "semantic_hash": "27015b936589a380ab70c6cdd83d741f"
   }
 }

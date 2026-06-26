@@ -34,6 +34,18 @@ export default defineConfig([
       'no-empty': ['error', { allowEmptyCatch: true }],
       'no-useless-assignment': 'error',
 
+      // ── Strict TypeScript Boundaries ─────────────────────────────────────────
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/ban-ts-comment': [
+        'error',
+        {
+          'ts-ignore': 'allow-with-description',
+          'ts-expect-error': 'allow-with-description',
+          'ts-nocheck': false,
+          'ts-check': false,
+        },
+      ],
+
       // ── R3F false-positives: downgrade to warn ───────────────────────────────
       // These rules fire on legitimate Three.js/R3F patterns (mutating gl, camera,
       // scene in useFrame callbacks). They are not bugs — R3F is designed for it.

@@ -1,6 +1,7 @@
 import { getGameStore } from '../storeLinker';
 import { playerPosition } from '../../globals';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const createChunkActions = (set: any, get: any): Record<string, any> => ({
   processChunkQueue: () => {
      const state = get();
@@ -8,6 +9,7 @@ export const createChunkActions = (set: any, get: any): Record<string, any> => (
      
      // Sort pendingChunkRequests by distance to player
      let px = 0, pz = 0;
+     // eslint-disable-next-line @typescript-eslint/no-explicit-any
      const useStore = (window as any).useStore || (typeof getGameStore === 'function' ? getGameStore() : null);
      if (useStore) {
         px = playerPosition.x;
@@ -24,7 +26,9 @@ export const createChunkActions = (set: any, get: any): Record<string, any> => (
      
      const nextReq = sortedQueue[0];
      
+     // eslint-disable-next-line @typescript-eslint/no-explicit-any
      set((prev: any) => ({ 
+         // eslint-disable-next-line @typescript-eslint/no-explicit-any
          chunkQueue: prev.chunkQueue.filter((r: any) => r.chunkKey !== nextReq.chunkKey),
          inFlightChunkRequests: prev.inFlightChunkRequests + 1,
          chunkRequests: { ...prev.chunkRequests, [nextReq.chunkKey]: nextReq.resolve }
@@ -38,6 +42,7 @@ export const createChunkActions = (set: any, get: any): Record<string, any> => (
         } catch(_e) {
            if (retryCount > 3) {
               nextReq.resolve('PRISTINE');
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               set((prev: any) => {
                   const next = { ...prev.chunkRequests };
                   delete next[nextReq.chunkKey];
@@ -75,6 +80,7 @@ export const createChunkActions = (set: any, get: any): Record<string, any> => (
            return;
         }
         
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         set((state: any) => ({ chunkQueue: [...state.chunkQueue, { chunkKey, resolve }] }));
         get().processChunkQueue();
      });

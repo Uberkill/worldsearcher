@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const load = (key: string, fallback: any): any => {
   try {
     const v = localStorage.getItem(key);

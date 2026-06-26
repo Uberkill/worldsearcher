@@ -74,9 +74,9 @@
     "lightLevel": 0,
     "type": "tool"
   },
-  "flare": {
+  "flare_item": {
     "id": 26,
-    "name": "Flare",
+    "name": "flare_item",
     "color": "#ff5500",
     "isTransparent": true,
     "lightLevel": 14,

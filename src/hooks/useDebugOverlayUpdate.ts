@@ -35,6 +35,7 @@ export function useDebugOverlayUpdate(overlayRef, visible, noiseFuncsRef) {
       if (!overlayRef.current) return;
 
       const stats = window.__DEBUG_STATS__;
+      if (!stats) return;
       const state = useStore.getState();
       const netState = networkActions.getState();
 

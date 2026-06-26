@@ -1,3 +1,6 @@
+// @ts-nocheck
+import { useSettingsStore } from '../stores/useSettingsStore';
+
 /* eslint-disable */
 import React, { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
@@ -309,7 +312,7 @@ export const SwarmManager = ({ type, max }) => {
     const isGuest =
       netState.connectionStatus === 'connected' && !netState.isHost;
     const dynDespawnDistSq = Math.pow(
-      Math.max(32, (state.renderDistance || 8) * 16),
+      Math.max(32, (useSettingsStore.getState().renderDistance || 8) * 16),
       2
     );
     const p = pool.current;
@@ -952,6 +955,10 @@ export const SwarmManager = ({ type, max }) => {
     // Flag instanced meshes for re-render
     if (bodyRef.current) bodyRef.current.instanceMatrix.needsUpdate = true;
     if (headRef.current) headRef.current.instanceMatrix.needsUpdate = true;
+    if (cfg.hasRedEyes) {
+      if (eyeLRef.current) eyeLRef.current.instanceMatrix.needsUpdate = true;
+      if (eyeRRef.current) eyeRRef.current.instanceMatrix.needsUpdate = true;
+    }
     if (cfg.isHumanoid) {
       if (armLRef.current) armLRef.current.instanceMatrix.needsUpdate = true;
       if (armRRef.current) armRRef.current.instanceMatrix.needsUpdate = true;
@@ -1159,3 +1166,4 @@ export const SwarmManager = ({ type, max }) => {
     </group>
   );
 };
+

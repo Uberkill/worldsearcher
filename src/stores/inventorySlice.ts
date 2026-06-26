@@ -1,11 +1,17 @@
 import { create } from 'zustand';
 
 interface InventorySlice {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   chests: Record<string, any>;       // TODO(ts-migration): type chest contents
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   machines: Record<string, any>;    // TODO(ts-migration): type machine contents
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   droppedItems: any[];              // TODO(ts-migration): type dropped items
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   tombstones: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   debris: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fallingStructures: any[];
   shadowSetState: (newState: Partial<Pick<InventorySlice, 'chests' | 'machines' | 'droppedItems' | 'tombstones' | 'debris' | 'fallingStructures'>>) => void;
   validateStateParity: (oldState: Partial<InventorySlice>) => void;

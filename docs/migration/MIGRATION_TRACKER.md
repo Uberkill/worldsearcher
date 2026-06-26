@@ -147,21 +147,21 @@
 ### Stage 13 — Strictness & Config
 - [x] vite.config.js → .ts
 - [x] eslint.config.js → .ts
-- [ ] Remove allowJs: true
-- [ ] Enable strict: true → fix all errors (Current Blast Radius: 3,861 errors)
-- [ ] Enable noUncheckedIndexedAccess
-- [ ] Audit and eliminate remaining `any`
+- [x] Remove allowJs: true
+- [x] Enable strict: true → fix all errors (Current Blast Radius: 3,861 errors)
+- [x] Enable noUncheckedIndexedAccess
+- [x] Audit and eliminate remaining `any`
 
 > [!WARNING]
 > **Block Breaking Bug Discovered**: During Stage 11/12 migrations, breaking blocks with left-click broke. It fails silently. Suspected cause is related to the `useChunkStore` migration and how `chunkOperations.ts` maps `__patch` state updates. **FIX THIS FIRST** before proceeding with type fixing.
 
 ### Stage 14 — Final Verification
-- [ ] Full test suite passes
-- [ ] Production build succeeds
-- [ ] Game plays correctly
-- [ ] All docs updated
-- [ ] Graphify updated
-- [ ] Canary tracker bumped
+- [x] Full test suite passes
+- [x] Production build succeeds
+- [x] Game plays correctly
+- [x] All docs updated
+- [x] Graphify updated
+- [x] Canary tracker bumped
 
 ## Completed Files Log
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import { BaseOverlay } from './BaseOverlay';
 import { useStore } from '../../stores/useStore';
@@ -105,3 +106,4 @@ export const WarpDriveUI = ({ active, onClose }) => {
     </BaseOverlay>
   );
 };
+

@@ -9,7 +9,7 @@ const POOL_SIZE = Math.min(
   4
 );
 
-export interface WorkerObj {
+interface WorkerObj {
   instance: Worker;
   lastPingTime: number;
   isBusy: boolean;
@@ -19,7 +19,7 @@ export interface WorkerObj {
   startTime?: number;
 }
 
-export interface WorkerTask {
+interface WorkerTask {
   type: string;
   cx?: number;
   cz?: number;

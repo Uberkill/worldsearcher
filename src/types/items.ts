@@ -1,4 +1,4 @@
-export interface CombatConfig {
+interface CombatConfig {
   type: 'hitscan' | 'projectile';
   damage: number;
   cooldownMs: number;
@@ -18,4 +18,4 @@ export interface ItemDefinition {
   combat?: CombatConfig;
 }
 
-export type ItemRegistryData = Record<string, ItemDefinition>;
+type ItemRegistryData = Record<string, ItemDefinition>;

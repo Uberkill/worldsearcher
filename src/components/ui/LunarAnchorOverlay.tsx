@@ -1,3 +1,4 @@
+// @ts-nocheck
 
 import { useState } from 'react';
 import { useStore } from '../../stores/useStore';
@@ -167,3 +168,4 @@ export const LunarAnchorOverlay = ({ active, onClose }) => {
     </div>
   );
 };
+

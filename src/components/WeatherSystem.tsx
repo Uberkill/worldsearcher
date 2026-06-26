@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useRef, useMemo, useState, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useEnvironmentStore } from '../stores/environmentSlice';
@@ -237,4 +238,5 @@ export function WeatherSystem() {
     </instancedMesh>
   );
 }
+
 

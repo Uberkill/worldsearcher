@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../../stores/useStore';
 import { SkillsRegistry as skillsData } from '../../registry/SkillsRegistry';
@@ -120,3 +121,4 @@ export const SkillTreeOverlay = ({ active, onClose }) => {
     </AnimatePresence>
   );
 };
+

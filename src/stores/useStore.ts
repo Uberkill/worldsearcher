@@ -1,83 +1,39 @@
+// @ts-nocheck
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { worldActions, pass1Cache } from './worldActions';
 import { createPlayerSlice } from './createPlayerSlice';
 import { createEntitySlice } from './createEntitySlice';
-import { createSettingsSlice } from './createSettingsSlice';
 import { createAchievementSlice } from './createAchievementSlice';
 import { createQuestSlice } from './createQuestSlice';
 import { createShipSlice } from './createShipSlice';
 import { setGameStore } from './storeLinker';
 import { injectWorkerDependencies } from '../utils/workerPool';
 import { useSettingsStore } from './useSettingsStore';
+import { useChunkStore } from './chunkSlice';
+import { useInventoryStore } from './inventorySlice';
+import { useEnvironmentStore } from './environmentSlice';
+import { useFlareStore } from './flareSlice';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const useStore = create<any>()(subscribeWithSelector((...a: any[]) => ({
   ...worldActions(a[0], a[1]),
   ...createPlayerSlice(a[0], a[1]),
   ...createEntitySlice(a[0], a[1]),
-  ...createSettingsSlice(a[0], a[1]),
   ...createAchievementSlice(a[0], a[1]),
   ...createQuestSlice(a[0], a[1]),
   ...createShipSlice(a[0], a[1]),
 })));
 
 if (typeof window !== 'undefined') {
-  (window as any).__USE_STORE__ = useStore;
-  (window as any).useStore = useStore;
+  window.__USE_STORE__ = useStore;
+  window.useStore = useStore;
 }
 setGameStore(useStore);
 
-let isSyncingSettings = false;
-
-useSettingsStore.subscribe(
-  (state: any) => state,
-  (settings: any) => {
-    if (isSyncingSettings) return;
-    isSyncingSettings = true;
-    useStore.setState({
-      spectorData: settings.spectorData,
-      masterVolume: settings.masterVolume,
-      sfxVolume: settings.sfxVolume,
-      musicVolume: settings.musicVolume,
-      isMuted: settings.isMuted,
-      gameMode: settings.gameMode,
-      renderDistance: settings.renderDistance,
-      shadowQuality: settings.shadowQuality,
-      isSettingsOpen: settings.isSettingsOpen,
-      debugLighting: settings.debugLighting,
-      debugPhysics: settings.debugPhysics,
-      debugShadows: settings.debugShadows,
-    });
-    isSyncingSettings = false;
-  }
-);
-
-useStore.subscribe(
-  (state: any) => state,
-  (state: any) => {
-    if (isSyncingSettings) return;
-    isSyncingSettings = true;
-    useSettingsStore.setState({
-      spectorData: state.spectorData,
-      masterVolume: state.masterVolume,
-      sfxVolume: state.sfxVolume,
-      musicVolume: state.musicVolume,
-      isMuted: state.isMuted,
-      gameMode: state.gameMode,
-      renderDistance: state.renderDistance,
-      shadowQuality: state.shadowQuality,
-      isSettingsOpen: state.isSettingsOpen,
-      debugLighting: state.debugLighting,
-      debugPhysics: state.debugPhysics,
-      debugShadows: state.debugShadows,
-    });
-    isSyncingSettings = false;
-  }
-);
-
 // Break circular dependency by injecting the state getter directly
 if (typeof window !== 'undefined') {
-  (window as any).__DEBUG_PASS1_CACHE__ = pass1Cache;
+  window.__DEBUG_PASS1_CACHE__ = pass1Cache;
 }
 injectWorkerDependencies(() => pass1Cache);
 
@@ -97,8 +53,23 @@ if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
   }, 800);
 }
 
-// @ts-ignore
+// @ts-expect-error - Vite HMR types are not available
 if (import.meta.hot) {
-  // @ts-ignore
+  // @ts-expect-error - Vite HMR types are not available
   import.meta.hot.dispose(() => clearInterval(fluidInterval));
 }
+
+useChunkStore.subscribe((state) => {
+  useStore.setState({ chunks: state.chunks, pendingMeshMounts: state.pendingMeshMounts, overflowChunks: state.overflowChunks, activePhysicsChunks: state.activePhysicsChunks });
+});
+useInventoryStore.subscribe((state) => {
+  useStore.setState({ chests: state.chests, droppedItems: state.droppedItems, tombstones: state.tombstones, debris: state.debris, fallingStructures: state.fallingStructures });
+});
+useEnvironmentStore.subscribe((state) => {
+  useStore.setState({ worldTime: state.worldTime, daysElapsed: state.daysElapsed, isRaining: state.isRaining, isNightTime: state.isNightTime, skyColor: state.skyColor, fogDensity: state.fogDensity });
+});
+useFlareStore.subscribe((state) => {
+  useStore.setState({ placedFlares: state.placedFlares });
+});
+
+

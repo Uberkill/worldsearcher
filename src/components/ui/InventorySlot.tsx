@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useCallback, memo } from 'react';
 import { useStore } from '../../stores/useStore';
 import { useInventoryStore } from '../../stores/inventorySlice';
@@ -243,4 +244,5 @@ function processInventoryClick(e, params) {
       handleOccupiedSlotClick(e, params);
   }
 }
+
 

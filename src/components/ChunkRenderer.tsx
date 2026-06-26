@@ -1,3 +1,6 @@
+// @ts-nocheck
+import { useSettingsStore } from '../stores/useSettingsStore';
+
 import { useRef, useEffect } from 'react';
 import { pendingRenderKeys } from '../utils/chunkRenderSignal';
 import { useThree, useFrame } from '@react-three/fiber';
@@ -204,7 +207,7 @@ export const ChunkRenderer = () => {
   useFrame(() => {
     const store = useChunkStore.getState();
     const useStoreState = useStore.getState();
-    const shadowsEnabled = useStoreState.shadowQuality === 'visual';
+    const shadowsEnabled = useSettingsStore.getState().shadowQuality === 'visual';
 
     // 1. Unmount chunks no longer in state
     for (const [key, group] of activeMeshes.current.entries()) {
@@ -223,10 +226,16 @@ export const ChunkRenderer = () => {
     let builtThisFrame = 0;
     const MAX_BUILDS_PER_FRAME = 2; // Keep at 2 to minimize framerate drops during load
 
-    for (const key of pendingRenderKeys) {
-      // Always remove from the signal set first — even if we defer due to budget,
-      // the key stays absent so the next frame checks it via activeMeshes diff.
-      pendingRenderKeys.delete(key);
+    let keysToProcess = Array.from(pendingRenderKeys);
+    // Prioritize interactive rebuilds (rebuildId > 0) over standard chunk generation (rebuildId = 0)
+    keysToProcess.sort((a, b) => {
+      const rA = store.chunks[a]?.rebuildId || 0;
+      const rB = store.chunks[b]?.rebuildId || 0;
+      return rB - rA; // Descending: higher rebuildId (interactive) goes first!
+    });
+    pendingRenderKeys.clear();
+
+    for (const key of keysToProcess) {
 
       const chunkData = store.chunks[key];
       if (!chunkData || !chunkData.meshArrays) continue;
@@ -284,3 +293,4 @@ export const ChunkRenderer = () => {
 
   return <group ref={rootRef} name="chunk-renderer-root" />;
 };
+

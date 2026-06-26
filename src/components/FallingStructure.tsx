@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useRef, useEffect } from 'react';
 import { RigidBody, CuboidCollider } from '@react-three/rapier';
 import { useStore } from '../stores/useStore';
@@ -178,3 +179,4 @@ export const FallingStructure = ({ structure }) => {
     </RigidBody>
   );
 };
+

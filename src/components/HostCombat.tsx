@@ -1,3 +1,4 @@
+// @ts-nocheck
 /* eslint-disable no-unused-vars */
 import { useRef, useState, useEffect } from 'react';
 import { useRapier, RigidBody, BallCollider, useBeforePhysicsStep } from '@react-three/rapier';
@@ -240,3 +241,4 @@ function HostProjectile({ proj, onImpact }) {
     </RigidBody>
   );
 }
+

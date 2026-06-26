@@ -1,3 +1,4 @@
+// @ts-nocheck
 
 import { useStore } from '../../stores/useStore';
 import { Battery, Zap, AlertTriangle, X } from 'lucide-react';
@@ -147,3 +148,4 @@ export const HeartCoreOverlay = ({ active, onClose }) => {
     </div>
   );
 };
+

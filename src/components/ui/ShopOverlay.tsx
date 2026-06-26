@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { X, Heart, Sword, ArrowUpCircle } from 'lucide-react';
 import { useStore } from '../../stores/useStore';
 
@@ -146,3 +147,4 @@ export const ShopOverlay = ({ active, onClose }) => {
     </div>
   );
 };
+

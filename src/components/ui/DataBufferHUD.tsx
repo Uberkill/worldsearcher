@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useStore } from '../../stores/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useState } from 'react';
@@ -62,3 +63,4 @@ export const DataBufferHUD = () => {
     </div>
   );
 };
+

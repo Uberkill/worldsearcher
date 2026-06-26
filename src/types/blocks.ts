@@ -1,4 +1,4 @@
-export interface BlockTextures {
+interface BlockTextures {
   top: string;
   side: string;
   bottom: string;
@@ -17,6 +17,8 @@ export interface BlockDefinition {
   opacity?: number;
   texture?: string;
   textures?: BlockTextures;
+  damagePerTick?: number;
+  isHidden?: boolean;
 }
 
-export type BlockRegistryData = Record<string, BlockDefinition>;
+type BlockRegistryData = Record<string, BlockDefinition>;

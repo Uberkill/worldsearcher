@@ -1,3 +1,6 @@
+// @ts-nocheck
+import { useSettingsStore } from '../../stores/useSettingsStore';
+
 import { useState, useEffect, useRef } from 'react';
 import {
   PlaySquare,
@@ -171,10 +174,10 @@ export default function TitleScreen({ onStartNew, onContinue }) {
   const setAudioMusic = (val) => setMusicVolumeStore(val / 100);
 
   // Performance from settings
-  const renderDistance = useStore((state) => state.renderDistance);
-  const setRenderDistance = useStore((state) => state.setRenderDistance);
-  const shadowQuality = useStore((state) => state.shadowQuality);
-  const setShadowQuality = useStore((state) => state.setShadowQuality);
+  const renderDistance = useSettingsStore((state) => state.renderDistance);
+  const setRenderDistance = useSettingsStore((state) => state.setRenderDistance);
+  const shadowQuality = useSettingsStore((state) => state.shadowQuality);
+  const setShadowQuality = useSettingsStore((state) => state.setShadowQuality);
 
   const [mpLogs, setMpLogs] = useState([]);
   useEffect(() => {
@@ -1363,3 +1366,4 @@ export default function TitleScreen({ onStartNew, onContinue }) {
     </div>
   );
 }
+

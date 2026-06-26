@@ -23,7 +23,9 @@ interface Waypoint {
 interface SyncSlice {
   players: Record<string, PlayerSync>;  // { id: { x, y, z, rx, ry, rz, name, ping } }
   guestHealthMap: Record<string, number>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   enemySyncBuffers: Record<string, any>; // TODO(ts-migration): type enemy sync buffers
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   queuedDeltas: Record<string, any[]>;  // { [chunkKey]: [deltas] }
   waypoints: Waypoint[];               // { id, x, y, z, color, timestamp }
   worldEpoch: number;

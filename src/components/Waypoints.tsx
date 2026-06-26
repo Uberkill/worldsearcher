@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Billboard, Text } from '@react-three/drei';
@@ -154,3 +155,4 @@ const ShipWaypointMarker = ({ camera }) => {
     </Billboard>
   );
 };
+

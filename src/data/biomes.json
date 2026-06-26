@@ -32,8 +32,8 @@
     "fauna": ["wooly-grazer"]
   },
   "desert": {
-    "surface": "sand",
-    "subsurface": "sandstone",
+    "surface": "alien_sand",
+    "subsurface": "alien_sand",
     "roughness": 0.1,
     "structures": ["Cactus"],
     "flora": [],

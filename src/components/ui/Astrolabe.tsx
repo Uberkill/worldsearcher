@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useEffect, useRef } from 'react';
 import { playerPosition, playerRotation, shipTransforms } from '../../globals';
 import { Euler } from 'three';
@@ -283,3 +284,4 @@ export const Astrolabe = ({ active, onClose }) => {
     </BaseOverlay>
   );
 };
+

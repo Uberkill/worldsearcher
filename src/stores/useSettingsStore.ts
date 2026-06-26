@@ -1,10 +1,16 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 
-const load = (key: string, fallback: any): any => {
+const load = <T>(key: string, fallback: T, allowedValues?: T[]): T => {
   try {
     const v = localStorage.getItem(key);
-    return v !== null ? JSON.parse(v) : fallback;
+    if (v === null) return fallback;
+    const parsed = JSON.parse(v);
+    
+    if (typeof parsed !== typeof fallback) return fallback;
+    if (allowedValues && !allowedValues.includes(parsed)) return fallback;
+    
+    return parsed as T;
   } catch {
     return fallback;
   }
@@ -15,8 +21,8 @@ type ShadowQuality = 'visual' | 'performance';
 
 interface SettingsSlice {
   // Debug State
-  spectorData: any | null;
-  setSpectorData: (data: any) => void;
+  spectorData: unknown | null;
+  setSpectorData: (data: unknown) => void;
   // Game Mode
   gameMode: GameMode;
   // Graphics
@@ -44,11 +50,11 @@ export const useSettingsStore = create<SettingsSlice>()(
     setSpectorData: (data) => set({ spectorData: data }),
 
     // Game Mode
-    gameMode: 'survival', // 'survival' | 'creative' | 'hardcore'
+    gameMode: load<GameMode>('setting_gameMode', 'survival', ['survival', 'creative', 'hardcore']),
 
     // Graphics
-    renderDistance: load('setting_renderDistance', 8),
-    shadowQuality: load('setting_shadowQuality', 'visual'), // 'visual' | 'performance'
+    renderDistance: load<number>('setting_renderDistance', 8),
+    shadowQuality: load<ShadowQuality>('setting_shadowQuality', 'visual', ['visual', 'performance']),
 
     // UI & Debug
     isSettingsOpen: false,

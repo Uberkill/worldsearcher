@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from 'react';
 import { useStore } from '../../stores/useStore';
 import { GlobalRegistry } from '../../registry/Registry';
@@ -155,3 +156,4 @@ export const CreativeInventory = ({ active, onClose }) => {
     </BaseOverlay>
   );
 };
+

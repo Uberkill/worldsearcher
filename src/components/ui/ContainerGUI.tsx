@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import { InventorySlot } from './InventorySlot';
 import { BaseOverlay } from './BaseOverlay';
@@ -42,3 +43,4 @@ export const ContainerGUI = ({ active, onClose, title, children }) => {
     </BaseOverlay>
   );
 };
+

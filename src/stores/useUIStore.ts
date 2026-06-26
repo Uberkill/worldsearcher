@@ -4,10 +4,10 @@ type ModalId = string | null;
 
 interface UISlice {
   activeModal: ModalId;
-  modalData: any | null; // TODO(ts-migration): discriminated union per modal
-  openModal: (modalId: string, data?: any) => void;
+  modalData: unknown | null; // TODO(ts-migration): discriminated union per modal
+  openModal: (modalId: string, data?: unknown) => void;
   closeModal: () => void;
-  toggleModal: (modalId: string, data?: any) => void;
+  toggleModal: (modalId: string, data?: unknown) => void;
   isModalOpen: (modalId: string) => boolean;
   getAnyUIOpen: () => boolean;
 }

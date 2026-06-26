@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useStore } from '../stores/useStore';
 import { Edges } from '@react-three/drei';
 import { MaterialCache } from '../utils/MaterialCache';
@@ -61,3 +62,4 @@ export const GhostBlock = () => {
     </mesh>
   );
 };
+

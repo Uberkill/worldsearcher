@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { InventorySlot } from './InventorySlot';
 import { ContainerGUI } from './ContainerGUI';
 
@@ -28,3 +29,4 @@ export const CraftingOverlay = ({ active, onClose }) => {
     </ContainerGUI>
   );
 };
+

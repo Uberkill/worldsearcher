@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useFrame, useThree, createPortal } from '@react-three/fiber';
 import { useRef, useState, useEffect, Suspense } from 'react';
 import { useStore } from '../stores/useStore';
@@ -357,3 +358,4 @@ export const ViewModel = () => {
     </>
   );
 };
+

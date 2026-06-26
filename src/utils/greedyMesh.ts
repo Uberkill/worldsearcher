@@ -10,7 +10,7 @@ import {
   getBlockLight,
   getGlobalBlockLight,
 } from './chunkData';
-import type { NeighborBuffer } from '../types/world';
+import type { NeighborBuffer, ChunkMeshArrays } from '../types/world';
 
 const NEIGHBORS = [
   { nx: 0, ny: 1, nz: 0 },
@@ -19,7 +19,7 @@ const NEIGHBORS = [
   { nx: -1, ny: 0, nz: 0 },
   { nx: 0, ny: 0, nz: 1 },
   { nx: 0, ny: 0, nz: -1 },
-];
+] as const;
 
 const NEIGHBOR_OFFSETS = [
   256,  // Top: ny = 1
@@ -28,7 +28,7 @@ const NEIGHBOR_OFFSETS = [
   -1,   // Left: nx = -1
   16,   // Front: nz = 1
   -16,  // Back: nz = -1
-];
+] as const;
 
 // Pre-allocated static buffers (60k faces max per sub-chunk, drastically reduces memory!)
 const MAX_FACES = 60000;
@@ -50,7 +50,7 @@ const pIdxBuffer = new Uint32Array(MAX_FACES * 6);
 const floraMatricesBuffer = new Float32Array(MAX_FACES * 16);
 const floraPackedBuffer = new Float32Array(MAX_FACES);
 
-export const buildGreedyArrays = (buffer: Uint32Array, cx: number, cz: number, neighborBuffers: NeighborBuffer[] | null | undefined, recycledBufferBuckets: Record<number, ArrayBuffer[]> | null = null, SolidLookup: Uint8Array, FluidLookup: Uint8Array, TextureLookup: Uint16Array, FloraLookup: Uint8Array, TransparentLookup: Uint8Array): Record<string, any> => {
+export const buildGreedyArrays = (buffer: Uint32Array, cx: number, cz: number, neighborBuffers: NeighborBuffer[] | null | undefined, recycledBufferBuckets: Record<number, ArrayBuffer[]> | null = null, SolidLookup: Uint8Array, FluidLookup: Uint8Array, TextureLookup: Uint16Array, FloraLookup: Uint8Array, TransparentLookup: Uint8Array): ChunkMeshArrays => {
   const result = {
     solid: [],
     transparent: [],
@@ -219,7 +219,7 @@ export const buildGreedyArrays = (buffer: Uint32Array, cx: number, cz: number, n
 
     // --- STRICT GREEDY MESHING (Run-Length Encoding along X) ---
     const isMergeable = (p0 === p1 && p1 === p2 && p2 === p3) && (customY0 === 1 && customY1 === 1 && customY2 === 1 && customY3 === 1);
-    const faceKey = ny === 1 ? 'top' : ny === -1 ? 'bottom' : nz === 1 ? 'front' : nz === -1 ? 'back' : null;
+    const faceKey = (ny === 1 ? 'top' : ny === -1 ? 'bottom' : nz === 1 ? 'front' : nz === -1 ? 'back' : null) as 'top' | 'bottom' | 'front' | 'back' | null;
     const arrayGroup = isTrans ? lastFaces.transparent : lastFaces.solid;
 
     if (isMergeable && faceKey) {
@@ -681,7 +681,7 @@ export const buildGreedyArrays = (buffer: Uint32Array, cx: number, cz: number, n
             // Lighting for top face: local-first lookup
             let globalLight;
             if (y + 1 <= CHUNK_Y_MAX) {
-              globalLight = buffer[idx + 256];
+              globalLight = buffer[idx + 256] as number;
             } else {
               globalLight = 15 << 26;
             }
@@ -719,9 +719,9 @@ export const buildGreedyArrays = (buffer: Uint32Array, cx: number, cz: number, n
           const nlx = x + n.nx;
           const nly = y + n.ny;
           const nlz = z + n.nz;
-          let nVal;
+          let nVal: number;
           if (nlx >= 0 && nlx < 16 && nlz >= 0 && nlz < 16 && nly >= CHUNK_Y_MIN && nly <= CHUNK_Y_MAX) {
-            nVal = buffer[idx + NEIGHBOR_OFFSETS[i]];
+            nVal = buffer[idx + NEIGHBOR_OFFSETS[i]] as number;
           } else {
             nVal = getGlobalBlockVal(cx, cz, buffer, neighborBuffers, cx * 16 + nlx, nly, cz * 16 + nlz);
           }
@@ -748,9 +748,9 @@ export const buildGreedyArrays = (buffer: Uint32Array, cx: number, cz: number, n
             const gx = cx * CHUNK_SIZE_X + nlx;
             const gy = nly;
             const gz = cz * CHUNK_SIZE_Z + nlz;
-            let globalLight;
+            let globalLight: number;
             if (nlx >= 0 && nlx < 16 && nlz >= 0 && nlz < 16 && nly >= CHUNK_Y_MIN && nly <= CHUNK_Y_MAX) {
-              globalLight = buffer[idx + NEIGHBOR_OFFSETS[i]];
+              globalLight = buffer[idx + NEIGHBOR_OFFSETS[i]] as number;
             } else {
               globalLight = getGlobalBlockLight(
                 cx,
@@ -769,7 +769,7 @@ export const buildGreedyArrays = (buffer: Uint32Array, cx: number, cz: number, n
 
             // If neighbor is fully opaque, we use OUR light so it's not pitch black (failsafe)
             if (nBlockId !== 0 && TransparentLookup[nBlockId] === 0) {
-              const selfLight = buffer[idx];
+              const selfLight = buffer[idx] as number;
               faceSun = (selfLight >> 26) & 0xf;
               faceBlk = (selfLight >> 22) & 0xf;
             }

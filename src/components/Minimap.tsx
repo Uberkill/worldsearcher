@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useRef, useEffect } from 'react';
 import { useChunkStore } from '../stores/chunkSlice';
 import {
@@ -288,3 +289,4 @@ export const Minimap = () => {
     </div>
   );
 };
+

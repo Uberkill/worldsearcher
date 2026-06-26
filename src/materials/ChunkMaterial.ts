@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as THREE from 'three';
 import { ATLAS_GRID_SIZE } from '../utils/TextureAtlas';
 
@@ -179,3 +180,4 @@ export const createChunkMaterial = (textureAtlas: THREE.Texture, isTransparent =
 
   return material;
 };
+

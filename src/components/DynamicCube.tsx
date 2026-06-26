@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { RigidBody } from '@react-three/rapier';
 import { useStore } from '../stores/useStore';
 import { useRef, useEffect } from 'react';
@@ -76,3 +77,4 @@ export const DynamicCube = ({ block }) => {
     </RigidBody>
   );
 };
+

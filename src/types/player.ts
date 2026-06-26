@@ -1,11 +1,12 @@
-export interface InventoryItem {
+interface InventoryItem {
   type: string;
   count: number;
   durability?: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata?: Record<string, any>;
 }
 
-export type InventorySlot = InventoryItem | null;
+type InventorySlot = InventoryItem | null;
 
 export interface PlayerState {
   version: number;

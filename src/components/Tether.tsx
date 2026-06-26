@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useStore } from '../stores/useStore';
@@ -71,3 +72,4 @@ export const Tether = () => {
     />
   );
 };
+

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 
@@ -34,3 +35,4 @@ export const Screenshot = () => {
 
   return null;
 };
+

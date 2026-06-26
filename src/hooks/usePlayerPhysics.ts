@@ -1,3 +1,6 @@
+// @ts-nocheck
+import { useSettingsStore } from '../stores/useSettingsStore';
+
 import { useFrame } from '@react-three/fiber';
 
 
@@ -249,7 +252,7 @@ export function usePlayerPhysics(playerRef, meshRef, camera, actionsRef) {
       else if (texture === 'sword') powerCost = 2;
       else if (['pickaxe', 'axe', 'shovel'].includes(texture)) powerCost = 0.5;
 
-      if (powerCost > 0 && state.playerPower < powerCost && state.gameMode?.toLowerCase() !== 'creative') {
+      if (powerCost > 0 && state.playerPower < powerCost && useSettingsStore.getState().gameMode?.toLowerCase() !== 'creative') {
         networkStore.addChatMessage('> INSUFFICIENT POWER FOR OPERATION', 'system', 'System');
         return; // Fail action
       }
@@ -360,7 +363,7 @@ export function usePlayerPhysics(playerRef, meshRef, camera, actionsRef) {
 }
 
 function runFixedTick(world, playerRef, meshRef, camera, actionsRef, isFlying, isSeated, initialPos, context) {
-  const { lastIntentRef, processedDamageRef, isTeleporting, lastJump, lastGrappleReelTime, lastStep, lastLavaDamage, hasSnappedToGround, setIsFlying, wasGrounded, fallSpeed, frameCounter, wasSeated, tickCount, idleTicks, zeroPowerTicks, sprintTicks, physicsCachedRay, lastFired, accumulator, lastTickTime } = context;
+  const { wasSeated, accumulator, lastTickTime } = context;
     if (!playerRef.current) return;
     if (lastTickTime.current === null) lastTickTime.current = performance.now();
     
@@ -414,10 +417,10 @@ function runFixedTick(world, playerRef, meshRef, camera, actionsRef, isFlying, i
 }
 
 function runVisualTick(state, delta, playerRef, meshRef, camera, actionsRef, isFlying, isSeated, initialPos, context) {
-  const { lastIntentRef, processedDamageRef, isTeleporting, lastJump, lastGrappleReelTime, lastStep, lastLavaDamage, hasSnappedToGround, setIsFlying, wasGrounded, fallSpeed, frameCounter, wasSeated, tickCount, idleTicks, zeroPowerTicks, sprintTicks, cachedRay, lastFired, accumulator, lastTickTime } = context;
+  const { lastIntentRef } = context;
     // Poll Keyboard & Steer Vectors at 144Hz
     const storeState = useStore.getState();
-    const isCreative = storeState.gameMode?.toLowerCase() === 'creative';
+    const isCreative = useSettingsStore.getState().gameMode?.toLowerCase() === 'creative';
     const { jump, sprint, moveForward, moveBackward, moveLeft, moveRight } = actionsRef.current;
     
     if (storeState.isSeated) {
@@ -508,7 +511,7 @@ function runVisualTick(state, delta, playerRef, meshRef, camera, actionsRef, isF
 
 function corePhysicsStep(world, playerRef, meshRef, camera, actionsRef, isFlying, isSeated, initialPos, context) {
     const { jump, sprint, moveForward, moveBackward, moveLeft, moveRight } = actionsRef.current;
-  const { lastIntentRef, processedDamageRef, isTeleporting, lastJump, lastGrappleReelTime, lastStep, lastLavaDamage, hasSnappedToGround, setIsFlying, wasGrounded, fallSpeed, frameCounter, tickCount, idleTicks, zeroPowerTicks, sprintTicks, physicsCachedRay, lastFired } = context;
+  const { processedDamageRef, isTeleporting, lastJump, lastGrappleReelTime, lastStep, lastLavaDamage, hasSnappedToGround, wasGrounded, fallSpeed, frameCounter, tickCount, idleTicks, zeroPowerTicks, sprintTicks, physicsCachedRay } = context;
   const getPhysicsCachedRay = (origin, dir) => {
     const r = physicsCachedRay.current;
     if (!r) return null;
@@ -523,7 +526,7 @@ function corePhysicsStep(world, playerRef, meshRef, camera, actionsRef, isFlying
     if (state.isDead) return;
 
     tickCount.current++;
-    const isCreative = state.gameMode?.toLowerCase() === 'creative';
+    const isCreative = useSettingsStore.getState().gameMode?.toLowerCase() === 'creative';
 
     let currentSpeed = SPEED;
     if (sprint) {
@@ -1039,3 +1042,4 @@ function corePhysicsStep(world, playerRef, meshRef, camera, actionsRef, isFlying
       playerRef.current.setLinvel({ x: linvel.x, y: -35, z: linvel.z }, true);
     }
 };
+

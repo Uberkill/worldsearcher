@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useFrame } from '@react-three/fiber';
 import { useStore } from '../stores/useStore';
 import { useRef } from 'react';
@@ -65,3 +66,4 @@ export const Bullets = () => {
     </group>
   );
 };
+

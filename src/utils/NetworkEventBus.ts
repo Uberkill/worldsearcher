@@ -1,4 +1,5 @@
-export type NetworkEventCallback<T = any> = (payload: T) => void;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type NetworkEventCallback<T = any> = (payload: T) => void;
 
 class EventBus {
   private listeners: Map<string, NetworkEventCallback[]>;
@@ -7,6 +8,7 @@ class EventBus {
     this.listeners = new Map();
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   on<T = any>(event: string, callback: NetworkEventCallback<T>): () => void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
@@ -19,12 +21,14 @@ class EventBus {
     };
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   off<T = any>(event: string, callback: NetworkEventCallback<T>): void {
     if (!this.listeners.has(event)) return;
     const callbacks = this.listeners.get(event)!.filter((cb) => cb !== callback);
     this.listeners.set(event, callbacks);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   emit<T = any>(event: string, payload?: T): void {
     // Fire specific listeners
     if (this.listeners.has(event)) {

@@ -1,5 +1,6 @@
 import { get as getIDB, set as setIDB } from 'idb-keyval';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const createAchievementSlice = (set: any, get: any): Record<string, any> => ({
   achievements: {},
   recentAchievement: null,

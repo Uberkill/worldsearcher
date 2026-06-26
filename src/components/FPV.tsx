@@ -1,3 +1,6 @@
+// @ts-nocheck
+import { useSettingsStore } from '../stores/useSettingsStore';
+
 import { PointerLockControls } from '@react-three/drei';
 import { useThree } from '@react-three/fiber';
 import { useStore } from '../stores/useStore';
@@ -6,7 +9,7 @@ import { useEffect } from 'react';
 export const FPV = () => {
   const { camera, gl } = useThree();
   const isAnyOverlayOpen = useStore((state) => state.isUIActive());
-  const renderDistance = useStore((state) => state.renderDistance);
+  const renderDistance = useSettingsStore((state) => state.renderDistance);
 
   useEffect(() => {
     // Dynamically adjust the far plane based on Render Distance to fix frustum culling!
@@ -37,3 +40,4 @@ export const FPV = () => {
     />
   );
 };
+

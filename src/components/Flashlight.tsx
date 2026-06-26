@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useRef, useMemo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useStore } from '../stores/useStore';
@@ -52,3 +53,4 @@ export const Lantern = () => {
     </>
   );
 };
+

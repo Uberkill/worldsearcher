@@ -1,4 +1,4 @@
-export interface MeshGroup {
+interface MeshGroup {
   pos?: { buffer: ArrayBuffer | ArrayBufferView };
   norm?: { buffer: ArrayBuffer | ArrayBufferView };
   color?: { buffer: ArrayBuffer | ArrayBufferView };
@@ -12,21 +12,22 @@ export interface MeshGroup {
 
 export interface ChunkMeshArrays {
   _isMounted?: boolean;
-  __physics?: ArrayBuffer | ArrayBufferView;
-  _physics?: ArrayBuffer | ArrayBufferView;
-  __meta?: ArrayBuffer | ArrayBufferView;
-  __flora?: ArrayBuffer | ArrayBufferView;
-  [key: string]: MeshGroup | MeshGroup[] | ArrayBuffer | ArrayBufferView | boolean | undefined;
+  __physics?: Array<{ pos: Float32Array; idx: Uint32Array }>;
+  _physics?: ArrayBuffer | ArrayBufferView; // Legacy physics array (deprecation warning)
+  __meta?: { heightmap?: Uint8Array; [key: string]: unknown };
+  __flora?: { matrices: Float32Array; packed: Uint32Array; [key: string]: unknown };
+  [key: string]: unknown;
 }
 
 export interface ChunkData {
   buffer: Uint32Array;
   isModified?: boolean;
   rebuildId?: number;
+  physicsRebuildId?: number;
   meshArrays?: ChunkMeshArrays;
 }
 
-export type ChunkKey = string; // format: "x,z"
+type ChunkKey = string; // format: "x,z"
 
 export interface NeighborBuffer {
   cx: number;

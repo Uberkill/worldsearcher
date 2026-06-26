@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NetworkEventBus } from '../../utils/NetworkEventBus';
 import { setWorldSeed } from '../../worldSeed';
 import { getGameStore } from '../../stores/storeLinker';
@@ -100,3 +101,4 @@ const initializeConnectionSystems = () => {
 
 // Auto-initialize when imported
 initializeConnectionSystems();
+

@@ -34,52 +34,51 @@ Instead of utilizing heavy 3D rendering passes for environmental occlusion (like
 /src
 ├── components/         # React Components (UI and 3D Scene Elements)
 │   ├── ui/             # 2D DOM Overlays (TitleScreen, Inventory, HUD, SpectorModal)
-│   ├── Player.jsx      # Thin presentation wrapper around Player position
-│   ├── ChunkRenderer.jsx # Native Three.js Imperative Render Pipeline (Bypasses React for extreme performance)
-│   ├── ChunkPhysics.jsx  # Invisible physics colliders for chunk geometry
-│   ├── Enemies.jsx     # Spawner and SwarmManager for entities
-│   ├── HostCombat.jsx  # Host-authoritative hitscan & projectile logic
-│   ├── Tombstones.jsx  # Death system dropped items
-│   └── Tether.jsx      # Grapple Gun physics line
+│   ├── Player.tsx      # Thin presentation wrapper around Player position
+│   ├── ChunkRenderer.tsx # Native Three.js Imperative Render Pipeline (Bypasses React for extreme performance)
+│   ├── ChunkPhysics.tsx  # Invisible physics colliders for chunk geometry
+│   ├── Enemies.tsx     # Spawner and SwarmManager for entities
+│   ├── HostCombat.tsx  # Host-authoritative hitscan & projectile logic
+│   ├── Tombstones.tsx  # Death system dropped items
+│   └── Tether.tsx      # Grapple Gun physics line
 ├── hooks/              # Custom React hooks containing decoupled systems
-│   ├── usePlayerPhysics.js # Decoupled fixed physics accumulator loop (30Hz)
-│   ├── useWorldLighting.js # Decoupled lighting updates for DynamicSky.jsx
-│   ├── useDebugOverlayUpdate.js # Decoupled debug stats updates (F3 menu)
-│   └── useKeyboard.js  # Zero-render keyboard input hook (Ref-based)
+│   ├── usePlayerPhysics.ts # Decoupled fixed physics accumulator loop (30Hz)
+│   ├── useWorldLighting.ts # Decoupled lighting updates for DynamicSky.tsx
+│   ├── useDebugOverlayUpdate.ts # Decoupled debug stats updates (F3 menu)
+│   └── useKeyboard.ts  # Zero-render keyboard input hook (Ref-based)
 ├── stores/             # Zustand State Management (Modular Slices)
-│   ├── useStore.js     # Main store aggregator
-│   ├── createWorldSlice.js   # Chunk generation, meshing, and modification state
-│   ├── createEntitySlice.js  # Enemy/Mob logic and swarms
-│   ├── createPlayerSlice.js  # Inventory, Health, Position, and Game Modes (Survival/Creative)
-│   ├── networkActions.js # Split main network action hooks
-│   └── useNetworkStore.js    # PeerJS WebRTC networking and Host Commands (/tp, /kick)
+│   ├── useStore.ts     # Main store aggregator
+│   ├── useChunkStore.ts   # Chunk generation, meshing, and modification state
+│   ├── usePlayerStore.ts  # Inventory, Health, Position, and Game Modes (Survival/Creative)
+│   ├── networkActions.ts # Split main network action hooks
+│   └── useNetworkStore.ts    # PeerJS WebRTC networking and Host Commands (/tp, /kick)
 ├── systems/            # Logic tick sub-systems
 │   ├── network/        # Decoupled network system slices (Chat, Inventory, PlayerSync, etc.)
-│   └── MachineTickSystem.js # Crafting machine update loops
+│   └── MachineTickSystem.ts # Crafting machine update loops
 ├── utils/              # Pure Functions, Math, and Web Workers
-│   ├── chunkData.js    # 32-bit ECS bitpacking logic (Memory optimization)
-│   ├── chunkGenerator.js # Procedural generation (Simplex Noise)
-│   ├── greedyMesh.js   # Custom Naive/Greedy meshing with embedded AO/Lighting
-│   ├── workerPool.js   # Web Worker management and queueing
-│   ├── db.js           # Async Proxy to the IndexedDB Web Worker
-│   └── NetworkEventBus.js # Event bus for handling decoupled network payloads
+│   ├── chunkData.ts    # 32-bit ECS bitpacking logic (Memory optimization)
+│   ├── chunkGenerator.ts # Procedural generation (Simplex Noise)
+│   ├── greedyMesh.ts   # Custom Naive/Greedy meshing with embedded AO/Lighting
+│   ├── workerPool.ts   # Web Worker management and queueing
+│   ├── db.ts           # Async Proxy to the IndexedDB Web Worker
+│   └── NetworkEventBus.ts # Event bus for handling decoupled network payloads
 ├── workers/            # Off-thread Web Workers (DO NOT BLOCK THE MAIN THREAD)
-│   ├── chunkWorker.js  # Heavy terrain generation and meshing
-│   └── dbWorker.js     # IndexedDB I/O and RLE Array Decompression
+│   ├── chunkWorker.ts  # Heavy terrain generation and meshing
+│   └── dbWorker.ts     # IndexedDB I/O and RLE Array Decompression
 ├── materials/          # Custom WebGL Shaders and Texture Atlas
-│   ├── ChunkMaterial.js # Custom ShaderMaterial for voxel lighting & AO
-│   └── TextureAtlas.js  # Canvas-based automatic texture atlas compiler
+│   ├── ChunkMaterial.ts # Custom ShaderMaterial for voxel lighting & AO
+│   └── TextureAtlas.ts  # Canvas-based automatic texture atlas compiler
 ├── scripts/            # Build & CI/CD Scripts
-│   └── check_architecture.js # Custom AST Linter that enforces zero-allocation loops
+│   └── check_architecture.ts # Custom AST Linter that enforces zero-allocation loops
 └── registry/           # Game Data Configurations
     └── blocks.json     # Master block definition file (IDs, attributes, textures)
 ```
 
 ## Graphify Architectural Insights
-A recent Graphify AST analysis of the codebase highlighted several critical architectural bottlenecks and central "God Nodes" that future refactors must be aware of:
-- **The Core God Node (`useStore`)**: `useStore` is the most highly connected module in the entire project, acting as a bridge across 18 distinct communities (Networking, Swarm Management, Audio, Rendering, Chunk Logic). While Zustand slices help, `useStore.js` itself is a massive bottleneck.
-- **Import Cycles**: There is a known 3-file import cycle: `src/audio/GameAudio.js -> src/stores/useStore.js -> src/stores/createPlayerSlice.js -> src/audio/GameAudio.js`. Be extremely careful when adding imports to these files to prevent circular initialization crashes.
-- **Disconnected Tech Debt**: The codebase currently contains 271 "isolated nodes" (functions or modules with 1 or fewer AST connections). These represent deprecated features or stubbed modules that should be audited and removed.
+A recent Graphify AST analysis of the codebase previously highlighted several critical architectural bottlenecks that we have now resolved:
+- **The Core God Node (`useStore`)**: Previously, `useStore` was a massive monolithic God Node connected to 18 distinct communities. We have now **successfully decoupled** the store into 15+ isolated Zustand slices (e.g., `useChunkStore`, `usePlayerStore`, `useInventoryStore`). State sync is now handled through lightweight patch operations, eliminating the monolithic bottleneck.
+- **Import Cycles**: The notorious `GameAudio.ts -> useStore.ts -> createPlayerSlice.ts` circular dependency has been fully mitigated through our modular slice migration.
+- **Disconnected Tech Debt**: Unused isolated nodes were heavily pruned during the massive TypeScript migration.
 
 ## Database Schema (IndexedDB)
 
@@ -93,7 +92,7 @@ The application uses the browser's IndexedDB to save worlds persistently, utiliz
   - **Compression:** Run-Length Encoding (RLE) is applied via `compressRLE()` before hitting the database, shrinking identical air/stone blocks drastically. The DB stores the RLE array.
   - **Legacy Migration:** Legacy object-based or packed-array chunk formats are dynamically migrated to the fast ECS `Uint32Array` format upon loading via `migrateLegacyChunk()`.
 - **Player State:** (Pending explicit DB serialization in `PlayerSlice`)
-- **World State:** The seed is determined dynamically or loaded via `worldSeed.js`.
+- **World State:** The seed is determined dynamically or loaded via `worldSeed.ts`.
 
 ### Chunk Data Architecture (ECS Bitpacking)
 
@@ -109,14 +108,14 @@ A chunk is **16x320x16** blocks (81,920 total). Instead of allocating 81,920 Jav
 
 ## Web Worker Data Transfer Constraints (Critical Rules)
 
-Our architecture relies heavily on Web Workers (`chunkWorker.js`) to generate terrain and build geometry arrays off the main thread. When data is passed back and forth, standard JSON stringification is too slow, and `SharedArrayBuffer` is blocked by modern browser CORS constraints.
+Our architecture relies heavily on Web Workers (`chunkWorker.ts`) to generate terrain and build geometry arrays off the main thread. When data is passed back and forth, standard JSON stringification is too slow, and `SharedArrayBuffer` is blocked by modern browser CORS constraints.
 
 Therefore, we use the browser's native **Structured Clone Algorithm** combined with **Transferable Objects** (`ArrayBuffer`). This requires strict adherence to the following rules to prevent silent failures and memory crashes:
 
 1. **Network Data Constraints (PeerJS):** WebRTC Data Channels (via PeerJS) will crash the connection if you attempt to send massive strings. You **MUST NOT** use `JSON.stringify` on massive arrays (like chunk diffs, RLE buffers, or ship buffers) before transmitting. Always use `Array.from()` to serialize typed arrays into native JavaScript arrays before network transmission to bypass string memory limits.
 2. **Detached Buffers:** When an `ArrayBuffer` is transferred via `postMessage`, it becomes "detached" (neutered) in the originating thread. Its `.byteLength` becomes 0. You **must not** transfer a buffer if it is actively being cached or referenced by other chunk generations (e.g., neighbor boundary checks). In those cases, rely on the fast native structured clone instead of explicit transferring.
 2. **Caching Transferred Buffers:** If a WebWorker maintains a cache (like `walCache`), it MUST explicitly `.slice(0)` or clone the `ArrayBuffer` *before* adding it to the `postMessage` transfer list. Otherwise, the cache will instantly become a 0-byte ghost trap, silently destroying any subsequent reads.
-3. **Receiving TypedArrays on the Main Thread:** When catching data from a Web Worker (e.g., `meshArrays` in `createWorldSlice.js`), the main thread must safely copy it to avoid React rendering bugs during garbage collection.
+3. **Receiving TypedArrays on the Main Thread:** When catching data from a Web Worker (e.g., `meshArrays` in `useChunkStore.ts`), the main thread must safely copy it to avoid React rendering bugs during garbage collection.
 3. **The `for...in` Trap (The Flora Bug):** If a payload contains a raw `TypedArray` (e.g., `meshArrays.__flora: Float32Array`), you **MUST NOT** use a `for...in` loop to deep-copy its contents. A `for...in` loop on a `TypedArray` iterates over numerical string indices (`"0"`, `"1"`...). Attempting to call `.slice()` on these raw numbers will throw exceptions.
 4. **Never Swallow Exceptions Silently:** If a deep-clone loop uses a `try...catch` block, never leave the `catch` block empty. Silently swallowing errors can transform a 30,000-element `Float32Array` into an empty object `{}`, causing components checking for `.length` to silently fail (since `{}.length` is `undefined`, which breaks conditionals).
 

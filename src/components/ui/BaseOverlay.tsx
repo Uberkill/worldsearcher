@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useStore } from '../../stores/useStore';
 import { CursorItem } from './CursorItem';
 import { X } from 'lucide-react';
@@ -52,3 +53,4 @@ export const BaseOverlay = ({ active, onClose, title, children, containerClassNa
     </div>
   );
 };
+

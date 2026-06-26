@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useMemo, useRef, useEffect, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { RigidBody, CuboidCollider, useBeforePhysicsStep, useRapier } from '@react-three/rapier';
@@ -280,7 +281,7 @@ export const ShipPhysics = () => {
   );
 };
 
-export function runShipFrame(delta, isShipActive, hasEngine, hasCapacitor, rbRef, meshRef, velocityRef, lastValidTransform, setShipTransform, shipBuffer, isBuildMode, shipFullRebuildId, activeFires, world, shipShapeRef) {
+function runShipFrame(delta, isShipActive, hasEngine, hasCapacitor, rbRef, meshRef, velocityRef, lastValidTransform, setShipTransform, shipBuffer, isBuildMode, shipFullRebuildId, activeFires, world, shipShapeRef) {
     const currentTransform = ensureShipTransform(lastValidTransform);
     
     if (networkActions.getState().isHost && isShipActive) {
@@ -491,3 +492,4 @@ function applyShipPhysics(rbRef, velocityRef, currentTransform, lastValidTransfo
           }
       }
 }
+

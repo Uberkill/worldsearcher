@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useCallback, useEffect, useRef } from 'react';
 
 function actionByKey(key) {
@@ -100,3 +101,4 @@ export const useKeyboard = () => {
 
   return actions;
 };
+

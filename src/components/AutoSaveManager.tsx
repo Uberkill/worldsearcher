@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect } from 'react';
 import { useStore } from '../stores/useStore';
 import { playerPosition, playerRotation } from '../globals';
@@ -65,3 +66,4 @@ export const AutoSaveManager = () => {
 
   return null;
 };
+

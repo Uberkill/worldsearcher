@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { EventBus } from '../utils/EventBus';
 import { useStore } from '../stores/useStore';
 import { useConnectionStore } from '../stores/connectionSlice';

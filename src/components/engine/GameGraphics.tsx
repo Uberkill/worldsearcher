@@ -1,4 +1,5 @@
 import { ChunkManager } from '../ChunkManager';
+import { useSettingsStore } from '../../stores/useSettingsStore';
 import { AutoSaveManager } from '../AutoSaveManager';
 import { DebugTracker } from '../DebugTracker';
 import { DynamicSky } from '../DynamicSky';
@@ -8,7 +9,7 @@ import { AudioPoolManager } from '../../audio/AudioPoolManager';
 import { useStore } from '../../stores/useStore';
 
 export const GameGraphics = () => {
-  const renderDistance = useStore((state) => state.renderDistance);
+  const renderDistance = useSettingsStore((state) => state.renderDistance);
   return (
     <>
       <ChunkManager />

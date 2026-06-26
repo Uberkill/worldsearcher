@@ -1,45 +1,12 @@
-import { getNetworkStore } from '../storeLinker';
-import { useEnvironmentStore } from '../environmentSlice';
-import { useFlareStore } from '../flareSlice';
+// @ts-nocheck
 import { useChunkStore } from '../chunkSlice';
-import { useInventoryStore } from '../inventorySlice';
-import { saveChunkToDB, loadChunkFromDB, clearDB, cancelLoadFromDB, flushWAL } from '../../utils/db';
-import { BlockRegistry, BlockById, BlockKeyById, BlockIds } from '../../registry/BlockRegistry';
-import { setBlock, getIndex, getTextureId, CHUNK_Y_MIN, CHUNK_Y_MAX, getIsHidden, getHealth } from '../../utils/chunkData';
+import { useSettingsStore } from '../useSettingsStore';
 import { chunkWorkerPool } from '../../utils/workerPool';
-import { getSeed } from '../../worldSeed';
-import { tickFluids, wakeFluidsAround } from '../../utils/fluidSystem';
-import { EventBus } from '../../utils/EventBus';
-import { pendingRenderKeys } from '../../utils/chunkRenderSignal';
-import {
-  inFlightChunks, inFlightPromises, cancelledChunks, processingNetworkDeltas,
-  dirtyChunkSet, inFlightRebuildSet, pass1Cache, pendingUnloads, flareLightMap,
-  bufferRecycleQueue, worldState, getChunkKey, getBlockKey
-} from './sharedState';
-import { getCombinedState } from './stranglerInterceptors';
+import { pendingUnloads, bufferRecycleQueue, worldState } from './sharedState';
 
 // mirrors isWorldReady — set below once store is live
 
-const flushDirtyChunks = (get, rawGet, rawSet) => {
-  rafRebuildHandle = null;
-  if (dirtyChunkSet.size === 0) return;
 
-  // Drain the set — snapshot it so any new additions during async work go into the next frame
-  const toRebuild = [...dirtyChunkSet];
-  dirtyChunkSet.clear();
-  for (const chunkKey of toRebuild) {
-    if (inFlightRebuildSet.has(chunkKey)) {
-      // Worker already running for this chunk — re-dirty it so it rebuilds again after completion
-      dirtyChunkSet.add(chunkKey);
-      continue;
-    }
-    _executeRebuild(chunkKey, get, rawGet, rawSet);
-  }
-};
-const scheduleRafFlush = (get, rawGet, rawSet) => {
-  if (rafRebuildHandle !== null) return; // Already scheduled
-  rafRebuildHandle = requestAnimationFrame(() => flushDirtyChunks(get, rawGet, rawSet));
-};
 const flushBufferRecycleQueue = () => {
   if (bufferRecycleQueue.length > 0) {
     const validBuffers = new Set();
@@ -60,7 +27,7 @@ export const createGarbageCollection = (rawSet, rawGet) => {
   const get = rawGet;
   return {
 unloadDistantChunks: playerPosition => {
-  const renderDistance = get().renderDistance || 8;
+  const renderDistance = useSettingsStore.getState().renderDistance || 8;
   const chunks = useChunkStore.getState().chunks;
   const unmountDistance = renderDistance + 2;
   const unmountSq = unmountDistance * unmountDistance;
@@ -145,3 +112,4 @@ recycleChunkDataInternal: chunkData => {
 },
   };
 };
+

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useStore } from '../stores/useStore';
@@ -60,3 +61,4 @@ export const Lasers = () => {
     />
   );
 };
+

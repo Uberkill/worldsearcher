@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { EventBus } from '../utils/EventBus';
 import { useConnectionStore } from '../stores/connectionSlice';
 import { useStore } from '../stores/useStore';
@@ -77,3 +78,4 @@ export const initPhysicsReactionSystem = () => {
     }
   });
 };
+

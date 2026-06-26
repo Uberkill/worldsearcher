@@ -24,7 +24,7 @@ import {
   generateChunkPass1,
   generateChunkPass2,
 } from '../utils/chunkGenerator.js';
-import type { ChunkWorkerRequest, ChunkWorkerResponse } from '../types/workers';
+import type { ChunkWorkerRequest } from '../types/workers';
 import { CHUNK_VOLUME, getIndex } from '../utils/chunkData.js';
 import { buildGreedyArrays } from '../utils/greedyMesh.js';
 import {
@@ -34,20 +34,20 @@ import {
 } from '../utils/lighting.js';
 
 
-const recycledBufferBuckets = {};
+const recycledBufferBuckets: Record<number, ArrayBuffer[]> = {};
 for (let i = 8; i <= 24; i++) recycledBufferBuckets[1 << i] = [];
-  const getBucket = (size) => {
+  const getBucket = (size: number) => {
     let pow = 1;
     while (pow * 2 <= size) pow *= 2;
     return pow;
   };
 const MAX_POOL_SIZE = 1500;
 
-let SolidLookup = null;
-let FluidLookup = null;
-let TextureLookup = null;
-let FloraLookup = null;
-let TransparentLookup = null;
+let SolidLookup: Uint8Array | null = null;
+let FluidLookup: Uint8Array | null = null;
+let TextureLookup: Uint16Array | null = null;
+let FloraLookup: Uint8Array | null = null;
+let TransparentLookup: Uint8Array | null = null;
 let isReady = false;
 
   const computeHeightmap = (buffer) => {
@@ -60,7 +60,7 @@ let isReady = false;
         
         for (let y = 255; y >= -32; y--) {
           const tex = buffer[idx] & 0xFF;
-          if (tex !== 0 && SolidLookup[tex] === 1) {
+          if (tex !== 0 && SolidLookup && SolidLookup[tex] === 1) {
             highest = y;
             break;
           }
@@ -72,8 +72,9 @@ let isReady = false;
     return heightmap;
   };
 
-const extractTransfers = (meshArrays) => {
-  const uniqueTransfers = new Set();
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const extractTransfers = (meshArrays: any) => {
+  const uniqueTransfers = new Set<Transferable>();
 
   if (meshArrays) {
     if (meshArrays.__flora?.matrices?.buffer?.byteLength > 0) {
@@ -138,17 +139,24 @@ self.onmessage = async (e: MessageEvent<ChunkWorkerRequest>) => {
     return;
   }
 
-  if (!isReady) {
-    self.postMessage({
-      type: 'error',
-      message: 'Worker received generation task before registry initialization.',
-      cx: (data as any)?.cx,
-      cz: (data as any)?.cz,
-    });
-    return;
-  }
+  let currentCx: number | undefined;
+  let currentCz: number | undefined;
 
   try {
+    if ('cx' in data) {
+       currentCx = data.cx;
+       currentCz = data.cz;
+    }
+
+    if (!isReady) {
+      self.postMessage({
+        type: 'error',
+        message: 'Worker received generation task before registry initialization.',
+        cx: currentCx,
+        cz: currentCz,
+      });
+      return;
+    }
     if (data.type === 'generatePass1') {
       const { cx, cz, seed } = data;
       const pass1Data = generateChunkPass1(cx, cz, seed);
@@ -279,16 +287,17 @@ self.onmessage = async (e: MessageEvent<ChunkWorkerRequest>) => {
       );
     }
   } catch (_err) {
+    const err = _err as Error;
     console.error(
-      `[ChunkWorker] Fatal Error in Worker Thread for chunk ${data?.cx},${data?.cz}:`,
-      _err
+      `[ChunkWorker] Fatal Error in Worker Thread for chunk ${currentCx},${currentCz}:`,
+      err
     );
     self.postMessage({
       type: 'error',
-      message: _err.message,
-      stack: _err.stack,
-      cx: (data as any)?.cx,
-      cz: (data as any)?.cz,
-    });
+      message: err.message,
+      stack: err.stack,
+      cx: currentCx,
+      cz: currentCz,
+    } as any); // Force cast for error payload
   }
 };

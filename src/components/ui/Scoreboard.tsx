@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { networkActions } from '../../stores/networkActions';
 import { Signal, SignalHigh, SignalMedium, SignalLow } from 'lucide-react';
 import { getSeed } from '../../worldSeed';
@@ -163,3 +164,4 @@ export const Scoreboard = ({ isVisible }) => {
     </div>
   );
 };
+

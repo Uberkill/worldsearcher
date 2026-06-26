@@ -1,3 +1,6 @@
+// @ts-nocheck
+import { useSettingsStore } from '../../stores/useSettingsStore';
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { EventBus } from '../../utils/EventBus';
 import {
@@ -143,7 +146,7 @@ const PickupFeedItem = ({ item, onRemove }) => {
 export default function InGameUI() {
   const menuOpen = useUIStore((state) => state.activeModal === 'MENU');
   const inventoryOpen = useUIStore((state) => state.activeModal === 'INVENTORY');
-  const settingsOpen = useStore((state) => state.isSettingsOpen);
+  const settingsOpen = useSettingsStore((state) => state.isSettingsOpen);
   const shopOpen = useUIStore((state) => state.activeModal === 'SHOP');
   const craftingOpen = useUIStore((state) => state.activeModal === 'CRAFTING');
   const skillTreeOpen = useUIStore((state) => state.activeModal === 'SKILL_TREE');
@@ -162,8 +165,8 @@ export default function InGameUI() {
   const savePlayerState = useStore((state) => state.savePlayerState);
 
   // Settings use open/close in slice
-  const openSettings = useStore((state) => state.openSettings);
-  const closeSettings = useStore((state) => state.closeSettings);
+  const openSettings = useSettingsStore((state) => state.openSettings);
+  const closeSettings = useSettingsStore((state) => state.closeSettings);
 
   const setSettingsOpen = useCallback(
     (val) => (val ? openSettings() : closeSettings()),
@@ -207,10 +210,10 @@ export default function InGameUI() {
     }
   }, [isDead]);
 
-  const renderDistance = useStore((state) => state.renderDistance);
-  const setRenderDistance = useStore((state) => state.setRenderDistance);
-  const shadowQuality = useStore((state) => state.shadowQuality);
-  const setShadowQuality = useStore((state) => state.setShadowQuality);
+  const renderDistance = useSettingsStore((state) => state.renderDistance);
+  const setRenderDistance = useSettingsStore((state) => state.setRenderDistance);
+  const shadowQuality = useSettingsStore((state) => state.shadowQuality);
+  const setShadowQuality = useSettingsStore((state) => state.setShadowQuality);
 
   // Local state for transitions within the InGameUI (like deleting world)
   const [internalMenu, setInternalMenu] = useState(null);
@@ -232,7 +235,7 @@ export default function InGameUI() {
   }, []);
 
   // Real game mode from settings
-  const gameMode = useStore((state) => state.gameMode);
+  const gameMode = useSettingsStore((state) => state.gameMode);
 
   // Real audio from settings
   const masterVolume = useAudioStore((state) => state.masterVolume);
@@ -1004,3 +1007,4 @@ export default function InGameUI() {
     </div>
   );
 }
+

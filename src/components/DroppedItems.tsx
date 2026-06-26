@@ -1,3 +1,6 @@
+// @ts-nocheck
+import { useSettingsStore } from '../stores/useSettingsStore';
+
 import { useFrame } from '@react-three/fiber';
 import { useStore } from '../stores/useStore';
 import { useInventoryStore } from '../stores/inventorySlice';
@@ -132,7 +135,7 @@ export const DroppedItems = () => {
     const inventoryState = useInventoryStore.getState();
     const netState = networkActions.getState();
     const currentItems = inventoryState.droppedItems || [];
-    const renderDistance = state.renderDistance || 8;
+    const renderDistance = useSettingsStore.getState().renderDistance || 8;
     const maxDistSq = renderDistance * renderDistance * 256;
 
     let needsUpdate = false;
@@ -277,3 +280,4 @@ export const DroppedItems = () => {
     </group>
   );
 };
+

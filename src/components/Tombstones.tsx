@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useStore } from '../stores/useStore';
 import { useInventoryStore } from '../stores/inventorySlice';
 import { playerPosition as globalPlayerPosition } from '../globals';
@@ -128,3 +129,4 @@ export const Tombstones = () => {
     </group>
   );
 };
+

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useMemo, useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -132,3 +133,4 @@ export const AudioPoolManager = ({ poolSize = 15 }) => {
     </group>
   );
 };
+

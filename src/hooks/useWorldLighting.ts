@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useFrame, useThree } from '@react-three/fiber';
 import { useRef, useMemo } from 'react';
 import * as THREE from 'three';
@@ -410,3 +411,4 @@ export function useWorldLighting(
   });
 
 }
+

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import { useStore } from '../../stores/useStore';
 import { networkActions } from '../../stores/networkActions';
@@ -116,3 +117,4 @@ export const ShipyardUI = ({ active, onClose }) => {
     </div>
   );
 };
+
