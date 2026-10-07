@@ -74,8 +74,9 @@ Instead of utilizing heavy 3D rendering passes for environmental occlusion (like
     └── blocks.json     # Master block definition file (IDs, attributes, textures)
 ```
 
-## Graphify Architectural Insights
-A recent Graphify AST analysis of the codebase previously highlighted several critical architectural bottlenecks that we have now resolved:
+## State & Dependency Architecture
+
+Recent codebase modularization resolved key architectural bottlenecks:
 - **The Core God Node (`useStore`)**: Previously, `useStore` was a massive monolithic God Node connected to 18 distinct communities. We have now **successfully decoupled** the store into 15+ isolated Zustand slices (e.g., `useChunkStore`, `usePlayerStore`, `useInventoryStore`). State sync is now handled through lightweight patch operations, eliminating the monolithic bottleneck.
 - **Import Cycles**: The notorious `GameAudio.ts -> useStore.ts -> createPlayerSlice.ts` circular dependency has been fully mitigated through our modular slice migration.
 - **Disconnected Tech Debt**: Unused isolated nodes were heavily pruned during the massive TypeScript migration.
