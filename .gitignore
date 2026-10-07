@@ -34,3 +34,10 @@ search_*.json
 subagent_logs.txt
 messages.txt
 puppeteer_test*.js
+
+# AI Tooling & Knowledge Graphs
+.serena/
+.agents/
+graphify-out/
+test-results/
+.pytest_cache/

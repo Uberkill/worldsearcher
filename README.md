@@ -1,25 +1,49 @@
 # World Search - Custom Voxel Engine
 
-A high-performance, deterministic custom voxel engine built natively for the browser using WebGL, WebWorkers, and WebRTC.
+A high-performance custom voxel engine built natively for the browser using WebGL, Web Workers, Rapier physics, and WebRTC peer-to-peer multiplayer.
 
-## The Sky Island & Ship Expansion
-World Search now features procedural floating islands set over a bottomless void. Players can construct, pilot, and maintain their own customizable physical voxel ships using the new Hybrid Flight System. Engage the Warp Drive to traverse the void to new dimensional coordinates while fending off Glitch Storms alongside your crew!
+---
 
-> [!WARNING]  
-> **AI AGENTS:** Do not blindly load monolithic documentation files. You MUST read `docs/context_map.json` to determine which specific sub-document to load for your current task. 
-> 
-> You MUST also read `docs/core/AI_AGENT_WARNINGS.md` before making any code modifications. Failure to adhere to the Canary tracking rules will result in your changes being rejected by the test suite.
+## Overview
+
+World Search runs an interactive, deterministic voxel simulation directly within the browser, featuring procedural sky islands, drivable physics-based voxel vehicles, and real-time multiplayer terrain synchronization.
+
+### Technical Highlights
+
+- **Decoupled Three.js Rendering:** Bypasses React Virtual DOM reconciliation for high-volume mesh rendering (`ChunkRenderer.jsx`), maintaining steady 60 FPS frame rates under heavy terrain loads.
+- **Multi-Threaded Chunk Processing:** CPU-intensive Run-Length Encoding (RLE) decompression and terrain generation run off the main thread inside Web Workers (`src/workers/dbWorker.js`).
+- **Zero-Copy Memory Transfers:** Raw geometry arrays (`Uint32Array`, `Float32Array`) transfer across worker boundaries via Transferable Objects, eliminating structured cloning and garbage collection stutter.
+- **Physics Engine Integration:** Decoupled visual meshes from Rapier WebAssembly physics colliders (`ChunkPhysics.jsx`), supporting collision detection without rendering bottlenecks.
+- **Physical Voxel Vehicles:** Real-time drivable ships utilizing quaternion orientation math and 1D-to-3D stride coordinates.
+- **Offline & Network Persistence:** Entity persistence layer built on IndexedDB tables synchronized across WebRTC channels.
+
+---
+
+## Documentation
+
+Full architectural specifications and system guides are available in the [`docs/`](docs/INDEX.md) directory:
+
+- **[Architecture & Performance Guidelines](docs/ARCHITECTURE.md)**: Deep-dive into geometry streaming, worker pipelines, and memory optimization.
+- **[System Architecture](docs/architecture/architecture.md)**: Authoritative game tick loops and network packet structures.
+- **[Vehicle Physics & Mechanics](docs/systems/shipdesign.md)**: Flight coordinate math, collision geometry, and seating systems.
+
+---
 
 ## Getting Started
 
-1. Install dependencies: `npm install`
-2. Start the development server: `npm run dev`
-3. Run the engine test suite: `npm run test:unit`
-4. Hit `F3` or `F12` in-game to view the live Engine Dump metrics (TPS, MSPT, Draw Calls).
+### Prerequisites
+- Node.js v18 or higher
+- npm v8 or higher
 
-## Recent Engine Updates (V3 - V5)
-* **Decoupled Entity Persistence**: Global objects like Chests, Machines, Tombstones, and Dropped Items have been successfully decoupled from the chunking system. They now save properly to the `_world_entities` IndexedDB tables and synchronize reliably across the network.
-* **Persistent Ship Containers**: Ships now robustly support interactive containers. You can place chests and furnaces on ships, load them with fuel and items, fly the ship, and they will persist accurately.
-* **Item Drop Vector Math**: Breaking a ship container automatically triggers a global matrix transformation, projecting the local `x, y, z` ship coordinates into global world space to spawn physics-based item drops safely on the deck of your ship!
-* **Engine Stability & Zero-Allocation GC (V6)**: The chunk loading pipeline has been upgraded with a Manhattan Distance Priority Queue, guaranteeing chunks directly beneath the player load first. Memory allocations are now perfectly flat thanks to an ArrayBuffer Recycling system that bypasses the native Garbage Collector to eliminate V8 "Stop-the-World" stuttering.
-* **Safe Spawn Raycast Guard**: The loading sequence is now physically bound to the Rapier physics engine, dynamically projecting a raycast to ensure solid terrain generation before dropping the player into the world, effectively eliminating "void clipping" bugs.
+### Installation & Run
+```bash
+npm install
+npm run dev
+```
+
+### Verification & Testing
+```bash
+npm run typecheck         # Verify TypeScript compilation
+npm run test:unit         # Run engine unit tests
+npm run test:godmode      # Run full architectural integration suite
+```

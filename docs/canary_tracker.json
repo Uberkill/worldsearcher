@@ -1,5 +1,0 @@
-{
-  "version": 10,
-  "last_updated_by": "Antigravity Agent",
-  "reason": "UI Design Overhaul: Stripping raw CSS from index.css to enforce Tailwind utility classes for Impeccable Design compliance."
-}
