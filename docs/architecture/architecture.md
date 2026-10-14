@@ -69,7 +69,7 @@ Instead of utilizing heavy 3D rendering passes for environmental occlusion (like
 │   ├── ChunkMaterial.ts # Custom ShaderMaterial for voxel lighting & AO
 │   └── TextureAtlas.ts  # Canvas-based automatic texture atlas compiler
 ├── scripts/            # Build & CI/CD Scripts
-│   └── check_architecture.ts # Custom AST Linter that enforces zero-allocation loops
+│   └── check_architecture.js # Custom AST Linter that enforces zero-allocation loops
 └── registry/           # Game Data Configurations
     └── blocks.json     # Master block definition file (IDs, attributes, textures)
 ```

@@ -220,8 +220,12 @@ class WorkerManager {
         isHighPriority
       };
 
-      if (isHighPriority && firstGenIdx !== -1) {
-        this._queue.splice(firstGenIdx, 0, task);
+      if (isHighPriority) {
+        if (firstGenIdx !== -1) {
+          this._queue.splice(firstGenIdx, 0, task);
+        } else {
+          this._queue.unshift(task);
+        }
       } else {
         this._queue.push(task);
       }

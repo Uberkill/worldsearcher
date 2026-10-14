@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
@@ -7,11 +6,11 @@ import App from './App.jsx';
 
 // Prevent unhandled promise rejections when UI opens/closes rapidly and hits the 1.25s browser cooldown
 const originalRequestPointerLock = Element.prototype.requestPointerLock;
-Element.prototype.requestPointerLock = function(...args) {
+Element.prototype.requestPointerLock = function(this: Element, ...args: [options?: PointerLockOptions]): Promise<void> {
   try {
     const promise = originalRequestPointerLock.apply(this, args);
-    if (promise) {
-      promise.catch((err) => {
+    if (promise && typeof promise.catch === 'function') {
+      promise.catch((err: Error) => {
         if (err.name === 'SecurityError') {
           console.warn('Pointer lock cooldown active. Click again shortly.');
         } else if (err.name === 'NotAllowedError') {
@@ -34,15 +33,11 @@ document.addEventListener('contextmenu', (e) => e.preventDefault());
 window.addEventListener('mouseenter', () => window.focus());
 window.addEventListener('click', () => window.focus());
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <App />
-  </StrictMode>
-);
-window.addEventListener('error', (e) => {
-  console.error('GLOBAL ERROR CAPTURED:', e.error?.stack || e.message);
-});
-window.addEventListener('error', (e) => {
-  fetch('http://localhost:5174/', { method: 'POST', body: e.error?.stack || e.message }).catch(()=>{});
-});
-
+const rootElement = document.getElementById('root');
+if (rootElement) {
+  createRoot(rootElement).render(
+    <StrictMode>
+      <App />
+    </StrictMode>
+  );
+}

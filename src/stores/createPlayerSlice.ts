@@ -3,6 +3,7 @@ import { useSettingsStore } from '../stores/useSettingsStore';
 
 import { getNetworkStore } from './storeLinker';
 import { get as getIDB, set as setIDB } from 'idb-keyval';
+import { loadWorldEntities } from '../utils/db';
 import { useInventoryStore } from './inventorySlice';
 import { useConnectionStore } from './connectionSlice';
 import { useChatStore } from './chatSlice';
@@ -846,7 +847,6 @@ export const createPlayerSlice = (set: any, get: any): Record<string, any> => ({
 
   loadPlayerState: async () => {
     try {
-      const { loadWorldEntities } = await import('../utils/db');
       const prefix = typeof window !== 'undefined' && window.sessionStorage ? sessionStorage.getItem('saveSlotId') || 'default' : 'default';
       const data = await getIDB(`${prefix}_player_state`);
       const worldData = await loadWorldEntities();

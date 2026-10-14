@@ -52,7 +52,7 @@ export const setBlock = (
 ## 4. Materials and Shaders
 
 - **Material Sharing Anti-Pattern:** Do NOT share a `ShaderMaterial` instance between a standard `Mesh` and an `InstancedMesh`. Three.js relies on compilation macros (e.g. `#define INSTANCED`). Sharing the material will cause the instancing macro to be dropped, resulting in severe rendering bugs. Always use `.clone()` or regenerate the material via factory functions when spanning different mesh types.
-- **Custom Lighting Compilation:** Do NOT inject standard Three.js directional lights directly on terrain. We override `#include <lights_fragment_begin>` in `ChunkMaterial.js` to inject our own custom voxel ambient occlusion, sunlight, and blocklight, keeping performance high without relying on expensive cascaded shadow maps.
+- **Custom Lighting Compilation:** Do NOT inject standard Three.js directional lights directly on terrain. We override `#include <lights_fragment_begin>` in `ChunkMaterial.ts` to inject our own custom voxel ambient occlusion, sunlight, and blocklight, keeping performance high without relying on expensive cascaded shadow maps.
 
 ## 5. Multiplayer Architecture
 

@@ -4,6 +4,7 @@ import { ShipStructure } from '../utils/structures';
 import { BlockIds } from '../registry/BlockRegistry';
 import { shipTransforms } from '../globals';
 import { NetworkEventBus } from '../utils/NetworkEventBus';
+import { loadShipFromDB } from '../utils/db';
 
 export const SHIP_SIZE_X = 32;
 export const SHIP_SIZE_Y = 32;
@@ -182,7 +183,6 @@ export const createShipSlice = (set: any, get: any): Record<string, any> => ({
   },
 
   loadShipState: async () => {
-     const { loadShipFromDB } = await import('../utils/db');
      let buffer = await loadShipFromDB();
      
      // Fallback if loading an old save from before the ship existed

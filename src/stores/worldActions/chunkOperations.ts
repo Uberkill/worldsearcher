@@ -3,7 +3,8 @@ import { useEnvironmentStore } from '../environmentSlice';
 import { useFlareStore } from '../flareSlice';
 import { useChunkStore } from '../chunkSlice';
 import { useInventoryStore } from '../inventorySlice';
-import { saveChunkToDB, loadChunkFromDB, clearDB, cancelLoadFromDB, flushWAL } from '../../utils/db';
+import { del as idbDel } from 'idb-keyval';
+import { saveChunkToDB, loadChunkFromDB, clearDB, cancelLoadFromDB, flushWAL, saveWorldEntities } from '../../utils/db';
 import { BlockRegistry, BlockById, BlockKeyById, BlockIds } from '../../registry/BlockRegistry';
 import { setBlock, getIndex, getTextureId, CHUNK_Y_MIN, CHUNK_Y_MAX, getIsHidden, getHealth } from '../../utils/chunkData';
 import { chunkWorkerPool } from '../../utils/workerPool';
@@ -851,11 +852,8 @@ loadChunkAsync: (cx, cz, skipDB = false) => {
       console.error(`[loadChunkAsync] FATAL ERROR loading chunk ${chunkKey}. Deleting corrupted save and forcing regeneration!`, err);
       // Aggressive DB Wipe for Corrupted Chunk
       try {
-        const {
-          del
-        } = await import('idb-keyval');
         const prefix = sessionStorage.getItem('saveSlotId') || 'default';
-        await del(`${prefix}_chunk_v14_${chunkKey}`);
+        await idbDel(`${prefix}_chunk_v14_${chunkKey}`);
       } catch (_e) {
         /* intentionally ignored: IDB might already be locked or deleted */
       }
@@ -1146,11 +1144,8 @@ loadChunkPass2Async: async (cx, cz) => {
   } catch (err) {
     console.error(`[loadChunkPass2Async] FATAL ERROR for chunk ${cx},${cz}:`, err);
     try {
-      const {
-        del
-      } = await import('idb-keyval');
       const prefix = sessionStorage.getItem('saveSlotId') || 'default';
-      await del(`${prefix}_chunk_v14_${chunkKey}`);
+      await idbDel(`${prefix}_chunk_v14_${chunkKey}`);
     } catch (_e) {
       /* intentionally ignored: IDB might already be locked or deleted */
     }
@@ -2054,7 +2049,6 @@ saveWorld: async () => {
   await flushWAL();
 
   // Save decoupled world entities (chests, items, etc)
-  const { saveWorldEntities } = await import("../../utils/db");
   await saveWorldEntities({
     chests: useInventoryStore.getState().chests,
     authoritativeInventories: get().authoritativeInventories,

@@ -13,8 +13,6 @@ interface ConnectionSlice {
   roomCode: string | null;
   playerName: string;
   connectionStatus: ConnectionStatus;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  players: Record<string, any>; // TODO(ts-migration): type player sync objects
   playerId: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   mods: any[];
@@ -36,10 +34,9 @@ export const useConnectionStore = create<ConnectionSlice>((_set) => ({
   roomCode: null,
   playerName: '',
   connectionStatus: 'disconnected',
-  players: {},
-  playerId: localStorage.getItem('ws_playerId') || (() => {
+  playerId: (typeof localStorage !== 'undefined' ? localStorage.getItem('ws_playerId') : null) || (() => {
      const newId = Math.random().toString(36).substring(2, 9);
-     localStorage.setItem('ws_playerId', newId);
+     if (typeof localStorage !== 'undefined') localStorage.setItem('ws_playerId', newId);
      return newId;
   })(),
   mods: [],

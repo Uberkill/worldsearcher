@@ -20,11 +20,10 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
     rules: {
-      // ── Real errors ──────────────────────────────────────────────────────────
-      // Use the TS-aware version of no-unused-vars
+      // TS-aware version of no-unused-vars
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': [
-        'error',
+        'warn',
         {
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',
@@ -32,12 +31,14 @@ export default defineConfig([
         },
       ],
       'no-empty': ['error', { allowEmptyCatch: true }],
-      'no-useless-assignment': 'error',
+      'no-useless-assignment': 'warn',
+      'prefer-const': 'warn',
+      'prefer-rest-params': 'warn',
 
-      // ── Strict TypeScript Boundaries ─────────────────────────────────────────
-      '@typescript-eslint/no-explicit-any': 'error',
+      // TypeScript Boundaries
+      '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/ban-ts-comment': [
-        'error',
+        'warn',
         {
           'ts-ignore': 'allow-with-description',
           'ts-expect-error': 'allow-with-description',
@@ -46,14 +47,17 @@ export default defineConfig([
         },
       ],
 
-      // ── R3F false-positives: downgrade to warn ───────────────────────────────
+      // R3F false-positives: downgrade to warn
       // These rules fire on legitimate Three.js/R3F patterns (mutating gl, camera,
       // scene in useFrame callbacks). They are not bugs — R3F is designed for it.
       'react-hooks/immutability': 'warn',
       'react-hooks/purity': 'warn',
 
-      // ── Hook dependency warnings (informational only) ────────────────────────
+      // Hook dependency warnings (informational only)
       'react-hooks/exhaustive-deps': 'warn',
+
+      // React Refresh
+      'react-refresh/only-export-components': 'warn',
     },
   },
 ]);

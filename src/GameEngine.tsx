@@ -19,6 +19,7 @@ import { initItemDropSystem } from './systems/ItemDropSystem';
 import { initQuestSystem } from './systems/QuestSystem';
 import { initPhysicsReactionSystem } from './systems/PhysicsReactionSystem';
 import { initCommandSystem } from './systems/CommandSystem';
+import { initMachineTickSystem } from './systems/MachineTickSystem';
 import * as THREE from 'three';
 
 import { GameUI } from './components/engine/GameUI';
@@ -44,9 +45,7 @@ export default function GameEngine() {
       loadShipState();
       loadAchievements();
       initializeQuests();
-      import('./systems/MachineTickSystem').then(({ initMachineTickSystem }) => {
-        initMachineTickSystem();
-      });
+      initMachineTickSystem();
       window.__DEBUG_STORE__ = useStore;
     }
     

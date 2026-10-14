@@ -8,7 +8,7 @@ This document outlines the entire architectural shift and design progression of 
 
 Before this update, the world generation produced infinite rolling terrain starting from Y=0. This was completely overhauled to support a sky-based archipelago aesthetic with a deadly void below.
 
-### Chunk Generation Changes (`chunkGenerator.js` & `structures.js`)
+### Chunk Generation Changes (`chunkGenerator.ts` & `structures.ts`)
 - **Removal of Flat Ground**: The legacy hardcoded ground floor base and bedrock kill planes were completely removed.
 - **Pure 3D Noise Islands**: The world is now exclusively generated using 3D Simplex/Perlin noise applied uniformly across all Y-levels, producing pure layered floating islands without any continuous bottom landmass.
 - **The Void**: Everything around and below the islands is an empty void. Falling off an island leads to an infinite fall (or a kill plane).
@@ -31,7 +31,7 @@ The Hybrid system allows players to physically fly the ship locally, while retai
 > - **Sluggish Torque:** Do NOT use `applyTorqueImpulse` for steering. It is sluggish and non-deterministic because of mass/drag. Use `setAngvel` for instant, snappy steering.
 
 ### Local Flight & Seating Mechanics (Captain vs Passenger)
-- **Physics Rewrite**: The ship is now a massive `<RigidBody type="dynamic">` in `ShipPhysics.jsx`. Every block placed on the ship dynamically adds a voxel collider to this master body.
+- **Physics Rewrite**: The ship is now a massive `<RigidBody type="dynamic">` in `ShipPhysics.tsx`. Every block placed on the ship dynamically adds a voxel collider to this master body.
   - **Native Stabilization**: We natively lock Pitch and Roll using `enabledRotations={[false, true, false]}`, completely eliminating Gimbal Lock, "Bronco Bucking", and Garbage Collection spam, while allowing deterministic yaw via `setAngvel` and organic momentum bouncing upon collisions.
 - **The Seating System**: To fly the ship, players MUST sit down. We implemented a strict split:
   - **`ship_helm`**: The authoritative driver's seat. Interacting with it broadcasts a `REQUEST_HELM` network intent. The Host validates this and grants the player exclusive driving authority (`shipHelmPlayerId`). Only the Captain can steer the ship using WASD.
@@ -39,13 +39,13 @@ The Hybrid system allows players to physically fly the ship locally, while retai
 - **Dynamic Seating Offsets**: Using Amanatides-Woo DDA raycasting, right-clicking any specific seat calculates a local `seatOffset`, physically snapping the player directly into the specific chair they clicked, correctly rotated relative to the ship's current rotation.
 
 ### Hardware Tracking & Physics Optimization
-- **`O(1)` Hardware Sync**: Originally, counting Warp Engines and Capacitors required looping through all 32,768 ship blocks (`O(N)`) every time a block was placed, causing massive CPU cascading spikes. This was optimized. The `createShipSlice.js` store now incrementally tracks `shipHardwareCounts` at the exact moment a block is placed/broken, granting instant, zero-cost access to engine limits.
+- **`O(1)` Hardware Sync**: Originally, counting Warp Engines and Capacitors required looping through all 32,768 ship blocks (`O(N)`) every time a block was placed, causing massive CPU cascading spikes. This was optimized. The `createShipSlice.ts` store now incrementally tracks `shipHardwareCounts` at the exact moment a block is placed/broken, granting instant, zero-cost access to engine limits.
 - **GC Memory Thrashing Elimination**: The `castRayShip` raycaster fires 60 times a second per player. To eliminate Garbage Collection stutters, all `THREE.js` vector, matrix, and quaternion objects inside physics loops were hoisted to file-scoped global constants, completely eliminating GC allocations during local flight.
 
 ### The Warp Drive (Story & Distant Islands)
 - **Entering the Void**: When players are ready to cross oceans, they pull the Lunar Anchor. The ship instantly ascends from sea-level (`Y=60`) up to the "Warp Void" (`Y=10000`).
 - **The Glitch Minigame**: The Host server calculates random Glitch Storm strikes and broadcasts them to all clients. Players must frantically use the `repair_tool` to patch the hull before the engine runs out of fuel.
-- **Safe Arrival (Void Trap Fix)**: Upon a successful warp, the `TransitManager.jsx` places the ship in a holding pattern (Y=800) until the destination chunk explicitly mounts its `buffer` AND `meshArrays`. Only then does it calculate the terrain height, preventing players from being softlocked in the sky or clipping into unloaded bedrock.
+- **Safe Arrival (Void Trap Fix)**: Upon a successful warp, the `TransitManager.tsx` places the ship in a holding pattern (Y=800) until the destination chunk explicitly mounts its `buffer` AND `meshArrays`. Only then does it calculate the terrain height, preventing players from being softlocked in the sky or clipping into unloaded bedrock.
 
 ### Polish & World Integration
 - **Prebuilt Spawn**: The ship spawns naturally docked near the player's starting island.

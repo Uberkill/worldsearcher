@@ -8,7 +8,7 @@ World Searcher is a voxel game engine engineered for high-throughput 60 FPS perf
 
 To maintain steady frame times, high-volume voxel chunk geometry must never be rendered as individual Virtual DOM elements within the React tree.
 
-- **Native Three.js Pipeline (`ChunkRenderer.jsx`):** A dedicated render controller mounts directly into the Three.js scene graph via `useFrame`.
+- **Native Three.js Pipeline (`ChunkRenderer.tsx`):** A dedicated render controller mounts directly into the Three.js scene graph via `useFrame`.
 - **Imperative Lifecycle:** The renderer subscribes to state changes from `useChunkStore` and imperatively invokes `group.add(mesh)`, `group.remove(mesh)`, and `geometry.dispose()`.
 - **Virtual DOM Overhead:** Keeping mesh nodes outside React reconciliation prevents costly tree diffing and garbage collection pauses during world streaming.
 
@@ -18,7 +18,7 @@ To maintain steady frame times, high-volume voxel chunk geometry must never be r
 
 All CPU-intensive terrain operations, Run-Length Encoding (RLE) decompression, and persistence queries run asynchronously in Web Workers.
 
-- **Worker Proxy (`src/workers/dbWorker.js`):** Storage queries and chunk generation execute off the main thread.
+- **Worker Proxy (`src/workers/dbWorker.ts`):** Storage queries and chunk generation execute off the main thread.
 - **Transferable Objects:** When exchanging raw buffer arrays (`Uint32Array`, `Float32Array`) between Web Workers and the main thread, memory buffers are passed via Transferable Objects (`postMessage(response, [array1.buffer, array2.buffer])`).
 - **Memory Overhead:** Zero-copy transfers bypass structured cloning, eliminating memory duplication and avoiding V8 garbage collection spikes.
 
@@ -28,7 +28,7 @@ All CPU-intensive terrain operations, Run-Length Encoding (RLE) decompression, a
 
 Physics simulation and visual geometry follow distinct lifecycles:
 
-- **Physics Colliders (`ChunkPhysics.jsx`):** Invisible Trimesh colliders mount directly into the `@react-three/rapier` physics simulation. Rapier executes natively via WebAssembly.
+- **Physics Colliders (`ChunkPhysics.tsx`):** Invisible Trimesh colliders mount directly into the `@react-three/rapier` physics simulation. Rapier executes natively via WebAssembly.
 - **Visuals:** Mesh generation, LOD, and chunk visibility operate decoupled from physics bounds, allowing independent tuning of collision geometry and rendering fidelity.
 
 ---

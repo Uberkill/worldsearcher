@@ -39,5 +39,17 @@ puppeteer_test*.js
 .serena/
 .agents/
 graphify-out/
+.graphifyignore
+.wiggumrc
+TASK_LEDGER*
+task_state.json
 test-results/
 .pytest_cache/
+
+# Test, Build & Audit Artifacts
+*-results.json
+fallow_*.txt
+typecheck_results*.txt
+scratch/
+*.tsbuildinfo
+playwright-report/

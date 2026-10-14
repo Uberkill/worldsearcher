@@ -5,32 +5,32 @@ This document serves as a historical record and architectural guide for the mass
 ## 1. Memory Leak & Garbage Collection Hardening
 Previously, chunks would silently leak `ArrayBuffer` geometry data when players moved rapidly or broke blocks fast, eventually leading to Out-Of-Memory (OOM) crashes and frozen GPU states.
 
-- **Centralized Recycling Hook (`worldActions.js`)**: Web Worker payloads carry decoupled `Float32Array` and `Uint32Array` geometry buffers (pos, norm, color, uv, idx) and meta-grids (heightmap). A global helper `recycleChunkDataInternal` was created to traverse and capture ALL arrays safely, funneling them into the `bufferRecycleQueue`.
+- **Centralized Recycling Hook (`chunkOperations.ts`)**: Web Worker payloads carry decoupled `Float32Array` and `Uint32Array` geometry buffers (pos, norm, color, uv, idx) and meta-grids (heightmap). A global helper `recycleChunkDataInternal` was created to traverse and capture ALL arrays safely, funneling them into the `bufferRecycleQueue`.
 - **Mid-Flight & Stale Cancellations**: Added strict boundary checks to ensure that if a chunk is mathematically superseded while its Worker is still generating it, the incoming stale payload is instantly discarded into the recycling queue rather than dropping into the void.
 - **Unload/GC Parity**: The `unloadDistantChunks` and `tickGarbageCollection` intervals now correctly flush all buffers into the recycle queue before deleting the chunk from Zustand's `chunks` state.
 
 ## 2. Face Culling Glitches (Void Rendering)
 Players experienced random chunk "faces" disappearing when looking around, caused by Three.js aggressively culling valid geometry.
 
-- **BoundingBox Padding Removal (`ChunkRenderer.jsx`)**: The bounding box calculation included an artificial `+1` padding. This padding distorted the bounding sphere and caused the frustum culling matrix in `THREE.Mesh` to calculate incorrect intersections. Removing the `+1` padding restored perfect culling.
+- **BoundingBox Padding Removal (`ChunkRenderer.tsx`)**: The bounding box calculation included an artificial `+1` padding. This padding distorted the bounding sphere and caused the frustum culling matrix in `THREE.Mesh` to calculate incorrect intersections. Removing the `+1` padding restored perfect culling.
 
 ## 3. Light Overflow Boundary Bleed
 Lighting updates (like placing a torch or breaking a wall to let sun in) on the edge of a chunk were failing to bleed into neighboring chunks, resulting in harsh black borders.
 
-- **Unified Overflow Payloads (`chunkWorker.js`)**: Updated `generatePass2` to concatenate both `sunOverflow` and `blockOverflow` into a unified `lightOverflow` array.
-- **Cross-Boundary Dispatch (`worldActions.js`)**: Built an imperative handler that parses the unified overflow queue, identifies the neighbor chunk coordinates, mutates their `buffer` directly, and flags them with `isModified: true` and a bumped `rebuildId` so their geometry rebuilds natively.
+- **Unified Overflow Payloads (`chunkWorker.ts`)**: Updated `generatePass2` to concatenate both `sunOverflow` and `blockOverflow` into a unified `lightOverflow` array.
+- **Cross-Boundary Dispatch (`chunkOperations.ts`)**: Built an imperative handler that parses the unified overflow queue, identifies the neighbor chunk coordinates, mutates their `buffer` directly, and flags them with `isModified: true` and a bumped `rebuildId` so their geometry rebuilds natively.
 
 ## 4. Physics Collision & Terrain Fall-Through Fixes
 Players reported randomly falling through the ground, particularly into chunks that had just generated or had been modified (like jumping into a hole they just dug).
 
-- **Dynamic Trimesh Re-Mounting (`ChunkPhysics.jsx`)**: `@react-three/rapier`'s `<TrimeshCollider>` component does **not** dynamically update its physical shape if its React `key` remains unchanged, even if the underlying vertices (`args`) change. The engine was using a deprecated `physicsRebuildId` that evaluated to `0`, locking the key to `"0-0"`. When a player broke a block, the new geometry arrived but the physics engine ignored it. We swapped the key to `chunkData.rebuildId`, correctly forcing React to remount and rebuild the physics BVH tree when the terrain changes.
-- **Physics Loading Radius & Rapier Freezes (`ChunkManager.jsx`)**: Previously, we attempted to expand the physics collision threshold from a `5x5` radius to a `7x7` radius (25 chunks vs 49 chunks) to prevent fast-falling players from glitching through the ground. However, pushing 49 chunks of trimesh geometry to the WebAssembly engine simultaneously overwhelmed Rapier's BVH builder, causing the physics engine to freeze and hang (resulting in the player floating/frozen in the sky). We reverted the radius back to `5x5` (`[-2, 2]`) and instead relied purely on the 3-frame throttle to keep physics generation fast and responsive without OOMing the WebAssembly runtime.
+- **Dynamic Trimesh Re-Mounting (`ChunkPhysics.tsx`)**: `@react-three/rapier`'s `<TrimeshCollider>` component does **not** dynamically update its physical shape if its React `key` remains unchanged, even if the underlying vertices (`args`) change. The engine was using a deprecated `physicsRebuildId` that evaluated to `0`, locking the key to `"0-0"`. When a player broke a block, the new geometry arrived but the physics engine ignored it. We swapped the key to `chunkData.rebuildId`, correctly forcing React to remount and rebuild the physics BVH tree when the terrain changes.
+- **Physics Loading Radius & Rapier Freezes (`ChunkManager.tsx`)**: Previously, we attempted to expand the physics collision threshold from a `5x5` radius to a `7x7` radius (25 chunks vs 49 chunks) to prevent fast-falling players from glitching through the ground. However, pushing 49 chunks of trimesh geometry to the WebAssembly engine simultaneously overwhelmed Rapier's BVH builder, causing the physics engine to freeze and hang (resulting in the player floating/frozen in the sky). We reverted the radius back to `5x5` (`[-2, 2]`) and instead relied purely on the 3-frame throttle to keep physics generation fast and responsive without OOMing the WebAssembly runtime.
 
 ## 5. React Geometry Unmount Racing
 Chunks would sometimes flash or leak if React unmounted the visual component before the Three.js geometry was explicitly disposed.
 
-- **Reference Tracking (`ChunkRenderer.jsx`)**: Added an `isReused` reference parity check inside `disposeGeometries()`. Since multiple visual passes might temporarily share the same underlying geometry buffer before it finishes building, the engine now mathematically proves the buffer is no longer attached to any active React state before disposing of it.
-- **`_isMounted` Flags**: Chunks in `worldActions.js` are now strictly flagged with `_isMounted = true` to prevent active meshes from being unmounted prematurely out from under React by the Garbage Collector.
+- **Reference Tracking (`ChunkRenderer.tsx`)**: Added an `isReused` reference parity check inside `disposeGeometries()`. Since multiple visual passes might temporarily share the same underlying geometry buffer before it finishes building, the engine now mathematically proves the buffer is no longer attached to any active React state before disposing of it.
+- **`_isMounted` Flags**: Chunks in `chunkOperations.ts` are now strictly flagged with `_isMounted = true` to prevent active meshes from being unmounted prematurely out from under React by the Garbage Collector.
 
 ## Warning to Future Agents
 Always adhere strictly to these patterns when modifying the terrain engine. Never inject logic that detaches array buffers from the GC tracker, and always ensure `rebuildId` scales linearly with geometry modifications to keep Rapier physics synchronized.

@@ -1,7 +1,8 @@
 // @ts-nocheck
 import Peer from 'peerjs';
+import { get as idbGet, set as idbSet } from 'idb-keyval';
 import { getSeed } from '../../worldSeed';
-import { flushWAL } from '../../utils/db';
+import { flushWAL, clearSlotDB, setDbSlotId } from '../../utils/db';
 import { playerPosition, playerRotation } from '../../globals';
 import { getGameStore } from '../storeLinker';
 
@@ -128,22 +129,20 @@ export const createConnectionActions = (set: any, get: any): Record<string, any>
               // Active Guest Saving: Don't rely on the Guest to send GUEST_SAVE
               if (useStore && conn.metadata?.playerId) {
                  const guestId = conn.metadata.playerId;
-                 import('idb-keyval').then(({ get: idbGet, set: idbSet }) => {
-                    const prefix = typeof window !== 'undefined' && window.sessionStorage ? sessionStorage.getItem('saveSlotId') || 'default' : 'default';
-                    const guestKey = `${prefix}_guest_${guestId}`;
-                    idbGet(guestKey).then((savedState) => {
-                       const currentState = savedState || { version: 1 };
-                       // Merge authoritative Host knowledge
-                       if (useStore.authoritativeInventories[guestId]) {
-                          currentState.inventory = useStore.authoritativeInventories[guestId];
-                       }
-                       if (netState.players[guestId]) {
-                          currentState.playerPos = netState.players[guestId].pos;
-                          currentState.playerRot = netState.players[guestId].rot;
-                       }
-                       idbSet(guestKey, currentState).catch(e => console.error("Host active save failed", e));
-                    });
-                 });
+                 const prefix = typeof window !== 'undefined' && window.sessionStorage ? sessionStorage.getItem('saveSlotId') || 'default' : 'default';
+                 const guestKey = `${prefix}_guest_${guestId}`;
+                 idbGet(guestKey).then((savedState) => {
+                    const currentState = savedState || { version: 1 };
+                    // Merge authoritative Host knowledge
+                    if (useStore.authoritativeInventories[guestId]) {
+                       currentState.inventory = useStore.authoritativeInventories[guestId];
+                    }
+                    if (netState.players[guestId]) {
+                       currentState.playerPos = netState.players[guestId].pos;
+                       currentState.playerRot = netState.players[guestId].rot;
+                    }
+                    idbSet(guestKey, currentState).catch(e => console.error("Host active save failed", e));
+                 }).catch(e => console.warn("[Network] Failed reading guest save:", e.message));
               }
            });
         }, 5000);
@@ -233,10 +232,9 @@ export const createConnectionActions = (set: any, get: any): Record<string, any>
         set(state => ({ connections: [...state.connections, conn] }));
         
         // Fetch the Guest's saved profile if it exists
-        import('idb-keyval').then(({ get: idbGet }) => {
-           const prefix = sessionStorage.getItem('saveSlotId') || 'default';
-           const guestKey = `${prefix}_guest_${conn.metadata?.playerId}`;
-           idbGet(guestKey).then((savedState) => {
+        const prefix = typeof window !== 'undefined' && window.sessionStorage ? sessionStorage.getItem('saveSlotId') || 'default' : 'default';
+        const guestKey = `${prefix}_guest_${conn.metadata?.playerId}`;
+        idbGet(guestKey).then((savedState) => {
                try {
                  const useStore = getGameStore();
                  const gameState = useStore ? useStore.getState() : null;
@@ -282,7 +280,6 @@ export const createConnectionActions = (set: any, get: any): Record<string, any>
                  });
                } catch(e) { console.warn("[Network] Dropped packet/action:", e.message); }
            });
-        });
         // Note: Bulk Sync removed! We now use Lazy REQUEST_CHUNK architecture.
       };
 
@@ -347,7 +344,6 @@ export const createConnectionActions = (set: any, get: any): Record<string, any>
     set({ connectionStatus: 'connecting' });
     
     // FIX: Isolate Guest world into a temporary slot so it doesn't overwrite their Singleplayer world!
-    const { clearSlotDB, setDbSlotId } = await import('../../utils/db');
     setDbSlotId('multiplayer_guest');
     await clearSlotDB('multiplayer_guest');
     

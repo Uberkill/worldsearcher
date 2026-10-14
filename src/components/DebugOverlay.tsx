@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useSettingsStore } from '../stores/useSettingsStore';
+import { clearDB } from '../utils/db';
 
 import { useEffect, useState, useRef } from 'react';
 import { useDebugOverlayUpdate } from '../hooks/useDebugOverlayUpdate';
@@ -350,7 +351,6 @@ export const DebugOverlay = () => {
           <button
             onClick={async (e) => {
               e.stopPropagation();
-              const { clearDB } = await import('../utils/db');
               if (
                 window.confirm(
                   'Are you sure you want to clear your world data? All built structures will be lost.'

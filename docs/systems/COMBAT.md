@@ -1,10 +1,10 @@
 # Combat and Entity Systems
 
-## 1. Host-Authoritative Combat (`HostCombat.jsx`)
+## 1. Host-Authoritative Combat (`HostCombat.tsx`)
 
 To prevent client-side hacking and ensure fair gameplay, all combat and weapon logic is processed by the Host and synchronized over the network.
 
-When a guest player clicks to attack, their client sends an attack intent containing `weaponId`, `dir` (direction), `origin`, and `timestamp`. The Host's `HostCombat.jsx` component evaluates the queue of pending attacks.
+When a guest player clicks to attack, their client sends an attack intent containing `weaponId`, `dir` (direction), `origin`, and `timestamp`. The Host's `HostCombat.tsx` component evaluates the queue of pending attacks.
 
 ### Deterministic Physics Tick
 All combat logic is evaluated strictly within a **20Hz Fixed Physics Tick** (`useBeforePhysicsStep`). This guarantees that hitscan raycasts and projectile spawns hit exactly where the enemy physically exists in the Rapier physics world, completely immune to visual interpolation tearing or monitor refresh rate discrepancies.
@@ -20,17 +20,17 @@ All combat logic is evaluated strictly within a **20Hz Fixed Physics Tick** (`us
 - **Resolution:** A network event (`SPAWN_PROJECTILE`) is broadcast so all clients can render deterministic visual tracers. Once the physical collider strikes a target on the host, a `PROJECTILE_IMPACT` event triggers damage and localized visual effects.
 - **Memory Management:** Physical projectiles are aggressively garbage-collected after 5 seconds to prevent physics engine lag.
 
-## 2. Entity Management (`SwarmManager.jsx`)
+## 2. Entity Management (`Enemies.tsx`)
 
-World Search utilizes a centralized `SwarmManager.jsx` rather than allowing independent enemies to manage their own lifecycles.
+World Search utilizes a centralized `Enemies.tsx` (managing SwarmManager logic) rather than allowing independent enemies to manage their own lifecycles.
 
 - **Terrain Scanning:** Entities spawn adaptively over procedurally generated hills and valleys to avoid spawning inside solid blocks.
 - **Entity State:** AI pathfinding and target acquisition are processed on the Host. The resulting delta coordinates are pushed to clients at a fixed tick rate to update visual models smoothly.
 
-## 3. Grapple Gun (`Tether.jsx`)
+## 3. Grapple Gun (`Tether.tsx`)
 
 The Grapple Gun utilizes physics impulses combined with visual tethering.
 
 - The player fires a raycast to find a suitable solid anchor block.
-- `Tether.jsx` renders a dynamic instanced cylinder stretching from the player's viewmodel barrel to the target anchor.
+- `Tether.tsx` renders a dynamic instanced cylinder stretching from the player's viewmodel barrel to the target anchor.
 - The player's physics controller applies continuous pulling force towards the anchor point until released.

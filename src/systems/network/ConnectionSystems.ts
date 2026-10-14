@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { NetworkEventBus } from '../../utils/NetworkEventBus';
+import { set as idbSet } from 'idb-keyval';
 import { setWorldSeed } from '../../worldSeed';
 import { getGameStore } from '../../stores/storeLinker';
 
@@ -91,11 +92,9 @@ const initializeConnectionSystems = () => {
      const { data, getNetworkState } = payload;
      if (!getNetworkState().isHost) return;
      
-     import('idb-keyval').then(({ set: idbSet }) => {
-        const prefix = sessionStorage.getItem('saveSlotId') || 'default';
-        const guestKey = `${prefix}_guest_${data.playerId}`;
-        idbSet(guestKey, data.savedState).catch(err => console.error("Failed to save guest state:", err));
-     });
+     const prefix = sessionStorage.getItem('saveSlotId') || 'default';
+     const guestKey = `${prefix}_guest_${data.playerId}`;
+     idbSet(guestKey, data.savedState).catch(err => console.error("Failed to save guest state:", err));
   });
 };
 

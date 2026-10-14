@@ -1,6 +1,6 @@
 # Game Modes
 
-World Search features a unified Game Mode system managed within `createPlayerSlice.js`. The active game mode dictates block interactions, physics, and entity aggression.
+World Search features a unified Game Mode system managed within `createPlayerSlice.ts`. The active game mode dictates block interactions, physics, and entity aggression.
 
 ## Available Modes
 

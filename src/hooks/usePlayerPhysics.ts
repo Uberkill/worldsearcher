@@ -1000,7 +1000,6 @@ function corePhysicsStep(world, playerRef, meshRef, camera, actionsRef, isFlying
     if (!isGrounded) fallSpeed.current = linvel.y;
 
     if (isGrounded && !isFlying && Number.isFinite(translation.x) && Number.isFinite(translation.y) && Number.isFinite(translation.z)) {
-      if (false) /* removed global assign */ [];
       const stack = playerSafeStack;
       const last = stack[stack.length - 1];
       if (!last || Math.pow(translation.x - last[0], 2) + Math.pow(translation.y - last[1], 2) + Math.pow(translation.z - last[2], 2) > 4) {

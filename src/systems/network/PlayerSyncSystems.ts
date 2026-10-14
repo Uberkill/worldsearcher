@@ -1,6 +1,7 @@
 // @ts-nocheck
 /* eslint-disable no-unused-vars */
 import { NetworkEventBus } from '../../utils/NetworkEventBus';
+import { set as idbSet } from 'idb-keyval';
 import { getGameStore } from '../../stores/storeLinker';
 import { _useInventoryStore } from '../../stores/inventorySlice';
 import { _playerPosition, _playerRotation } from '../../globals';
@@ -13,11 +14,9 @@ const initializePlayerSyncSystems = () => {
         const state = get();
 
       if (state.isHost) {
-         import('idb-keyval').then(({ set: idbSet }) => {
-            const prefix = sessionStorage.getItem('saveSlotId') || 'default';
-            const guestKey = `${prefix}_guest_${senderConn.metadata?.playerId}`;
-            idbSet(guestKey, data.state).catch(e => console.error("Host failed to save guest state", e));
-         });
+         const prefix = sessionStorage.getItem('saveSlotId') || 'default';
+         const guestKey = `${prefix}_guest_${senderConn.metadata?.playerId}`;
+         idbSet(guestKey, data.state).catch(e => console.error("Host failed to save guest state", e));
       }
     
     });

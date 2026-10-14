@@ -4,7 +4,7 @@ import { NetworkEventBus } from '../../utils/NetworkEventBus';
 import { getGameStore } from '../../stores/storeLinker';
 import { _useInventoryStore } from '../../stores/inventorySlice';
 import { useChunkStore } from '../../stores/chunkSlice';
-import { compressRLE, decompressRLE } from '../../utils/db';
+import { compressRLE, decompressRLE, loadChunkFromDB } from '../../utils/db';
 
 const initializeWorldSyncSystems = () => {
     NetworkEventBus.on('WORLD_SYNC', (payload) => {
@@ -34,16 +34,14 @@ const initializeWorldSyncSystems = () => {
                } else if (chunk && !chunk.isModified) {
                    try { senderConn.send({ type: 'CHUNK_PRISTINE', chunkKey: data.chunkKey }); } catch { /* ignore */ }
                } else {
-                   import('../../utils/db').then(({ loadChunkFromDB }) => {
-                      loadChunkFromDB(data.chunkKey).then(dbChunk => {
-                         if (dbChunk && dbChunk.isModified && dbChunk.buffer) {
-                             compressRLE(dbChunk.buffer).then(rle => {
-                                 try { senderConn.send({ type: 'WORLD_SYNC_RLE', chunkKey: data.chunkKey, rle: Array.from(rle) }); } catch { /* ignore */ }
-                             });
-                         } else {
-                             try { senderConn.send({ type: 'CHUNK_PRISTINE', chunkKey: data.chunkKey }); } catch { /* ignore */ }
-                         }
-                      });
+                   loadChunkFromDB(data.chunkKey).then(dbChunk => {
+                      if (dbChunk && dbChunk.isModified && dbChunk.buffer) {
+                          compressRLE(dbChunk.buffer).then(rle => {
+                              try { senderConn.send({ type: 'WORLD_SYNC_RLE', chunkKey: data.chunkKey, rle: Array.from(rle) }); } catch { /* ignore */ }
+                          });
+                      } else {
+                          try { senderConn.send({ type: 'CHUNK_PRISTINE', chunkKey: data.chunkKey }); } catch { /* ignore */ }
+                      }
                    });
                }
             }

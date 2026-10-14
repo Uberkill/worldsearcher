@@ -17,7 +17,7 @@ Forcefully disconnects a guest player from the current game session.
 ### 2. `/time set <value>`
 Changes the time of day in the dynamic sky rendering.
 - **Usage:** `/time set morning`, `/time set noon`, `/time set night`, or a numeric value (e.g., `/time set 12000`).
-- **Logic:** Updates the global `worldTime` in `createWorldSlice` which drives the `DynamicSky.jsx` sun/moon positioning.
+- **Logic:** Updates the global `worldTime` in `createWorldSlice` which drives the `DynamicSky.tsx` sun/moon positioning.
 
 ### 3. `/give <player> <item_id> [amount]`
 Spawns an item directly into the target player's inventory or drops it at their feet if full.
@@ -59,4 +59,4 @@ Revokes Operator privileges from a promoted guest player.
 
 ## Network Security
 
-Commands are processed authoritatively by the Host inside `networkActions.js` via the `processCommandIntent` handler. When guests issue a command, a `COMMAND_INTENT` package is routed to the Host, who explicitly validates the sender's Operator (`isOp`) status before executing the instruction, maintaining complete networking security.
+Commands are processed authoritatively by the Host inside `networkActions.ts` via the `processCommandIntent` handler. When guests issue a command, a `COMMAND_INTENT` package is routed to the Host, who explicitly validates the sender's Operator (`isOp`) status before executing the instruction, maintaining complete networking security.

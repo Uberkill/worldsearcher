@@ -626,9 +626,11 @@ export default function TitleScreen({ onStartNew, onContinue }) {
         if (!object.isMesh) return;
         if (object.geometry) object.geometry.dispose();
         if (object.material) {
-          Array.isArray(object.material)
-            ? object.material.forEach((m) => m.dispose())
-            : object.material.dispose();
+          if (Array.isArray(object.material)) {
+            object.material.forEach((m) => m.dispose());
+          } else {
+            object.material.dispose();
+          }
         }
       });
     };
