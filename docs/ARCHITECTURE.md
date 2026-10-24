@@ -2,6 +2,8 @@
 
 World Searcher is a voxel game engine engineered for high-throughput 60 FPS performance in modern web browsers, combining Three.js, React Three Fiber, Rapier physics, and multi-threaded Web Workers.
 
+For detailed system topology, folder structure, and database schemas, refer to the [System Architecture Specification](architecture/architecture.md). For network protocols, binary bitlayouts, and peer-to-peer transport, refer to the [Multiplayer & Networking Specification](systems/MULTIPLAYER.md).
+
 ---
 
 ## 1. Scene Graph Architecture: Decoupled Geometry Pipeline
@@ -40,11 +42,12 @@ The hybrid flight system maps 3D ship physics and hitboxes using strict coordina
 1. **Memory Strides:** Ship voxel storage maps 1D typed arrays to local 3D coordinates using `Y * 1024 + Z * 32 + X`.
 2. **Rotation Matrices:** Raycasting and trajectory calculations consume physical quaternions directly from the Rapier `RigidBody` rather than Euler representations, preventing Gimbal Lock during pitch and roll maneuvers.
 3. **Resting Interpolation:** When a ship comes to rest, position vectors synchronize directly from rigid body resting states to maintain alignment.
+4. **Network Transform Sync:** Resting ship states and active trajectory updates broadcast dynamically over WebRTC via `SHIP_TRANSFORM`, with automatic resting-frame broadcast fallbacks (`window.__forceShipBroadcast`).
 
 ---
 
 ## 5. State Management & Memory Safety
 
-- **Zustand Slices:** World state, inventory, and player physics communicate across modular Zustand slices.
+- **Zustand Slices:** World state, inventory, vehicle physics, and WebRTC networking communicate across modular Zustand slices (`chunkSlice`, `connectionSlice`, `chatSlice`, etc.).
 - **Frustum Culling:** Visibility queues stream meshes into view progressively per frame, maintaining a stable GPU memory footprint.
 - **TypeScript Compliance:** Codebases enforce strict typing across interfaces in `src/types/` to prevent silent null references.

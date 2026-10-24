@@ -19,24 +19,24 @@ import { mulberry32 } from '../utils/chunkGenerator';
 import { getBiomeAt } from '../utils/biomes';
 
 // Initialize global debug stats
-window.__DEBUG_STATS__ = window.__DEBUG_STATS__ || {
-  fps: 0,
-  cpuTime: 0,
-  gpuTime: 0,
-  drawCalls: 0,
-  vertices: 0,
-  textureBinds: 0,
-  vboMemoryBytes: 0,
-  totalChunks: 0,
-  chunksRendered: 0,
-  totalEntities: 0,
-  entitiesRendered: 0,
-  bytesSent: 0,
-  bytesReceived: 0,
-  ping: 0,
-  packetStats: { sent: {}, recv: {} },
-  errorLog: [],
-};
+const ds = (window.__DEBUG_STATS__ = window.__DEBUG_STATS__ || {});
+ds.fps = ds.fps ?? 0;
+ds.cpuTime = ds.cpuTime ?? 0;
+ds.gpuTime = ds.gpuTime ?? 0;
+ds.drawCalls = ds.drawCalls ?? 0;
+ds.triangles = ds.triangles ?? 0;
+ds.vertices = ds.vertices ?? 0;
+ds.textureBinds = ds.textureBinds ?? 0;
+ds.vboMemoryBytes = ds.vboMemoryBytes ?? 0;
+ds.totalChunks = ds.totalChunks ?? 0;
+ds.chunksRendered = ds.chunksRendered ?? 0;
+ds.totalEntities = ds.totalEntities ?? 0;
+ds.entitiesRendered = ds.entitiesRendered ?? 0;
+ds.bytesSent = ds.bytesSent ?? 0;
+ds.bytesReceived = ds.bytesReceived ?? 0;
+ds.ping = ds.ping ?? 0;
+ds.packetStats = ds.packetStats ?? { sent: {}, recv: {} };
+ds.errorLog = ds.errorLog ?? [];
 
 const StatRow = ({ label, valueId, color = 'text-white' }) => (
   <div className="flex justify-between w-full space-x-8">

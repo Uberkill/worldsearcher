@@ -74,18 +74,18 @@ const initializeConnectionSystems = () => {
        }
     }
     
-    if (data.hostId && data.hostName) {
-       setNetworkState(prev => ({
-          connectionStatus: 'connected', // Boot the guest into the GameEngine now that seed is synced!
-          players: {
-             ...prev.players,
-             [data.hostId]: {
-                ...(prev.players[data.hostId] || {}),
-                name: data.hostName
-             }
+        const hostId = data.hostId || 'host';
+    const hostName = data.hostName || 'Host';
+    setNetworkState(prev => ({
+       connectionStatus: 'connected', // Boot the guest into the GameEngine now that seed is synced!
+       players: {
+          ...prev.players,
+          [hostId]: {
+             ...(prev.players[hostId] || {}),
+             name: hostName
           }
-       }));
-    }
+       }
+    }));
   });
 
   NetworkEventBus.on('GUEST_STATE_SYNC', (payload) => {

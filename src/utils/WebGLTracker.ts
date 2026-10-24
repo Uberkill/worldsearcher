@@ -13,6 +13,10 @@ window.__DEBUG_STATS__ = window.__DEBUG_STATS__ || {
   chunksRendered: 0,
   totalEntities: 0,
   entitiesRendered: 0,
+  bytesSent: 0,
+  bytesReceived: 0,
+  ping: 0,
+  packetStats: { sent: {}, recv: {} },
   errorLog: [],
 };
 

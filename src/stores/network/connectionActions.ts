@@ -7,7 +7,10 @@ import { playerPosition, playerRotation } from '../../globals';
 import { getGameStore } from '../storeLinker';
 
 const trackPacket = (data, dir) => {
-   if (!window.__DEBUG_STATS__ || !window.__DEBUG_STATS__.packetStats) return;
+   if (!window.__DEBUG_STATS__) return;
+   if (!window.__DEBUG_STATS__.packetStats) {
+      window.__DEBUG_STATS__.packetStats = { sent: {}, recv: {} };
+   }
    const stats = window.__DEBUG_STATS__.packetStats[dir];
    if (!stats) return;
    let type = 'UNKNOWN';
@@ -22,6 +25,55 @@ const trackPacket = (data, dir) => {
       type = data.type;
    }
    stats[type] = (stats[type] || 0) + 1;
+};
+
+const attachSendTelemetry = (conn) => {
+  if (!conn || conn._telemetryAttached) return;
+  conn._telemetryAttached = true;
+  const originalSend = conn.send;
+  conn.send = (data) => {
+    if (conn._isSending) {
+       originalSend.call(conn, data);
+       return;
+    }
+    conn._isSending = true;
+    try {
+       if (window.__DEBUG_STATS__) {
+          trackPacket(data, 'sent');
+          if (typeof window.__DEBUG_STATS__.bytesSent !== 'number' || isNaN(window.__DEBUG_STATS__.bytesSent)) {
+             window.__DEBUG_STATS__.bytesSent = 0;
+          }
+          if (data instanceof ArrayBuffer || data instanceof Uint8Array) window.__DEBUG_STATS__.bytesSent += data.byteLength;
+          else if (data instanceof Blob) window.__DEBUG_STATS__.bytesSent += data.size;
+          else {
+             try { 
+                if (data && data.type === 'WORLD_SYNC_RLE' && data.rle) window.__DEBUG_STATS__.bytesSent += data.rle.length * 4 + 100;
+                else window.__DEBUG_STATS__.bytesSent += JSON.stringify(data).length; 
+             } catch(e) { console.warn('[Network] Dropped packet/action:', e.message); }
+          }
+       }
+       originalSend.call(conn, data);
+    } finally {
+       conn._isSending = false;
+    }
+  };
+};
+
+const trackReceiveTelemetry = (data) => {
+  if (window.__DEBUG_STATS__) {
+     trackPacket(data, 'recv');
+     if (typeof window.__DEBUG_STATS__.bytesReceived !== 'number' || isNaN(window.__DEBUG_STATS__.bytesReceived)) {
+        window.__DEBUG_STATS__.bytesReceived = 0;
+     }
+     if (data instanceof ArrayBuffer || data instanceof Uint8Array) window.__DEBUG_STATS__.bytesReceived += data.byteLength;
+     else if (data instanceof Blob) window.__DEBUG_STATS__.bytesReceived += data.size;
+     else {
+        try {
+           if (data && data.type === 'WORLD_SYNC_RLE' && data.rle) window.__DEBUG_STATS__.bytesReceived += data.rle.length * 4 + 100;
+           else window.__DEBUG_STATS__.bytesReceived += JSON.stringify(data).length;
+        } catch(e) { console.warn('[Network] Dropped binary packet/action:', e.message); }
+     }
+  }
 };
 
 const generateRoomCode = () => {
@@ -165,11 +217,12 @@ export const createConnectionActions = (set: any, get: any): Record<string, any>
           const gameState = getGameStore()?.getState();
           if (gameState && gameState.isShipActive) {
              const transform = window.shipTransforms ? window.shipTransforms.get('default') : null;
-             if (transform && transform.actualVelocity) {
-                // Only broadcast if the ship is actually moving to save bandwidth
-                const moving = Math.abs(transform.actualVelocity.x) > 0.01 || 
-                               Math.abs(transform.actualVelocity.y) > 0.01 || 
-                               Math.abs(transform.actualVelocity.z) > 0.01;
+             if (transform && (transform.actualVelocity || window.__forceShipBroadcast)) {
+                 // Only broadcast if the ship is actually moving to save bandwidth
+                 const moving = transform.actualVelocity ? (
+                                Math.abs(transform.actualVelocity.x) > 0.01 || 
+                                Math.abs(transform.actualVelocity.y) > 0.01 || 
+                                Math.abs(transform.actualVelocity.z) > 0.01) : false;
                 
                 if (moving || window.__forceShipBroadcast) {
                     const payload = {
@@ -192,43 +245,23 @@ export const createConnectionActions = (set: any, get: any): Record<string, any>
 
     peer.on('connection', (conn) => {
       if (conn.label === 'movement') {
+        attachSendTelemetry(conn);
         const onMoveOpen = () => set((state) => ({ unreliableConnections: [...state.unreliableConnections, conn] }));
         if (conn.open) onMoveOpen();
         else conn.on('open', onMoveOpen);
-        conn.on('data', (data) => get().handleNetworkData(data, conn));
+        conn.on('data', (data) => {
+          trackReceiveTelemetry(data);
+          get().handleNetworkData(data, conn);
+        });
         conn.on('close', () => set(state => ({ unreliableConnections: state.unreliableConnections.filter(c => c.peer !== conn.peer) })));
         return;
       }
 
       console.log('Guest connected:', conn.peer);
+      attachSendTelemetry(conn);
       
       const onConnectionOpen = () => {
-        // Intercept send to count bytes
-        const originalSend = conn.send;
-        conn.send = (data) => {
-          if (conn._isSending) {
-             originalSend.call(conn, data);
-             return;
-          }
-          conn._isSending = true;
-          try {
-             if (window.__DEBUG_STATS__) {
-                trackPacket(data, 'sent');
-                if (data instanceof ArrayBuffer || data instanceof Uint8Array) window.__DEBUG_STATS__.bytesSent += data.byteLength;
-                else if (data instanceof Blob) window.__DEBUG_STATS__.bytesSent += data.size;
-                else {
-                   try { 
-                      if (data.type === 'WORLD_SYNC_RLE' && data.rle) window.__DEBUG_STATS__.bytesSent += data.rle.length * 4 + 100;
-                      else window.__DEBUG_STATS__.bytesSent += JSON.stringify(data).length; 
-                   } catch(e) { console.warn("[Network] Dropped packet/action:", e.message); }
-                }
-             }
-             originalSend.call(conn, data);
-          } finally {
-             conn._isSending = false;
-          }
-        };
-        
+        attachSendTelemetry(conn);
         set(state => ({ connections: [...state.connections, conn] }));
         
         // Fetch the Guest's saved profile if it exists
@@ -290,17 +323,7 @@ export const createConnectionActions = (set: any, get: any): Record<string, any>
       }
 
       conn.on('data', (data) => {
-        if (window.__DEBUG_STATS__) {
-           trackPacket(data, 'recv');
-           if (data instanceof ArrayBuffer || data instanceof Uint8Array) window.__DEBUG_STATS__.bytesReceived += data.byteLength;
-           else if (data instanceof Blob) window.__DEBUG_STATS__.bytesReceived += data.size;
-           else {
-              try {
-                 if (data.type === 'WORLD_SYNC_RLE' && data.rle) window.__DEBUG_STATS__.bytesReceived += data.rle.length * 4 + 100;
-                 else window.__DEBUG_STATS__.bytesReceived += JSON.stringify(data).length;
-              } catch(e) { console.warn("[Network] Dropped binary packet/action:", e.message); }
-           }
-        }
+        trackReceiveTelemetry(data);
         get().handleNetworkData(data, conn);
       });
 
@@ -371,37 +394,18 @@ export const createConnectionActions = (set: any, get: any): Record<string, any>
         metadata: { playerId: get().playerId }
       });
 
+      attachSendTelemetry(moveConn);
       moveConn.on('open', () => set((_state) => ({ unreliableConnections: [moveConn] })));
-      moveConn.on('data', (data) => get().handleNetworkData(data, moveConn));
+      moveConn.on('data', (data) => {
+        trackReceiveTelemetry(data);
+        get().handleNetworkData(data, moveConn);
+      });
+
+      attachSendTelemetry(conn);
 
       conn.on('open', () => {
         console.log('Connected to host, waiting for handshake...');
-        
-        // Intercept send to count bytes
-        const originalSend = conn.send;
-        conn.send = (data) => {
-          if (conn._isSending) {
-             originalSend.call(conn, data);
-             return;
-          }
-          conn._isSending = true;
-          try {
-             if (window.__DEBUG_STATS__) {
-                trackPacket(data, 'sent');
-                if (data instanceof ArrayBuffer || data instanceof Uint8Array) window.__DEBUG_STATS__.bytesSent += data.byteLength;
-                else if (data instanceof Blob) window.__DEBUG_STATS__.bytesSent += data.size;
-                else {
-                   try { 
-                      if (data.type === 'WORLD_SYNC_RLE' && data.rle) window.__DEBUG_STATS__.bytesSent += data.rle.length * 4 + 100;
-                      else window.__DEBUG_STATS__.bytesSent += JSON.stringify(data).length; 
-                   } catch(e) { console.warn("[Network] Dropped packet/action:", e.message); }
-                }
-             }
-             originalSend.call(conn, data);
-          } finally {
-             conn._isSending = false;
-          }
-        };
+        attachSendTelemetry(conn);
 
           // Guest Watchdog Timer
           window.__lastPingTime = Date.now();
@@ -444,17 +448,7 @@ export const createConnectionActions = (set: any, get: any): Record<string, any>
       });
 
       conn.on('data', (data) => {
-        if (window.__DEBUG_STATS__) {
-           trackPacket(data, 'recv');
-           if (data instanceof ArrayBuffer || data instanceof Uint8Array) window.__DEBUG_STATS__.bytesReceived += data.byteLength;
-           else if (data instanceof Blob) window.__DEBUG_STATS__.bytesReceived += data.size;
-           else {
-              try {
-                 if (data.type === 'WORLD_SYNC_RLE' && data.rle) window.__DEBUG_STATS__.bytesReceived += data.rle.length * 4 + 100;
-                 else window.__DEBUG_STATS__.bytesReceived += JSON.stringify(data).length;
-              } catch(e) { console.warn("[Network] Dropped binary packet/action:", e.message); }
-           }
-        }
+        trackReceiveTelemetry(data);
         get().handleNetworkData(data, conn);
       });
 

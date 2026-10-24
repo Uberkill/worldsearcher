@@ -34,7 +34,18 @@ export const createChunkActions = (set: any, get: any): Record<string, any> => (
          chunkRequests: { ...prev.chunkRequests, [nextReq.chunkKey]: nextReq.resolve }
      }));
      
-     const hostConn = get().connections[0];
+     const hostConn = get().connections?.[0];
+     if (!hostConn) {
+        nextReq.resolve('PRISTINE');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        set((prev: any) => {
+            const next = { ...prev.chunkRequests };
+            delete next[nextReq.chunkKey];
+            return { chunkRequests: next, inFlightChunkRequests: Math.max(0, prev.inFlightChunkRequests - 1) };
+        });
+        setTimeout(() => get().processChunkQueue(), 0);
+        return;
+     }
      
      const sendRequest = (retryCount = 0) => {
         try {
@@ -57,15 +68,21 @@ export const createChunkActions = (set: any, get: any): Record<string, any> => (
            const requests = get().chunkRequests;
            if (requests[nextReq.chunkKey]) {
               console.warn(`Chunk request timed out for ${nextReq.chunkKey}. Retrying (${retryCount + 1})...`);
-              if (retryCount >= 4) { // Hard limit 5 retries (10s, 20s, 40s...)
-                 console.error(`Chunk request FATAL timeout for ${nextReq.chunkKey}. Disconnecting to save data.`);
-                 sessionStorage.setItem('kickReason', 'Network Sync Failure: Missing Chunks.');
-                 window.location.reload();
+              if (retryCount >= 4) {
+                 console.warn(`[Network] Chunk request exceeded retries for ${nextReq.chunkKey}. Falling back to PRISTINE generation.`);
+                 nextReq.resolve('PRISTINE');
+                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                 set((prev: any) => {
+                     const next = { ...prev.chunkRequests };
+                     delete next[nextReq.chunkKey];
+                     return { chunkRequests: next, inFlightChunkRequests: Math.max(0, prev.inFlightChunkRequests - 1) };
+                 });
+                 setTimeout(() => get().processChunkQueue(), 0);
                  return;
               }
               sendRequest(retryCount + 1);
            }
-        }, 10000 * Math.pow(1.5, retryCount)); // Exponential backoff
+        }, 2500 * Math.pow(1.5, retryCount)); // Exponential backoff with lower initial timeout
      };
      sendRequest();
      
@@ -75,7 +92,7 @@ export const createChunkActions = (set: any, get: any): Record<string, any> => (
   requestChunkFromHost: (chunkKey: string) => {
      return new Promise((resolve) => {
         const { connections, isHost } = get();
-        if (isHost || connections.length === 0) {
+        if (isHost || !connections || connections.length === 0) {
            resolve('PRISTINE');
            return;
         }

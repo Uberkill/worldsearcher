@@ -121,3 +121,10 @@ export const initMachineTickSystem = () => {
 };
 
 
+
+export const stopMachineTickSystem = () => {
+  if (tickInterval) {
+    clearInterval(tickInterval);
+    tickInterval = null;
+  }
+};

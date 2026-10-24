@@ -1,24 +1,78 @@
-# Debug Diagnostics System (F3)
+# Debug Diagnostics & Telemetry System (F3)
 
-The engine features an advanced diagnostic overlay (accessible via the `F3` key) designed to monitor real-time performance, memory consumption, and engine telemetry without relying on external browser profilers. The diagnostic menu is split into localized sections.
+The engine features an advanced diagnostic and telemetry overlay (accessible via the `F3` key) designed to monitor real-time rendering metrics, memory consumption, WebGL state, and peer-to-peer network traffic without relying on external browser profilers.
 
-## 1. Performance Tracking
-The performance tab monitors the core hardware and framework load:
-* **RAM Usage [Chrome]**: Utilizes the V8 `performance.memory` API to track the Live Javascript Heap size in megabytes.
-  * *Fallback*: If the client is using Firefox or Safari (where the API is blocked for security), the stat gracefully falls back to `N/A`.
-  * *Thresholds*: If the RAM usage exceeds 80% of the allocated browser limit, the text color changes to red.
-* **TPS (Ticks Per Second)**: The logical simulation rate of the engine (target: 60).
-* **MSPT (Milliseconds Per Tick)**: The CPU time required to calculate a single logic frame.
-* **FPS (Visual)**: The visual render framerate from Three.js.
+---
 
-## 2. Scene Telemetry
-The scene tab monitors the "invisible load" placed on the engine by systems that run in the background or off-thread.
-* **Active Physics**: Tracks the exact number of 5x5 chunk grids currently mounted into the Rapier physics engine.
-* **Active Fluids**: Tracks the length of the cellular automata fluid queue.
-  * *Thresholds*: Exceeding 500 active fluid blocks triggers a yellow warning. Exceeding 2000 active fluid blocks triggers a red warning (imminent CPU lag spike).
-* **Pending Unloads**: Tracks the number of out-of-bounds chunks currently sitting in the Engine GC's 15-second grace period queue.
+## 1. Global Telemetry Architecture (`window.__DEBUG_STATS__`)
 
-## 3. Network & Pipeline Tracking
-* **Net Requests**: Tracks live WebRTC data requests.
-* **Mesh Mount Queue**: Tracks Web Worker payloads that have returned to the main thread and are waiting to be converted into native Three.js `BufferGeometries`. The queue mounts 1 chunk per frame to prevent loading stutters.
-* **Processing Deltas**: Tracks incoming block modifications that need to be asynchronously written to the local IndexedDB Write-Ahead Log.
+Telemetry is collected in a centralized singleton object attached to `window.__DEBUG_STATS__`. To prevent race conditions during early module imports, the singleton is defensively initialized using nullish coalescing in `src/utils/WebGLTracker.ts`, `src/globals.ts`, and `src/components/DebugOverlay.tsx`.
+
+```typescript
+export interface DebugStats {
+  // Visual & CPU Load
+  fps: number;
+  cpuTime: number;
+  gpuTime: number;
+  
+  // Low-level WebGL Metrics
+  drawCalls: number;
+  triangles: number;
+  vertices: number;
+  textureBinds: number;
+  vboMemoryBytes: number;
+  
+  // World & Entity Counts
+  totalChunks: number;
+  chunksRendered: number;
+  totalEntities: number;
+  entitiesRendered: number;
+  
+  // Peer-to-Peer Network Telemetry
+  bytesSent: number;
+  bytesReceived: number;
+  ping: number;
+  packetStats: {
+    sent: Record<string, number>;
+    recv: Record<string, number>;
+  };
+  
+  // Diagnostic Errors
+  errorLog: Array<{ message: string; timestamp: number }>;
+}
+```
+
+---
+
+## 2. Diagnostic Panels
+
+### 1. Performance Tracking
+- **RAM Usage [Chrome]:** Tracks the live V8 Javascript Heap size via `performance.memory`. Falls back to `N/A` on Firefox/Safari. Exceeding 80% triggers a warning highlight.
+- **TPS (Ticks Per Second):** The logical simulation rate of the engine (target: 30Hz server tick / 60Hz local).
+- **MSPT (Milliseconds Per Tick):** CPU time required to calculate a single logic frame.
+- **FPS (Visual):** Visual render framerate from Three.js.
+
+### 2. Low-Level WebGL Profiler (`WebGLTracker.ts`)
+Hooks directly into `WebGLRenderingContext` and `WebGL2RenderingContext` prototypes:
+- **Draw Calls:** Incremented on `drawArrays` and `drawElements` (including instanced variants).
+- **Triangles & Vertices:** Calculated per draw call based on draw modes (`TRIANGLES`, `TRIANGLE_STRIP`, `TRIANGLE_FAN`).
+- **Texture Binds:** Incremented on `bindTexture`.
+- **VBO Memory:** Tracks allocated GPU buffer byte sizes via `bufferData` and `deleteBuffer`.
+
+### 3. Scene & Pipeline Telemetry
+- **Active Physics:** Exact count of chunk grids currently mounted into the Rapier WebAssembly physics engine.
+- **Active Fluids:** Length of the cellular automata fluid queue. Exceeding 500 triggers a warning; exceeding 2000 warns of potential CPU lag.
+- **Pending Unloads:** Number of out-of-bounds chunks sitting in the 15-second grace period queue.
+- **Mesh Mount Queue:** Web Worker payloads waiting to be converted into native Three.js `BufferGeometries` (capped at 1 per frame to prevent stutter).
+
+### 4. Network Telemetry Subsystem
+Monitors live WebRTC peer-to-peer data flow:
+- **Bandwidth Counters (`bytesSent` / `bytesReceived`):** Accurately counts byte lengths from ArrayBuffers, Blobs, RLE strings, and JSON payloads across both reliable and unreliable channels.
+- **Ping (RTT):** Millisecond latency calculated from `PING` and `PONG` packet roundtrips.
+- **Packet Dictionaries (`packetStats`):** Real-time volume maps for both outbound and inbound traffic categorizing:
+  - Binary Type 1 (`PLAYER_MOVE`)
+  - Binary Type 2 (`BLOCK_DELTA`)
+  - Binary Type 3 (`ENTITY_STATE`)
+  - Control packets (`WELCOME`, `REQUEST_CHUNK`, `CHUNK_PRISTINE`, `WORLD_SYNC_RLE`)
+  - Vehicle packets (`REQUEST_HELM`, `HELM_UPDATE`, `SHIP_STEER_INTENT`, `SHIP_TRANSFORM`)
+  - Chat and system events (`CHAT_MESSAGE`, `PING`, `PONG`)

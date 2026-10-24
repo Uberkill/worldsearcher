@@ -16,8 +16,10 @@ Technical guides, architectural patterns, and subsystem specifications for World
 
 ## Engine Subsystems
 
+- **[Multiplayer & Networking](systems/MULTIPLAYER.md)**: WebRTC mesh topology, dual-channel transport, binary packet bitlayouts, chunk streaming, peer relaying, and vehicle synchronization.
 - **[Ship & Vehicle Physics](systems/shipdesign.md)**: Voxel vehicle kinematics, quaternion math, and seating mechanics.
+- **[Machine & Item Physics Systems](systems/MACHINES.md)**: Background machine simulation and authoritative item drop consolidation.
 - **[Combat & Weapons](systems/COMBAT.md)**: Hitscan verification, enemy behavior, and damage calculation.
-- **[Diagnostics & Performance](systems/DIAGNOSTICS.md)**: Frame profilers, memory dumps, and debug HUD.
+- **[Diagnostics & Performance](systems/DIAGNOSTICS.md)**: Frame profilers, memory dumps, network telemetry, and debug HUD.
 - **[Game Modes](systems/GAME_MODES.md)**: Game rules and session configurations.
 - **[Admin & Host Commands](systems/COMMANDS.md)**: In-engine developer commands and debugging utilities.

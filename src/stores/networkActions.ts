@@ -122,7 +122,7 @@ export const networkActions = create((rawSet: any, rawGet: any) => {
 
     handleNetworkData: (data: any, senderConn: any) => {
       if (data instanceof ArrayBuffer || data instanceof Uint8Array) {
-          parseBinaryPacket(data, set, get);
+          parseBinaryPacket(data, set, get, senderConn);
           return;
       }
 

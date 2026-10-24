@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { getGameStore } from '../storeLinker';
 
-export const parseBinaryPacket = (data: ArrayBuffer | Uint8Array, set: any, get: any): void => {
+export const parseBinaryPacket = (data: ArrayBuffer | Uint8Array, set: any, get: any, senderConn?: any): void => {
     try {
         const isArrayBuffer = data instanceof ArrayBuffer;
         const buffer = isArrayBuffer ? data : data.buffer;
@@ -46,11 +46,32 @@ export const parseBinaryPacket = (data: ArrayBuffer | Uint8Array, set: any, get:
                         ...prev.players,
                         [id]: {
                             ...(prev.players[id] || {}),
+                            x,
+                            y,
+                            z,
+                            pitch,
+                            yaw,
+                            lastUpdate: Date.now(),
                             positionBuffer: newBuffer
                         }
                     }
                 };
             });
+
+            // Host relays Guest movement to all other peers via unreliable channels
+            const state = typeof get === 'function' ? get() : null;
+            if (state?.isHost && state?.unreliableConnections) {
+                const rawPayload = buffer.slice(byteOffset, byteOffset + byteLength);
+                state.unreliableConnections.forEach((conn: any) => {
+                    if (conn.peer !== senderConn?.peer && conn.open) {
+                        try {
+                            conn.send(rawPayload);
+                        } catch (e: any) {
+                            console.warn('[Network] Movement relay dropped:', e.message);
+                        }
+                    }
+                });
+            }
             return;
         }
 
@@ -81,6 +102,21 @@ export const parseBinaryPacket = (data: ArrayBuffer | Uint8Array, set: any, get:
             const useStore = getGameStore();
             if (useStore) {
                 useStore.getState().applyNetworkDelta(`${cx},${cz}`, Array.from(deltas));
+            }
+
+            // Host relays Guest block delta to all other peers via reliable connections
+            const state = typeof get === 'function' ? get() : null;
+            if (state?.isHost && state?.connections) {
+                const rawPayload = buffer.slice(byteOffset, byteOffset + byteLength);
+                state.connections.forEach((conn: any) => {
+                    if (conn.peer !== senderConn?.peer && conn.open) {
+                        try {
+                            conn.send(rawPayload);
+                        } catch (e: any) {
+                            console.warn('[Network] Block delta relay dropped:', e.message);
+                        }
+                    }
+                });
             }
             return;
         }

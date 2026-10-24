@@ -15,6 +15,7 @@ World Search runs an interactive, deterministic voxel simulation directly within
 - **Zero-Copy Memory Transfers:** Raw geometry arrays (`Uint32Array`, `Float32Array`) transfer across worker boundaries via Transferable Objects, eliminating structured cloning and garbage collection stutter.
 - **Physics Engine Integration:** Decoupled visual meshes from Rapier WebAssembly physics colliders (`ChunkPhysics.tsx`), supporting collision detection without rendering bottlenecks.
 - **Physical Voxel Vehicles:** Real-time drivable ships utilizing quaternion orientation math and 1D-to-3D stride coordinates.
+- **WebRTC Peer-to-Peer Mesh:** Dual-channel transport model splitting unreliable 30Hz position streaming from reliable block delta and state updates.
 - **Offline & Network Persistence:** Entity persistence layer built on IndexedDB tables synchronized across WebRTC channels.
 
 ---
@@ -23,9 +24,13 @@ World Search runs an interactive, deterministic voxel simulation directly within
 
 Full architectural specifications and system guides are available in the [`docs/`](docs/INDEX.md) directory:
 
+- **[Documentation Index](docs/INDEX.md)**: Master index of all technical subsystem specifications.
 - **[Architecture & Performance Guidelines](docs/ARCHITECTURE.md)**: Deep-dive into geometry streaming, worker pipelines, and memory optimization.
-- **[System Architecture](docs/architecture/architecture.md)**: Authoritative game tick loops and network packet structures.
+- **[System Architecture](docs/architecture/architecture.md)**: High-level architectural overview, tick loops, and folder structure.
+- **[Multiplayer & Networking](docs/systems/MULTIPLAYER.md)**: WebRTC mesh topology, dual-channel transport, binary packet bitlayouts, and peer relays.
 - **[Vehicle Physics & Mechanics](docs/systems/shipdesign.md)**: Flight coordinate math, collision geometry, and seating systems.
+- **[Machine & Item Physics](docs/systems/MACHINES.md)**: Off-tick crafting machines and authoritative item drop consolidation.
+- **[Diagnostics & Telemetry](docs/systems/DIAGNOSTICS.md)**: WebGL profiler, memory trackers, and peer-to-peer network metrics.
 
 ---
 
@@ -41,9 +46,31 @@ npm install
 npm run dev
 ```
 
-### Verification & Testing
+---
+
+## Verification & Testing
+
+World Searcher maintains a comprehensive multi-tier test pyramid consisting of static typing, unit suites, engine integration tests, and multi-browser live end-to-end simulation.
+
+| Command | Environment | Description |
+| :--- | :--- | :--- |
+| `npm run typecheck` | TypeScript (`tsc --noEmit`) | Validates 100% strict type safety across all components and stores. |
+| `npm run test:unit` | Vitest (`jsdom`) | Runs all 19 unit test files (63/63 tests) covering ECS bitpacking, command parsing, item drops, and multiplayer sync. |
+| `npm run test:engine` | Vitest (`jsdom`) | Runs engine-specific physics, memory, boundary, and logic tests. |
+| `npm run test:godmode` | Vitest (`jsdom`) | Executes the full architectural integration suite and AST allocation checks. |
+| `npm run test:e2e` | Playwright (`chromium`) | Runs all browser-based end-to-end tests against the Vite dev server. |
+
+### Dedicated Playwright E2E Suites
 ```bash
-npm run typecheck         # Verify TypeScript compilation
-npm run test:unit         # Run engine unit tests
-npm run test:godmode      # Run full architectural integration suite
+# Full simulation: Room generation, WebRTC handshake, 30Hz move sync, voxel deltas, ship piloting, chat & telemetry
+npx playwright test e2e/multiplayer_gameplay_scenarios.spec.ts
+
+# Live dual-browser WebRTC connection, packet counting, and streaming verification
+npx playwright test e2e/multiplayer_live.spec.ts
+
+# WebGL chunk render performance and memory stability
+npx playwright test e2e/chunk_memory.spec.ts
+
+# Multi-slot IndexedDB world persistence and save isolation
+npx playwright test e2e/persistence.spec.ts
 ```

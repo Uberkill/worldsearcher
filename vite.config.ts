@@ -11,6 +11,6 @@ export default defineConfig({
   },
   test: {
     exclude: ['e2e/*', 'node_modules/*'],
-    setupFiles: ['./tests/setup.js'],
+    setupFiles: ['./tests/setup.ts'],
   },
 });
